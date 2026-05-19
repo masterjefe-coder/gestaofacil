@@ -28,6 +28,7 @@ export async function POST(request: Request) {
     city?: string;
     state?: string;
     serviceDescription?: string;
+    defaultFiscalServiceCode?: string;
     defaultPixKey?: string;
     defaultPaymentMessage?: string;
   };
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
     city: body.city || "",
     state: body.state || "",
     serviceDescription: body.serviceDescription || "",
+    defaultFiscalServiceCode: body.defaultFiscalServiceCode || "",
     defaultPixKey: body.defaultPixKey || "",
     defaultPaymentMessage: body.defaultPaymentMessage || "",
   });

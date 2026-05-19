@@ -5,20 +5,22 @@
     "niche": "Servicos locais e operacao comercial enxuta"
   },
   "company": {
-    "legalName": "Gestao Facil Servicos Digitais LTDA",
-    "tradeName": "Gestao Facil",
-    "document": "12.345.678/0001-90",
-    "city": "Belo Horizonte",
-    "state": "MG",
-    "serviceDescription": "Operacao comercial, cobranca e emissao para pequenos negocios de servico.",
-    "defaultPixKey": "financeiro@gestaofacil.local",
-    "defaultPaymentMessage": "Pagamento referente ao servico contratado. Envie o comprovante por WhatsApp."
+    "legalName": "LOJA ONLINE OFERTAS DO TON LTDA",
+    "tradeName": "Ofertas do Ton",
+    "document": "43.300.030/0001-26",
+    "city": "Joinville",
+    "state": "SC",
+    "municipalCode": "4209102",
+    "serviceDescription": "Digitacao e servicos administrativos com emissao fiscal assistida e automatica.",
+    "defaultFiscalServiceCode": "17.02",
+    "defaultPixKey": "43300030000126",
+    "defaultPaymentMessage": "Pagamento referente aos servicos contratados. Envie o comprovante por WhatsApp."
   },
   "customers": [
     {
       "id": "cus_001",
       "name": "Clinica Horizonte",
-      "document": "12.345.678/0001-10",
+      "document": "12.345.678/0001-95",
       "segment": "Clinica pequena",
       "city": "Belo Horizonte",
       "status": "Recorrente",
@@ -29,7 +31,7 @@
     {
       "id": "cus_002",
       "name": "Studio Lume",
-      "document": "48.321.654/0001-22",
+      "document": "48.321.654/0001-43",
       "segment": "Agencia pequena",
       "city": "Sao Paulo",
       "status": "Aguardando retorno",
@@ -40,7 +42,7 @@
     {
       "id": "cus_003",
       "name": "Oficina Ponto Certo",
-      "document": "22.444.888/0001-03",
+      "document": "22.444.888/0001-94",
       "segment": "Assistencia tecnica",
       "city": "Campinas",
       "status": "Ativo",
@@ -51,7 +53,7 @@
     {
       "id": "cus_004",
       "name": "Casa Nobre",
-      "document": "084.512.990-40",
+      "document": "084.512.990-24",
       "segment": "Servico local",
       "city": "Curitiba",
       "status": "Ativo",
@@ -178,7 +180,8 @@
       "orderId": "ord_nfse_001",
       "serviceAmount": "R$ 890",
       "status": "Pronta",
-      "serviceDescription": "Suporte tecnico recorrente pronto para emissao fiscal."
+      "serviceDescription": "Suporte tecnico recorrente pronto para emissao fiscal.",
+      "serviceCode": "17.02"
     }
   ]
 }

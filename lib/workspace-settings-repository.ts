@@ -2,6 +2,7 @@ import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-sessi
 import { recordAuditEvent } from "@/lib/audit-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
+import { resolveIbgeMunicipalityCode } from "@/lib/ibge";
 import { prisma } from "@/lib/prisma";
 import { readDemoWorkspaceData, writeDemoWorkspaceData } from "@/lib/demo-store";
 import type { SetupInput } from "@/lib/types";
@@ -17,6 +18,10 @@ export async function getWorkspaceSetup() {
       where: { workspaceId },
     });
 
+    const resolvedMunicipality = !company?.municipalCode && company?.city && company?.state
+      ? await resolveIbgeMunicipalityCode(company.city, company.state)
+      : null;
+
     return {
       name: workspace.name,
       slug: workspace.slug,
@@ -26,20 +31,31 @@ export async function getWorkspaceSetup() {
       document: company?.document || "",
       city: company?.city || "",
       state: company?.state || "",
+      municipalCode: company?.municipalCode || resolvedMunicipality?.municipalCode || "",
       serviceDescription: company?.serviceDescription || "",
+      defaultFiscalServiceCode: company?.defaultFiscalServiceCode || "",
       defaultPixKey: company?.defaultPixKey || "",
       defaultPaymentMessage: company?.defaultPaymentMessage || "",
     };
   }
 
   const data = await readDemoWorkspaceData();
+  const resolvedMunicipality = !data.company.municipalCode && data.company.city && data.company.state
+    ? await resolveIbgeMunicipalityCode(data.company.city, data.company.state)
+    : null;
+
   return {
     ...data.workspace,
     ...data.company,
+    municipalCode: data.company.municipalCode || resolvedMunicipality?.municipalCode || "",
   };
 }
 
 export async function updateWorkspaceSetup(input: SetupInput) {
+  const resolvedMunicipality = input.city && input.state
+    ? await resolveIbgeMunicipalityCode(input.city, input.state)
+    : null;
+
   if (!isLocalDataMode()) {
     await ensureDemoCommerceSeeded();
     const context = await getCurrentWorkspaceContext();
@@ -65,9 +81,11 @@ export async function updateWorkspaceSetup(input: SetupInput) {
       (company?.document || "") !== input.document ? "documento" : null,
       (company?.city || "") !== input.city ? "cidade" : null,
       (company?.state || "") !== input.state ? "UF" : null,
+      (company?.municipalCode || "") !== (resolvedMunicipality?.municipalCode || "") ? "codigo IBGE" : null,
       (company?.serviceDescription || "") !== (input.serviceDescription || input.niche)
         ? "descricao de servicos"
         : null,
+      (company?.defaultFiscalServiceCode || "") !== (input.defaultFiscalServiceCode || "") ? "codigo padrao de servico" : null,
       (company?.defaultPixKey || "") !== input.defaultPixKey ? "chave Pix" : null,
       (company?.defaultPaymentMessage || "") !== input.defaultPaymentMessage
         ? "mensagem de cobranca"
@@ -91,7 +109,9 @@ export async function updateWorkspaceSetup(input: SetupInput) {
           document: input.document,
           city: input.city,
           state: input.state,
+          municipalCode: resolvedMunicipality?.municipalCode || null,
           serviceDescription: input.serviceDescription || input.niche,
+          defaultFiscalServiceCode: input.defaultFiscalServiceCode || null,
           defaultPixKey: input.defaultPixKey,
           defaultPaymentMessage: input.defaultPaymentMessage,
         },
@@ -102,7 +122,9 @@ export async function updateWorkspaceSetup(input: SetupInput) {
           document: input.document,
           city: input.city,
           state: input.state,
+          municipalCode: resolvedMunicipality?.municipalCode || null,
           serviceDescription: input.serviceDescription || input.niche,
+          defaultFiscalServiceCode: input.defaultFiscalServiceCode || null,
           defaultPixKey: input.defaultPixKey,
           defaultPaymentMessage: input.defaultPaymentMessage,
         },
@@ -123,6 +145,7 @@ export async function updateWorkspaceSetup(input: SetupInput) {
               tradeName: input.tradeName,
               city: input.city || null,
               state: input.state || null,
+              municipalCode: resolvedMunicipality?.municipalCode || null,
             },
           },
         },
@@ -142,7 +165,9 @@ export async function updateWorkspaceSetup(input: SetupInput) {
         document: input.document,
         city: input.city,
         state: input.state,
+        municipalCode: resolvedMunicipality?.municipalCode || "",
         serviceDescription: input.serviceDescription,
+        defaultFiscalServiceCode: input.defaultFiscalServiceCode || "",
         defaultPixKey: input.defaultPixKey,
         defaultPaymentMessage: input.defaultPaymentMessage,
       },
@@ -163,7 +188,9 @@ export async function updateWorkspaceSetup(input: SetupInput) {
     document: input.document,
     city: input.city,
     state: input.state,
+    municipalCode: resolvedMunicipality?.municipalCode || "",
     serviceDescription: input.serviceDescription,
+    defaultFiscalServiceCode: input.defaultFiscalServiceCode || "",
     defaultPixKey: input.defaultPixKey,
     defaultPaymentMessage: input.defaultPaymentMessage,
   };

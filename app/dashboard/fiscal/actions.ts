@@ -8,7 +8,9 @@ import {
   issueNfseNationalDocument,
   updateNfseStatus,
 } from "@/lib/nfse-repository";
+import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { testNfseNationalConnectivity } from "@/lib/nfse-national-provider";
+import { inspectNfseNationalCertificate } from "@/lib/nfse-national-provider";
 
 function getString(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -72,12 +74,15 @@ export async function markNfseIssuedAction(formData: FormData) {
 
 export async function issueNfseNationalAction(formData: FormData) {
   const id = getString(formData, "id");
+  const serviceCode = getString(formData, "serviceCode");
 
   if (!id) {
     return;
   }
 
-  await issueNfseNationalDocument(id);
+  await issueNfseNationalDocument(id, {
+    serviceCode,
+  });
   revalidateFiscalViews();
 }
 
@@ -94,7 +99,8 @@ export async function markNfseErrorAction(formData: FormData) {
 }
 
 export async function testNfseNationalConnectivityAction() {
-  const result = await testNfseNationalConnectivity();
+  const setup = await getWorkspaceSetup();
+  const result = await testNfseNationalConnectivity(setup.municipalCode);
 
   const status = result.status ? String(result.status) : "";
   const message = result.ok
@@ -102,4 +108,13 @@ export async function testNfseNationalConnectivityAction() {
     : `Falha ao testar ambiente oficial. ${result.error || result.snippet || result.target}`;
 
   redirect(`/dashboard/fiscal?integrationMessage=${encodeURIComponent(message)}&integrationOk=${result.ok ? "1" : "0"}`);
+}
+
+export async function inspectNfseNationalCertificateAction() {
+  const result = await inspectNfseNationalCertificate();
+  const message = result.ok
+    ? `Certificado válido. Sujeito: ${result.subject}. Validade final: ${result.validTo || "não informada"}.`
+    : `Falha ao inspecionar certificado. ${result.error || "Erro desconhecido."}`;
+
+  redirect(`/dashboard/fiscal?certificateMessage=${encodeURIComponent(message)}&certificateOk=${result.ok ? "1" : "0"}`);
 }

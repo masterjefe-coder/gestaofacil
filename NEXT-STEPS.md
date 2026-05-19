@@ -47,6 +47,7 @@ Observacao:
 - o setup agora ja mostra quando a empresa ainda nao tem base suficiente para emissao
 - o fiscal agora ja tem base para emissao rapida por nome ou CPF/CNPJ
 - a integracao oficial da NFS-e Nacional agora ja tem client, envs, assinatura de DPS e tentativa de emissao pelo endpoint oficial
+- o produto agora ja deixa claro o caminho assistido via portal oficial e o caminho automatico com certificado
 - o proximo alvo mais forte agora e validar o leiaute DPS com um certificado real e ajustar os campos fiscais finos do primeiro municipio piloto
 
 ## Regra importante

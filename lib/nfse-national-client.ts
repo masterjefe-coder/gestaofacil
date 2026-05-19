@@ -1,4 +1,5 @@
 import https from "node:https";
+import { gunzipSync, gzipSync } from "node:zlib";
 
 export type NfseNationalEnvironment = "production" | "restricted";
 
@@ -6,6 +7,8 @@ type NfseNationalClientConfig = {
   environment: NfseNationalEnvironment;
   certPfxBase64?: string;
   certPassphrase?: string;
+  certificatePem?: string;
+  privateKeyPem?: string;
   requestTimeoutMs: number;
 };
 
@@ -23,9 +26,19 @@ export type NfseNationalResponse = {
   body: string;
 };
 
+function encodeXmlPayload(xmlPayload: string) {
+  return JSON.stringify({
+    dpsXmlGZipB64: gzipSync(Buffer.from(xmlPayload, "utf8")).toString("base64"),
+  });
+}
+
+export function decodeNfseXmlGZipB64(value: string) {
+  return gunzipSync(Buffer.from(value, "base64")).toString("utf8");
+}
+
 const NFSE_NATIONAL_BASE_URLS = {
   restricted: {
-    sefin: "https://sefin.producaorestrita.nfse.gov.br/API/SefinNacional",
+    sefin: "https://sefin.producaorestrita.nfse.gov.br/SefinNacional",
     parametrizacao: "https://adn.producaorestrita.nfse.gov.br/parametrizacao",
   },
   production: {
@@ -51,6 +64,8 @@ function buildAgent(config: NfseNationalClientConfig) {
     keepAlive: true,
     pfx: hasCertificate ? Buffer.from(config.certPfxBase64!, "base64") : undefined,
     passphrase: config.certPassphrase || undefined,
+    cert: config.certificatePem,
+    key: config.privateKeyPem,
   });
 }
 
@@ -140,10 +155,10 @@ export function createNfseNationalClient(config: NfseNationalClientConfig) {
         method: "POST",
         path: "/nfse",
         headers: {
-          "Content-Type": "application/xml; charset=utf-8",
-          Accept: "application/xml, text/xml, application/json;q=0.9, */*;q=0.8",
+          "Content-Type": "application/json; charset=utf-8",
+          Accept: "application/json, */*;q=0.8",
         },
-        body: xmlPayload,
+        body: encodeXmlPayload(xmlPayload),
       });
     },
   };

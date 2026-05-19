@@ -46,11 +46,31 @@ function escapeXml(value: string) {
 }
 
 function formatDateOnly(value: Date) {
-  return value.toISOString().slice(0, 10);
+  const formatter = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  return formatter.format(value);
 }
 
 function formatDateTime(value: Date) {
-  return value.toISOString().replace(".000Z", "-03:00");
+  const formatter = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(value);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value || "00";
+
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}:${part("second")}-03:00`;
 }
 
 function formatAmount(value: number) {
@@ -65,8 +85,27 @@ function normalizeNumber(value: string) {
   return stripNonDigits(value).padStart(15, "0").slice(-15);
 }
 
+function formatDpsNumberValue(value: string) {
+  const digits = stripNonDigits(value).replace(/^0+/, "");
+  return digits || "1";
+}
+
 function normalizeMunicipalCode(value: string) {
   return stripNonDigits(value).padStart(7, "0").slice(-7);
+}
+
+function normalizeNationalServiceCode(value: string) {
+  const digits = stripNonDigits(value);
+
+  if (digits.length === 6) {
+    return digits;
+  }
+
+  if (digits.length === 4) {
+    return `${digits}01`;
+  }
+
+  throw new Error("Codigo nacional do servico invalido para a NFS-e Nacional. Use 6 digitos ou um subitem no formato 00.00.");
 }
 
 function inferDocumentType(value: string) {
@@ -117,7 +156,7 @@ function buildDpsId(input: NfseNationalDpsBuildInput) {
     throw new Error("Documento do emitente inválido para composição do identificador DPS.");
   }
 
-  return `ID${municipalCode}${docType.type}${normalizeIdDocument(input.issuer.document)}${normalizeSeries(input.series)}${normalizeNumber(input.number)}`;
+  return `DPS${municipalCode}${docType.type}${normalizeIdDocument(input.issuer.document)}${normalizeSeries(input.series)}${normalizeNumber(input.number)}`;
 }
 
 function buildUnsignedDpsXml(input: NfseNationalDpsBuildInput) {
@@ -126,54 +165,62 @@ function buildUnsignedDpsXml(input: NfseNationalDpsBuildInput) {
   const issueDate = formatDateTime(input.issueDate);
   const competenceDate = formatDateOnly(input.competenceDate);
   const amount = formatAmount(input.serviceAmount);
+  const serviceCode = normalizeNationalServiceCode(input.serviceCode);
   const environmentCode = input.environment === "production" ? "1" : "2";
+  const appVersion = "gfacil_0.1.0";
 
   const issuerName = escapeXml(input.issuer.name);
-  const issuerCity = escapeXml(input.issuer.city || "");
-  const issuerState = escapeXml((input.issuer.state || "").toUpperCase());
   const customerName = escapeXml(input.customer.name);
-  const customerCity = escapeXml(input.customer.city || "");
-  const customerState = escapeXml((input.customer.state || "").toUpperCase());
   const serviceDescription = escapeXml(input.serviceDescription);
-  const serviceCode = escapeXml(input.serviceCode);
 
   return {
     dpsId,
     xml: `<?xml version="1.0" encoding="UTF-8"?>
-<DPS xmlns="${NFSE_NAMESPACE}">
-  <infDPS Id="${dpsId}" versao="1.00">
+<DPS xmlns="${NFSE_NAMESPACE}" versao="1.00">
+  <infDPS Id="${dpsId}">
     <tpAmb>${environmentCode}</tpAmb>
     <dhEmi>${issueDate}</dhEmi>
-    <dCompet>${competenceDate}</dCompet>
+    <verAplic>${appVersion}</verAplic>
     <serie>${normalizeSeries(input.series)}</serie>
-    <nDPS>${normalizeNumber(input.number)}</nDPS>
+    <nDPS>${formatDpsNumberValue(input.number)}</nDPS>
+    <dCompet>${competenceDate}</dCompet>
+    <tpEmit>1</tpEmit>
     <cLocEmi>${municipalCode}</cLocEmi>
     <prest>
       ${formatPartyDocumentXml("Prest", input.issuer.document)}
       <xNome>${issuerName}</xNome>
-      <endNac>
-        <cMun>${municipalCode}</cMun>
-        <xMun>${issuerCity}</xMun>
-        <UF>${issuerState}</UF>
-      </endNac>
+      <regTrib>
+        <opSimpNac>3</opSimpNac>
+        <regApTribSN>1</regApTribSN>
+        <regEspTrib>0</regEspTrib>
+      </regTrib>
     </prest>
     <toma>
       ${formatPartyDocumentXml("Toma", input.customer.document)}
       <xNome>${customerName}</xNome>
-      <endNac>
-        <cMun>${municipalCode}</cMun>
-        <xMun>${customerCity}</xMun>
-        <UF>${customerState}</UF>
-      </endNac>
     </toma>
     <serv>
-      <cTribNac>${serviceCode}</cTribNac>
-      <xDescServ>${serviceDescription}</xDescServ>
-      <vServPrest>${amount}</vServPrest>
+      <locPrest>
+        <cLocPrestacao>${municipalCode}</cLocPrestacao>
+      </locPrest>
+      <cServ>
+        <cTribNac>${serviceCode}</cTribNac>
+        <xDescServ>${serviceDescription}</xDescServ>
+      </cServ>
     </serv>
     <valores>
-      <vServPrest>${amount}</vServPrest>
-      <vBc>${amount}</vBc>
+      <vServPrest>
+        <vServ>${amount}</vServ>
+      </vServPrest>
+      <trib>
+        <tribMun>
+          <tribISSQN>1</tribISSQN>
+          <tpRetISSQN>1</tpRetISSQN>
+        </tribMun>
+        <totTrib>
+          <indTotTrib>0</indTotTrib>
+        </totTrib>
+      </trib>
     </valores>
   </infDPS>
 </DPS>`,

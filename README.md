@@ -96,7 +96,7 @@ Variaveis para integrar a NFS-e Nacional:
 - `NFSE_NATIONAL_MUNICIPAL_CODE` com o codigo IBGE do municipio emissor
 - `NFSE_NATIONAL_SERVICE_CODE` com o codigo nacional do servico usado no fluxo inicial
 - `NFSE_NATIONAL_SERIES` com a serie DPS de 5 digitos usada pelo emitente
-- `NFSE_NATIONAL_CERT_PFX_BASE64` com o certificado A1 em base64
+- `NFSE_NATIONAL_CERT_PFX_BASE64` com o certificado A1 em base64, ou `NFSE_NATIONAL_CERT_PFX_PATH` apontando para o arquivo `.pfx`
 - `NFSE_NATIONAL_CERT_PASSPHRASE` com a senha do certificado
 - `NFSE_NATIONAL_TIMEOUT_MS` opcional
 
@@ -105,6 +105,8 @@ Observacao:
 - os endpoints oficiais usados no projeto seguem a publicacao do Portal NFS-e para `SEFIN Nacional` e `Parâmetros Municipais`
 - a conexao oficial no projeto hoje ja testa o endpoint de convenio municipal e prepara o client para `POST /nfse`, `GET /nfse/{chaveAcesso}` e `GET /dps/{id}`
 - a tela fiscal agora tambem monta uma DPS assinada por certificado A1 e tenta emitir direto no ambiente nacional quando o setup do emitente e do cliente estiver completo
+- a emissao automatica agora so fica disponivel quando o municipio do estabelecimento estiver com `AderenteEmissorNacional = Sim` na base oficial publica da NFS-e
+- clientes sem certificado podem continuar no fluxo de emissao assistida, abrindo o portal oficial da NFS-e a partir do painel fiscal
 
 Checklist de deploy:
 

@@ -13,15 +13,17 @@ const defaultWorkspace: WorkspaceProfile = {
 };
 
 const defaultCompany: CompanyProfile = {
-  legalName: "Gestao Facil Servicos Digitais LTDA",
-  tradeName: "Gestao Facil",
-  document: "12.345.678/0001-90",
-  city: "Belo Horizonte",
-  state: "MG",
-  serviceDescription: "Operacao comercial, cobranca e emissao para pequenos negocios de servico.",
-  defaultPixKey: "financeiro@gestaofacil.local",
+  legalName: "LOJA ONLINE OFERTAS DO TON LTDA",
+  tradeName: "Ofertas do Ton",
+  document: "43.300.030/0001-26",
+  city: "Joinville",
+  state: "SC",
+  municipalCode: "4209102",
+  serviceDescription: "Digitacao e servicos administrativos com emissao fiscal assistida e automatica.",
+  defaultFiscalServiceCode: "17.02",
+  defaultPixKey: "43300030000126",
   defaultPaymentMessage:
-    "Pagamento referente ao servico contratado. Envie o comprovante por WhatsApp.",
+    "Pagamento referente aos servicos contratados. Envie o comprovante por WhatsApp.",
 };
 
 const defaultData: DemoWorkspaceData = {

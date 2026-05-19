@@ -16,7 +16,9 @@ export type CompanyProfile = {
   document: string;
   city: string;
   state: string;
+  municipalCode?: string;
   serviceDescription: string;
+  defaultFiscalServiceCode?: string;
   defaultPixKey: string;
   defaultPaymentMessage: string;
 };
@@ -157,6 +159,7 @@ export type NfseDocument = {
   serviceAmount: string;
   status: "Rascunho" | "Pronta" | "Emitida" | "Erro" | "Cancelada";
   serviceDescription: string;
+  serviceCode?: string;
   verificationCode?: string;
   externalId?: string;
   issuedAt?: string;

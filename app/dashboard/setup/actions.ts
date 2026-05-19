@@ -28,6 +28,7 @@ export async function updateWorkspaceSetupAction(formData: FormData) {
     city: getString(formData, "city"),
     state: getString(formData, "state"),
     serviceDescription: getString(formData, "serviceDescription"),
+    defaultFiscalServiceCode: getString(formData, "defaultFiscalServiceCode"),
     defaultPixKey: getString(formData, "defaultPixKey"),
     defaultPaymentMessage: getString(formData, "defaultPaymentMessage"),
   };

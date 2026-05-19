@@ -3,6 +3,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import {
   createNfseDraftAction,
   createQuickNfseDraftAction,
+  inspectNfseNationalCertificateAction,
   issueNfseNationalAction,
   markNfseErrorAction,
   markNfseIssuedAction,
@@ -15,27 +16,39 @@ import {
   listNfseDocuments,
   listNfseReadyQueue,
 } from "@/lib/nfse-repository";
-import { getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
+import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
+import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
+import {
+  getNfseEmissionModeSummary,
+  getNfseNationalIntegrationStatus,
+  getNfseNationalPortalUrls,
+} from "@/lib/nfse-national-provider";
 
 type FiscalPageProps = {
   searchParams?: Promise<{
     integrationMessage?: string;
     integrationOk?: string;
+    certificateMessage?: string;
+    certificateOk?: string;
   }>;
 };
 
 export default async function FiscalPage({ searchParams }: FiscalPageProps) {
-  const [documents, readyQueue, readiness] = await Promise.all([
+  const [documents, readyQueue, readiness, setup] = await Promise.all([
     listNfseDocuments(),
     listNfseReadyQueue(),
     getFiscalSetupReadiness(),
+    getWorkspaceSetup(),
   ]);
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
   const issuePreviews = await Promise.all(
     documents.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
   );
   const issuePreviewMap = new Map(issuePreviews);
   const params = await searchParams;
   const integrationStatus = getNfseNationalIntegrationStatus();
+  const emissionModes = getNfseEmissionModeSummary();
+  const portalUrls = getNfseNationalPortalUrls();
   const draftCount = documents.filter((document) => document.status === "Rascunho").length;
   const readyCount = documents.filter((document) => document.status === "Pronta").length;
   const issuedCount = documents.filter((document) => document.status === "Emitida").length;
@@ -83,6 +96,46 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
       <section className="data-panel">
         <div className="card-header">
           <div>
+            <span className="section-label">Modelos de emissão</span>
+            <h2>O cliente pode emitir com ou sem certificado</h2>
+          </div>
+        </div>
+
+        <div className="cards-grid quote-grid">
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Emissão assistida</span>
+            <h3>Portal oficial da NFS-e</h3>
+            <p>{emissionModes.assisted.helper}</p>
+            <div className="dashboard-actions">
+              <Link href={portalUrls.loginUrl} className="secondary-link" target="_blank" rel="noreferrer">
+                Abrir login oficial
+              </Link>
+              <Link href={portalUrls.issueUrl} className="ghost-button" target="_blank" rel="noreferrer">
+                Abrir emissor web
+              </Link>
+            </div>
+          </article>
+
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Emissão automática</span>
+            <h3>API oficial com certificado</h3>
+            <p>{emissionModes.automatic.helper}</p>
+            <small className="muted-text">
+              {integrationStatus.hasCertificate
+                ? `Certificado detectado via ${integrationStatus.certificateSource === "path" ? "caminho local" : "base64"}.`
+                : "Nenhum certificado configurado ainda."}
+            </small>
+            <small className="muted-text">
+              Município IBGE: {setup.municipalCode || "aguardando cidade/UF"}.
+              {` Serviço padrão: ${setup.defaultFiscalServiceCode || "definir na empresa ou na emissão"}.`}
+            </small>
+          </article>
+        </div>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
             <span className="section-label">Integração oficial</span>
             <h2>Ambiente da NFS-e Nacional no projeto</h2>
           </div>
@@ -94,14 +147,25 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
             <span>{params.integrationMessage}</span>
           </div>
         ) : null}
+        {params?.certificateMessage ? (
+          <div className={params.certificateOk === "1" ? "auth-hint" : "auth-hint fiscal-warning"}>
+            <strong>{params.certificateOk === "1" ? "Certificado verificado" : "Certificado com falha"}</strong>
+            <span>{params.certificateMessage}</span>
+          </div>
+        ) : null}
 
         <div className={integrationStatus.ready ? "auth-hint" : "auth-hint fiscal-warning"}>
           <strong>{integrationStatus.ready ? "Ambiente configurado" : "Ambiente ainda incompleto"}</strong>
           <span>{integrationStatus.helper}</span>
           <small className="muted-text">
             Ambiente: {integrationStatus.environment === "production" ? "produção" : "produção restrita"}.
-            {integrationStatus.municipalCode ? ` Município configurado: ${integrationStatus.municipalCode}.` : " Município ainda não configurado."}
+            {setup.municipalCode ? ` Município configurado: ${setup.municipalCode}.` : " Município ainda não configurado."}
           </small>
+          {integrationStatus.certificateSource ? (
+            <small className="muted-text">
+              Certificado carregado via {integrationStatus.certificateSource === "path" ? "arquivo local" : "base64"}.
+            </small>
+          ) : null}
           <small className="muted-text">
             {integrationStatus.ready
               ? "A emissão agora usa DPS assinada e envio direto ao endpoint oficial /nfse."
@@ -112,11 +176,49 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
           ) : null}
         </div>
 
-        <form action={testNfseNationalConnectivityAction} className="card-action">
-          <button type="submit" className="secondary-link">
-            Testar conectividade oficial
-          </button>
-        </form>
+        {municipalityStatus ? (
+          <div className={municipalityStatus.aderenteEmissorNacional ? "auth-hint" : "auth-hint fiscal-warning"}>
+            <strong>
+              {municipalityStatus.aderenteEmissorNacional
+                ? "Município habilitado para emissor/API nacional"
+                : "Seu município de estabelecimento ainda não possui convênio ativo para emissão pública no Emissor Nacional"}
+            </strong>
+            <span>
+              {municipalityStatus.city}/{municipalityStatus.state}: convênio {municipalityStatus.statusConvenio.toLowerCase()}.
+              {` Ambiente nacional: ${municipalityStatus.aderenteAmbienteNacional ? "sim" : "não"}.`}
+              {` Emissor nacional: ${municipalityStatus.aderenteEmissorNacional ? "sim" : "não"}.`}
+            </span>
+            <small className="muted-text">
+              Base oficial consultada em tempo de execução.
+              {municipalityStatus.publication ? ` Publicação: ${municipalityStatus.publication}.` : ""}
+              {municipalityStatus.startDate ? ` Vigência: ${municipalityStatus.startDate}.` : ""}
+            </small>
+            <small className="muted-text">
+              Fonte oficial:{" "}
+              <Link href={municipalityStatus.sourceUrl} target="_blank" rel="noreferrer">
+                planilha pública de municípios aderentes
+              </Link>
+            </small>
+          </div>
+        ) : setup.city && setup.state ? (
+          <div className="auth-hint fiscal-warning">
+            <strong>Município sem correspondência na base pública</strong>
+            <span>Não encontrei {setup.city}/{setup.state} na planilha oficial atual de municípios aderentes.</span>
+          </div>
+        ) : null}
+
+        <div className="dashboard-actions">
+          <form action={inspectNfseNationalCertificateAction} className="card-action">
+            <button type="submit" className="ghost-button">
+              Validar certificado
+            </button>
+          </form>
+          <form action={testNfseNationalConnectivityAction} className="card-action">
+            <button type="submit" className="secondary-link">
+              Testar conectividade oficial
+            </button>
+          </form>
+        </div>
       </section>
 
       <section className="data-panel">
@@ -230,20 +332,18 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                 {issuePreviewMap.get(document.id)?.digest ? (
                   <small className="muted-text">Hash: {issuePreviewMap.get(document.id)?.digest?.slice(0, 16)}</small>
                 ) : null}
+                <small className="muted-text">
+                  Código de serviço sugerido: {document.serviceCode || setup.defaultFiscalServiceCode || "informar antes da emissão"}.
+                </small>
                 <div className="dashboard-actions">
+                  <Link href={portalUrls.issueUrl} className="ghost-button" target="_blank" rel="noreferrer">
+                    Emitir via portal oficial
+                  </Link>
                   {document.status !== "Pronta" && document.status !== "Emitida" ? (
                     <form action={markNfseReadyAction} className="card-action">
                       <input type="hidden" name="id" value={document.id} />
                       <button type="submit" className="secondary-link">
                         Marcar pronta
-                      </button>
-                    </form>
-                  ) : null}
-                  {document.status !== "Emitida" && integrationStatus.ready ? (
-                    <form action={issueNfseNationalAction} className="card-action">
-                      <input type="hidden" name="id" value={document.id} />
-                      <button type="submit" className="primary-link">
-                        Emitir na NFS-e Nacional
                       </button>
                     </form>
                   ) : null}
@@ -266,6 +366,30 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                   <div className="auth-hint fiscal-warning">
                     <strong>DPS ainda incompleta</strong>
                     <span>{issuePreviewMap.get(document.id)?.helper}</span>
+                  </div>
+                ) : null}
+                {document.status !== "Emitida" && integrationStatus.ready && municipalityStatus?.aderenteEmissorNacional ? (
+                  <form action={issueNfseNationalAction} className="follow-up-form">
+                    <input type="hidden" name="id" value={document.id} />
+                    <label className="form-span-2">
+                      <span>Código do serviço para esta emissão</span>
+                      <input
+                        name="serviceCode"
+                        type="text"
+                        defaultValue={document.serviceCode || setup.defaultFiscalServiceCode || ""}
+                        placeholder="Ex.: 17.02"
+                        required
+                      />
+                    </label>
+                    <button type="submit" className="primary-link">
+                      Emitir na NFS-e Nacional
+                    </button>
+                  </form>
+                ) : null}
+                {document.status !== "Emitida" && integrationStatus.ready && municipalityStatus && !municipalityStatus.aderenteEmissorNacional ? (
+                  <div className="auth-hint fiscal-warning">
+                    <strong>Emissão automática indisponível</strong>
+                    <span>Seu município de estabelecimento ainda não possui convênio ativo para emissão pública no Emissor Nacional.</span>
                   </div>
                 ) : null}
                 {document.status !== "Erro" ? (

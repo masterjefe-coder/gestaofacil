@@ -12,7 +12,9 @@ import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-sessi
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
+import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getFiscalSetupReadiness } from "@/lib/nfse-repository";
+import { getNfseEmissionModeSummary, getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
 
 type SetupPageProps = {
   searchParams?: Promise<{
@@ -39,6 +41,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const teamPasswordReset = params?.teamPasswordReset === "1";
   const teamError = params?.teamError;
   const canManage = isLocalDataMode() || canManageWorkspace(context.workspaceRole);
+  const emissionModes = getNfseEmissionModeSummary();
+  const nfseIntegration = getNfseNationalIntegrationStatus();
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
 
   return (
     <DashboardShell
@@ -108,6 +113,19 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 defaultValue={setup.serviceDescription}
               />
             </label>
+            <label>
+              <span>Código IBGE detectado</span>
+              <input value={setup.municipalCode || ""} type="text" readOnly />
+            </label>
+            <label>
+              <span>Código padrão do serviço</span>
+              <input
+                name="defaultFiscalServiceCode"
+                type="text"
+                defaultValue={setup.defaultFiscalServiceCode || ""}
+                placeholder="Ex.: 17.02"
+              />
+            </label>
             <label className="form-span-2">
               <span>Chave Pix padrão</span>
               <input name="defaultPixKey" type="text" defaultValue={setup.defaultPixKey} />
@@ -131,6 +149,55 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         )}
       </section>
+
+      <section className="section-split">
+        <article className="split-panel">
+          <span className="section-label">Emissão assistida</span>
+          <h2>Clientes sem certificado ainda conseguem emitir</h2>
+          <p>{emissionModes.assisted.helper}</p>
+        </article>
+
+        <article className={nfseIntegration.ready ? "split-panel success" : "split-panel"}>
+          <span className="section-label">Emissão automática</span>
+          <h2>Certificado ativa a API oficial da NFS-e Nacional</h2>
+          <p>{emissionModes.automatic.helper}</p>
+        </article>
+      </section>
+
+      {municipalityStatus ? (
+        <section className="data-panel">
+          <div className="card-header">
+            <div>
+              <span className="section-label">Município emissor</span>
+              <h2>Status oficial do emissor nacional para o estabelecimento</h2>
+            </div>
+          </div>
+
+          <div className={municipalityStatus.aderenteEmissorNacional ? "auth-hint" : "auth-hint fiscal-warning"}>
+            <strong>
+              {municipalityStatus.aderenteEmissorNacional
+                ? "Município habilitado para emissão pública automática"
+                : "Seu município de estabelecimento ainda não possui convênio ativo para emissão pública no Emissor Nacional"}
+            </strong>
+            <span>
+              {municipalityStatus.city}/{municipalityStatus.state}: convênio {municipalityStatus.statusConvenio.toLowerCase()}.
+              {` Ambiente nacional: ${municipalityStatus.aderenteAmbienteNacional ? "sim" : "não"}.`}
+              {` Emissor nacional: ${municipalityStatus.aderenteEmissorNacional ? "sim" : "não"}.`}
+            </span>
+            <small className="muted-text">
+              Base oficial consultada em tempo de execução.
+              {municipalityStatus.publication ? ` Publicação: ${municipalityStatus.publication}.` : ""}
+              {municipalityStatus.startDate ? ` Vigência: ${municipalityStatus.startDate}.` : ""}
+            </small>
+            <small className="muted-text">
+              Fonte oficial:{" "}
+              <Link href={municipalityStatus.sourceUrl} target="_blank" rel="noreferrer">
+                planilha pública de municípios aderentes
+              </Link>
+            </small>
+          </div>
+        </section>
+      ) : null}
 
       <section className="data-panel">
         <div className="card-header">

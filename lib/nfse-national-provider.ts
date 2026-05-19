@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { createNfseNationalClient, type NfseNationalEnvironment } from "@/lib/nfse-national-client";
 import {
   buildSignedNfseNationalDpsXml,
@@ -10,6 +12,7 @@ export type NfseNationalIntegrationStatus = {
   environment: NfseNationalEnvironment;
   municipalCode?: string;
   hasCertificate: boolean;
+  certificateSource?: "base64" | "path";
   ready: boolean;
   missing: string[];
   helper: string;
@@ -23,6 +26,16 @@ export type NfseNationalConnectivityResult = {
   error?: string;
 };
 
+export type NfseNationalCertificateInspection = {
+  ok: boolean;
+  subject?: string;
+  issuer?: string;
+  validFrom?: string;
+  validTo?: string;
+  hasPrivateKey?: boolean;
+  error?: string;
+};
+
 export type NfseNationalIssueConfig = {
   environment: NfseNationalEnvironment;
   municipalCode: string;
@@ -33,25 +46,139 @@ export type NfseNationalIssueConfig = {
   certPassphrase: string;
 };
 
+type NfseNationalIssueConfigOverrides = {
+  municipalCode?: string;
+  serviceCode?: string;
+};
+
+export type NfseEmissionModeSummary = {
+  assisted: {
+    available: true;
+    loginUrl: string;
+    issueUrl: string;
+    helper: string;
+  };
+  automatic: {
+    available: boolean;
+    helper: string;
+  };
+};
+
 function normalizeEnvironment(value: string | undefined): NfseNationalEnvironment {
   return value === "production" ? "production" : "restricted";
+}
+
+function getCertificateSource() {
+  const certPfxBase64 = process.env.NFSE_NATIONAL_CERT_PFX_BASE64?.trim();
+  const certPfxPath = process.env.NFSE_NATIONAL_CERT_PFX_PATH?.trim();
+
+  if (certPfxBase64) {
+    return {
+      source: "base64" as const,
+      value: certPfxBase64,
+    };
+  }
+
+  if (certPfxPath) {
+    return {
+      source: "path" as const,
+      value: certPfxPath,
+    };
+  }
+
+  return null;
+}
+
+async function resolveCertificatePfxBase64() {
+  const source = getCertificateSource();
+
+  if (!source) {
+    return null;
+  }
+
+  if (source.source === "base64") {
+    return source.value;
+  }
+
+  const fileBuffer = await readFile(source.value);
+  return fileBuffer.toString("base64");
+}
+
+export function getNfseNationalPortalUrls() {
+  return {
+    loginUrl: "https://www.nfse.gov.br/EmissorNacional/Login/Index",
+    issueUrl: "https://www.nfse.gov.br/EmissorNacional",
+  };
+}
+
+export function getNfseEmissionModeSummary(): NfseEmissionModeSummary {
+  const portal = getNfseNationalPortalUrls();
+  const status = getNfseNationalIntegrationStatus();
+
+  return {
+    assisted: {
+      available: true,
+      loginUrl: portal.loginUrl,
+      issueUrl: portal.issueUrl,
+      helper:
+        "Sem certificado, o cliente ainda pode entrar no portal oficial com gov.br, usuario/senha ou certificado e concluir a emissao manualmente.",
+    },
+    automatic: {
+      available: status.ready,
+      helper: status.ready
+        ? "Certificado e parametros fiscais configurados para tentar emissao automatica pela API oficial."
+        : "A emissao automatica fica disponivel quando houver certificado digital e parametros oficiais configurados.",
+    },
+  };
+}
+
+export async function inspectNfseNationalCertificate(): Promise<NfseNationalCertificateInspection> {
+  const certPassphrase = process.env.NFSE_NATIONAL_CERT_PASSPHRASE?.trim();
+  const certPfxBase64 = await resolveCertificatePfxBase64();
+
+  if (!certPfxBase64 || !certPassphrase) {
+    return {
+      ok: false,
+      error: "Certificado ou senha ainda não configurados para inspeção local.",
+    };
+  }
+
+  try {
+    const certificate = extractCertificateMaterialFromPfx(certPfxBase64, certPassphrase);
+    const body = certificate.certificatePem
+      .replace("-----BEGIN CERTIFICATE-----", "")
+      .replace("-----END CERTIFICATE-----", "")
+      .replace(/\r?\n/g, "");
+    const x509 = new crypto.X509Certificate(Buffer.from(body, "base64"));
+
+    return {
+      ok: true,
+      subject: x509.subject,
+      issuer: x509.issuer,
+      validFrom: x509.validFrom,
+      validTo: x509.validTo,
+      hasPrivateKey: !!certificate.privateKeyPem,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Falha ao inspecionar certificado da NFS-e Nacional.",
+    };
+  }
 }
 
 export function getNfseNationalIntegrationStatus(): NfseNationalIntegrationStatus {
   const enabled = process.env.NFSE_NATIONAL_ENABLED === "true";
   const environment = normalizeEnvironment(process.env.NFSE_NATIONAL_ENVIRONMENT);
   const municipalCode = process.env.NFSE_NATIONAL_MUNICIPAL_CODE?.trim();
-  const certPfxBase64 = process.env.NFSE_NATIONAL_CERT_PFX_BASE64?.trim();
+  const certificate = getCertificateSource();
   const certPassphrase = process.env.NFSE_NATIONAL_CERT_PASSPHRASE?.trim();
-  const serviceCode = process.env.NFSE_NATIONAL_SERVICE_CODE?.trim();
   const series = process.env.NFSE_NATIONAL_SERIES?.trim();
 
   const missing = [
     !enabled ? "NFSE_NATIONAL_ENABLED" : null,
-    !municipalCode ? "NFSE_NATIONAL_MUNICIPAL_CODE" : null,
-    !serviceCode ? "NFSE_NATIONAL_SERVICE_CODE" : null,
     !series ? "NFSE_NATIONAL_SERIES" : null,
-    !certPfxBase64 ? "NFSE_NATIONAL_CERT_PFX_BASE64" : null,
+    !certificate ? "NFSE_NATIONAL_CERT_PFX_BASE64 ou NFSE_NATIONAL_CERT_PFX_PATH" : null,
     !certPassphrase ? "NFSE_NATIONAL_CERT_PASSPHRASE" : null,
   ].filter((item): item is string => !!item);
 
@@ -59,7 +186,8 @@ export function getNfseNationalIntegrationStatus(): NfseNationalIntegrationStatu
     enabled,
     environment,
     municipalCode,
-    hasCertificate: !!certPfxBase64,
+    hasCertificate: !!certificate,
+    certificateSource: certificate?.source,
     ready: enabled && missing.length === 0,
     missing,
     helper:
@@ -69,20 +197,27 @@ export function getNfseNationalIntegrationStatus(): NfseNationalIntegrationStatu
   };
 }
 
-export function getNfseNationalIssueConfig(): NfseNationalIssueConfig {
+export async function getNfseNationalIssueConfig(overrides?: NfseNationalIssueConfigOverrides): Promise<NfseNationalIssueConfig> {
   const status = getNfseNationalIntegrationStatus();
-  const certPfxBase64 = process.env.NFSE_NATIONAL_CERT_PFX_BASE64?.trim();
   const certPassphrase = process.env.NFSE_NATIONAL_CERT_PASSPHRASE?.trim();
-  const serviceCode = process.env.NFSE_NATIONAL_SERVICE_CODE?.trim();
+  const serviceCode = overrides?.serviceCode?.trim() || process.env.NFSE_NATIONAL_SERVICE_CODE?.trim();
   const series = process.env.NFSE_NATIONAL_SERIES?.trim();
+  const certPfxBase64 = await resolveCertificatePfxBase64();
+  const municipalCode = overrides?.municipalCode?.trim() || status.municipalCode;
 
-  if (!status.ready || !status.municipalCode || !certPfxBase64 || !certPassphrase || !serviceCode || !series) {
-    throw new Error(`Integração NFS-e Nacional incompleta. Pendências: ${status.missing.join(", ") || "revisar variáveis de ambiente"}.`);
+  if (!status.ready || !municipalCode || !certPfxBase64 || !certPassphrase || !serviceCode || !series) {
+    const dynamicMissing = [
+      ...status.missing,
+      !municipalCode ? "codigo IBGE do municipio emissor" : null,
+      !serviceCode ? "codigo do servico da emissao" : null,
+    ].filter((item): item is string => !!item);
+
+    throw new Error(`Integração NFS-e Nacional incompleta. Pendências: ${dynamicMissing.join(", ") || "revisar variáveis de ambiente"}.`);
   }
 
   return {
     environment: status.environment,
-    municipalCode: status.municipalCode,
+    municipalCode,
     serviceCode,
     series,
     requestTimeoutMs: Number(process.env.NFSE_NATIONAL_TIMEOUT_MS || "15000"),
@@ -91,8 +226,11 @@ export function getNfseNationalIssueConfig(): NfseNationalIssueConfig {
   };
 }
 
-export function buildSignedDpsPayload(input: Omit<NfseNationalDpsBuildInput, "environment" | "municipalCode" | "serviceCode" | "series">) {
-  const config = getNfseNationalIssueConfig();
+export async function buildSignedDpsPayload(
+  input: Omit<NfseNationalDpsBuildInput, "environment" | "municipalCode" | "serviceCode" | "series">,
+  overrides?: NfseNationalIssueConfigOverrides,
+) {
+  const config = await getNfseNationalIssueConfig(overrides);
   const certificate = extractCertificateMaterialFromPfx(config.certPfxBase64, config.certPassphrase);
 
   return buildSignedNfseNationalDpsXml(
@@ -107,49 +245,59 @@ export function buildSignedDpsPayload(input: Omit<NfseNationalDpsBuildInput, "en
   );
 }
 
-export async function issueSignedNfsePayload(xmlPayload: string) {
-  const config = getNfseNationalIssueConfig();
+export async function issueSignedNfsePayload(xmlPayload: string, overrides?: NfseNationalIssueConfigOverrides) {
+  const config = await getNfseNationalIssueConfig(overrides);
+  const certificate = extractCertificateMaterialFromPfx(config.certPfxBase64, config.certPassphrase);
   const client = createNfseNationalClient({
     environment: config.environment,
     certPfxBase64: config.certPfxBase64,
     certPassphrase: config.certPassphrase,
+    certificatePem: certificate.certificatePem,
+    privateKeyPem: certificate.privateKeyPem,
     requestTimeoutMs: config.requestTimeoutMs,
   });
 
   return client.issueNfse(xmlPayload);
 }
 
-export async function testNfseNationalConnectivity(): Promise<NfseNationalConnectivityResult> {
+export async function testNfseNationalConnectivity(municipalCodeOverride?: string): Promise<NfseNationalConnectivityResult> {
   const status = getNfseNationalIntegrationStatus();
+  const municipalCode = municipalCodeOverride?.trim() || status.municipalCode;
 
-  if (!status.ready || !status.municipalCode) {
+  if (!status.ready || !municipalCode) {
     return {
       ok: false,
       target: "parametros_municipais/{codigoMunicipio}/convenio",
-      error: `Integração incompleta. Pendências: ${status.missing.join(", ") || "NFSE_NATIONAL_ENABLED"}.`,
+      error: `Integração incompleta. Pendências: ${[...status.missing, !municipalCode ? "codigo IBGE do municipio emissor" : null].filter(Boolean).join(", ") || "NFSE_NATIONAL_ENABLED"}.`,
     };
   }
 
   try {
+    const certPfxBase64 = await resolveCertificatePfxBase64();
+    const certificate = certPfxBase64 && process.env.NFSE_NATIONAL_CERT_PASSPHRASE
+      ? extractCertificateMaterialFromPfx(certPfxBase64, process.env.NFSE_NATIONAL_CERT_PASSPHRASE)
+      : null;
     const client = createNfseNationalClient({
       environment: status.environment,
-      certPfxBase64: process.env.NFSE_NATIONAL_CERT_PFX_BASE64,
+      certPfxBase64: certPfxBase64 || undefined,
       certPassphrase: process.env.NFSE_NATIONAL_CERT_PASSPHRASE,
+      certificatePem: certificate?.certificatePem,
+      privateKeyPem: certificate?.privateKeyPem,
       requestTimeoutMs: Number(process.env.NFSE_NATIONAL_TIMEOUT_MS || "15000"),
     });
 
-    const response = await client.getMunicipalAgreement(status.municipalCode);
+    const response = await client.getMunicipalAgreement(municipalCode);
 
     return {
       ok: response.status >= 200 && response.status < 300,
-      target: `/parametros_municipais/${status.municipalCode}/convenio`,
+      target: `/parametros_municipais/${municipalCode}/convenio`,
       status: response.status,
       snippet: response.body.slice(0, 280),
     };
   } catch (error) {
     return {
       ok: false,
-      target: `/parametros_municipais/${status.municipalCode}/convenio`,
+      target: `/parametros_municipais/${municipalCode}/convenio`,
       error: error instanceof Error ? error.message : "Falha desconhecida ao testar a integração oficial.",
     };
   }

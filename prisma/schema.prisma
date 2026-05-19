@@ -101,7 +101,9 @@ model Company {
   document              String    @unique
   city                  String?
   state                 String?
+  municipalCode         String?
   serviceDescription    String?
+  defaultFiscalServiceCode String?
   defaultPixKey         String?
   defaultPaymentMessage String?
   createdAt             DateTime  @default(now())

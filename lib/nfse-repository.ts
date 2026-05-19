@@ -8,6 +8,7 @@ import { formatCurrency, parseCurrencyToNumber } from "@/lib/demo-data-codecs";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { prisma } from "@/lib/prisma";
 import { readDemoWorkspaceData, writeDemoWorkspaceData } from "@/lib/demo-store";
+import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { buildSignedDpsPayload, issueSignedNfsePayload } from "@/lib/nfse-national-provider";
 import type { Charge, DemoWorkspaceData, NfseDocument, Order, Quote } from "@/lib/types";
@@ -22,6 +23,8 @@ export type NfseNationalIssuePreview = {
   ready: boolean;
   helper: string;
   missingFields: string[];
+  municipalCode?: string;
+  serviceCode?: string;
   dpsId?: string;
   digest?: string;
   xmlPreview?: string;
@@ -31,6 +34,10 @@ type QuickNfseDraftInput = {
   lookup: string;
   amount: string;
   serviceDescription: string;
+};
+
+type NfseIssueOptions = {
+  serviceCode?: string;
 };
 
 function formatIssuedAt(value: Date | string) {
@@ -461,6 +468,18 @@ export async function getFiscalSetupReadiness(): Promise<FiscalReadinessSummary>
 export async function getNfseNationalIssuePreview(id: string): Promise<NfseNationalIssuePreview | null> {
   const readiness = await getFiscalSetupReadiness();
   const setup = await getWorkspaceSetup();
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const municipalCode = setup.municipalCode?.trim();
+  const defaultServiceCode = setup.defaultFiscalServiceCode?.trim() || process.env.NFSE_NATIONAL_SERVICE_CODE?.trim() || "";
+
+  if (municipalityStatus && !municipalityStatus.aderenteEmissorNacional) {
+    return {
+      ready: false,
+      helper: "Seu município de estabelecimento ainda não possui convênio ativo para emissão pública no Emissor Nacional.",
+      missingFields: ["municipio habilitado no emissor nacional"],
+      municipalCode,
+    };
+  }
 
   if (isLocalDataMode()) {
     const data = await readDemoWorkspaceData();
@@ -473,7 +492,10 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
     const customer = data.customers.find((item) => item.name === document.customer);
     const missingFields = [
       ...readiness.missingFields,
+      !municipalCode ? "codigo IBGE do municipio emissor" : null,
+      !defaultServiceCode ? "codigo do servico padrao" : null,
       !normalizeDocumentDigits(customer?.document).length ? "documento do cliente" : null,
+      municipalityStatus && !municipalityStatus.aderenteEmissorNacional ? "municipio habilitado no emissor nacional" : null,
     ].filter((item): item is string => !!item);
 
     if (missingFields.length > 0) {
@@ -484,7 +506,7 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
       };
     }
 
-    const signed = buildSignedDpsPayload({
+    const signed = await buildSignedDpsPayload({
       issuer: {
         name: setup.legalName || setup.tradeName,
         document: setup.document,
@@ -502,12 +524,17 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
       competenceDate: new Date(),
       issueDate: new Date(),
       number: deriveDpsNumber(document.id, new Date()),
+    }, {
+      municipalCode,
+      serviceCode: document.serviceCode || defaultServiceCode,
     });
 
     return {
       ready: true,
       helper: "Rascunho preparado para envio como DPS assinada ao ambiente nacional.",
       missingFields: [],
+      municipalCode,
+      serviceCode: document.serviceCode || defaultServiceCode,
       dpsId: signed.dpsId,
       digest: signed.digest,
       xmlPreview: summarizeXml(signed.xml),
@@ -533,7 +560,10 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
 
   const missingFields = [
     ...readiness.missingFields,
+    !municipalCode ? "codigo IBGE do municipio emissor" : null,
+    !defaultServiceCode ? "codigo do servico padrao" : null,
     !normalizeDocumentDigits(dbDocument.customer.document).length ? "documento do cliente" : null,
+    municipalityStatus && !municipalityStatus.aderenteEmissorNacional ? "municipio habilitado no emissor nacional" : null,
   ].filter((item): item is string => !!item);
 
   if (missingFields.length > 0) {
@@ -544,7 +574,7 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
     };
   }
 
-  const signed = buildSignedDpsPayload({
+  const signed = await buildSignedDpsPayload({
     issuer: {
       name: setup.legalName || setup.tradeName,
       document: setup.document,
@@ -562,19 +592,24 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
     competenceDate: dbDocument.createdAt,
     issueDate: new Date(),
     number: deriveDpsNumber(dbDocument.id, dbDocument.createdAt),
+  }, {
+    municipalCode,
+    serviceCode: defaultServiceCode,
   });
 
   return {
     ready: true,
     helper: "Rascunho preparado para envio como DPS assinada ao ambiente nacional.",
     missingFields: [],
+    municipalCode,
+    serviceCode: defaultServiceCode,
     dpsId: signed.dpsId,
     digest: signed.digest,
     xmlPreview: summarizeXml(signed.xml),
   };
 }
 
-export async function issueNfseNationalDocument(id: string): Promise<NfseDocument | null> {
+export async function issueNfseNationalDocument(id: string, options?: NfseIssueOptions): Promise<NfseDocument | null> {
   const preview = await getNfseNationalIssuePreview(id);
 
   if (!preview) {
@@ -586,6 +621,8 @@ export async function issueNfseNationalDocument(id: string): Promise<NfseDocumen
   }
 
   const setup = await getWorkspaceSetup();
+  const municipalCode = setup.municipalCode?.trim();
+  const serviceCode = options?.serviceCode?.trim() || setup.defaultFiscalServiceCode?.trim() || process.env.NFSE_NATIONAL_SERVICE_CODE?.trim() || "";
 
   if (isLocalDataMode()) {
     const data = await readDemoWorkspaceData();
@@ -596,7 +633,7 @@ export async function issueNfseNationalDocument(id: string): Promise<NfseDocumen
       return updateNfseStatus(id, "Erro", "Cliente local sem documento fiscal para simular a emissão.");
     }
 
-    const signed = buildSignedDpsPayload({
+    const signed = await buildSignedDpsPayload({
       issuer: {
         name: setup.legalName || setup.tradeName,
         document: setup.document,
@@ -614,7 +651,13 @@ export async function issueNfseNationalDocument(id: string): Promise<NfseDocumen
       competenceDate: new Date(),
       issueDate: new Date(),
       number: deriveDpsNumber(id, new Date()),
+    }, {
+      municipalCode,
+      serviceCode,
     });
+
+    document.serviceCode = serviceCode;
+    await writeDemoWorkspaceData(data);
 
     return updateNfseStatus(id, "Emitida", `Simulação local concluída. DPS ${signed.dpsId} preparada para envio real.`);
   }
@@ -637,7 +680,7 @@ export async function issueNfseNationalDocument(id: string): Promise<NfseDocumen
   }
 
   try {
-    const signed = buildSignedDpsPayload({
+    const signed = await buildSignedDpsPayload({
       issuer: {
         name: setup.legalName || setup.tradeName,
         document: setup.document,
@@ -655,9 +698,15 @@ export async function issueNfseNationalDocument(id: string): Promise<NfseDocumen
       competenceDate: dbDocument.createdAt,
       issueDate: new Date(),
       number: deriveDpsNumber(dbDocument.id, dbDocument.createdAt),
+    }, {
+      municipalCode,
+      serviceCode,
     });
 
-    const response = await issueSignedNfsePayload(signed.xml);
+    const response = await issueSignedNfsePayload(signed.xml, {
+      municipalCode,
+      serviceCode,
+    });
 
     if (response.status < 200 || response.status >= 300) {
       return updateNfseStatus(
