@@ -59,14 +59,19 @@ export async function getDashboardStats(): Promise<Stat[]> {
       label: "Recebimentos pendentes",
       value: formatCurrency(openAmount),
       helper:
-        overdueCharges.length > 0
-          ? `${overdueCharges.length} cobranças já estão atrasadas e puxam a fila`
-          : followUpSummary.helper,
+        followUpSummary.slaOverdueCount > 0
+          ? `${followUpSummary.slaOverdueCount} follow-up(s) financeiros já estão com SLA vencido`
+          : overdueCharges.length > 0
+            ? `${overdueCharges.length} cobranças já estão atrasadas e puxam a fila`
+            : followUpSummary.helper,
     },
     {
       label: "Operação em andamento",
       value: String(activeOrders.length),
-      helper: `${recurringCustomers} clientes recorrentes sustentam base de previsibilidade`,
+      helper:
+        followUpSummary.waitingCount > 0
+          ? `${followUpSummary.waitingCount} cobranças estão aguardando retorno do cliente`
+          : `${recurringCustomers} clientes recorrentes sustentam base de previsibilidade`,
     },
   ];
 }
@@ -156,10 +161,12 @@ export async function getTodayAgenda(): Promise<AgendaItem[]> {
   ]);
 
   const prioritizedCharges = sortChargesByPriority(charges.filter((charge) => charge.status !== "Pago"));
-  const followUpSummary = summarizeChargeFollowUp(buildChargeFollowUpActions(charges));
+  const followUpActions = buildChargeFollowUpActions(charges);
+  const followUpSummary = summarizeChargeFollowUp(followUpActions);
   const overdueCharges = prioritizedCharges.filter((charge) => getChargeUrgency(charge) === "overdue");
   const dueTodayCharges = prioritizedCharges.filter((charge) => getChargeUrgency(charge) === "today");
   const nextCharge = prioritizedCharges.find((charge) => getChargeUrgency(charge) === "upcoming");
+  const nextAutomaticFollowUp = followUpActions[0];
   const pendingQuotes = quotes.filter((quote) => quote.status === "Follow-up" || quote.status === "Enviado");
   const approvedQuotes = quotes.filter((quote) => quote.status === "Aprovado");
   const ongoingOrders = orders.filter((order) => order.status === "Pendente" || order.status === "Agendado");
@@ -172,13 +179,17 @@ export async function getTodayAgenda(): Promise<AgendaItem[]> {
           ? `Resolver ${formatCountLabel(overdueCharges.length, "cobrança", "cobranças")} atrasadas`
           : `Cobrar ${formatCountLabel(dueTodayCharges.length, "cliente", "clientes")} com vencimento imediato`,
       description:
-        overdueCharges.length > 0
-          ? "As cobranças com vencimento passado precisam aparecer antes de qualquer nova rotina comercial."
-          : dueTodayCharges.length > 0
-            ? "As cobranças que vencem hoje devem virar prioridade operacional do financeiro."
-            : nextCharge
-              ? `A próxima cobrança com data real é de ${nextCharge.customer}, então o caixa já tem fila previsível.`
-              : followUpSummary.helper,
+        followUpSummary.slaOverdueCount > 0
+          ? "Existe follow-up financeiro com SLA vencido e ele precisa entrar antes do restante da operação."
+          : overdueCharges.length > 0
+            ? "As cobranças com vencimento passado precisam aparecer antes de qualquer nova rotina comercial."
+            : dueTodayCharges.length > 0
+              ? "As cobranças que vencem hoje devem virar prioridade operacional do financeiro."
+              : nextAutomaticFollowUp
+                ? `${nextAutomaticFollowUp.customer} já está no topo da cadência automática de follow-up.`
+                : nextCharge
+                  ? `A próxima cobrança com data real é de ${nextCharge.customer}, então o caixa já tem fila previsível.`
+                  : followUpSummary.helper,
     },
     {
       title: `Retomar ${formatCountLabel(pendingQuotes.length, "orçamento", "orçamentos")} em aberto`,

@@ -19,7 +19,7 @@ Consolidar a persistencia real usando Prisma, sem refazer a interface.
 1. manter fallback local enquanto o banco nao estiver configurado
 2. executar `prisma db push` no ambiente com banco para aplicar `passwordHash`
 3. aproximar agenda e insights do dashboard do futuro fluxo de `NFS-e`
-4. transformar o historico de follow-up financeiro em lembretes e proxima acao automatica
+4. transformar a fila automatica de follow-up em automacoes reais de lembrete e notificacao
 5. expandir auditoria para pedidos e futuras operacoes fiscais
 
 Observacao:
@@ -39,7 +39,8 @@ Observacao:
 - a fila de cobrancas agora ja permite agir rapido em atraso, vencimento do dia e reagendamento
 - a auditoria de cobrancas ja entra no modo `database`
 - o historico de follow-up financeiro agora ja fica persistido por cobranca
-- o proximo alvo mais forte agora e transformar esse historico em lembrete, SLA e fila automatica
+- SLA, proximo contato e fila automatica de follow-up financeiro agora ja existem
+- o proximo alvo mais forte agora e ligar essa fila a automacoes reais de lembrete
 
 ## Regra importante
 

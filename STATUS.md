@@ -55,6 +55,8 @@
 - cobrancas em modo `database` agora registram auditoria em criacao, atualizacao e remocao
 - cobrancas agora carregam historico de follow-up financeiro com canal, retorno e observacao
 - o painel de cobrancas agora permite registrar novos contatos financeiros por item
+- o follow-up financeiro agora calcula SLA, proximo contato e prioridade automatica por cobranca
+- dashboard e cobrancas agora usam a mesma fila automatica de follow-up financeiro
 - endpoint `/api/health` criado
 - schema Prisma inicial criado em `prisma/schema.prisma`
 - `.env.example` e scripts de banco adicionados
@@ -119,4 +121,5 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 - a fila financeira agora permite acao rapida direto do painel de cobrancas
 - a auditoria de cobrancas depende do modo `database`, mas ja esta encaixada no fluxo
 - o historico de follow-up financeiro agora persiste no metadata da cobranca sem exigir migration imediata
+- a cadencia de follow-up agora nasce do vencimento e do ultimo retorno do cliente
 - o workspace local serve como ambiente de produto enquanto o banco real nao entra
