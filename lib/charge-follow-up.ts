@@ -39,6 +39,22 @@ export type ChargeFollowUpSummary = {
   helper: string;
 };
 
+export type ChargeReminderTask = {
+  id: string;
+  chargeId: string;
+  customer: string;
+  amount: string;
+  channel: "WhatsApp" | "Ligacao" | "Email" | "Pix reenviado";
+  title: string;
+  reason: string;
+  message: string;
+  suggestedOutcome: "Sem resposta" | "Prometeu pagar";
+  slaLabel: string;
+  nextFollowUpLabel: string;
+  deliveryLabel: string | undefined;
+  deliveryUrl: string | undefined;
+};
+
 function diffInDays(left: Date, right: Date) {
   const millisecondsPerDay = 1000 * 60 * 60 * 24;
   const leftDate = new Date(left);
@@ -218,6 +234,140 @@ function buildSuggestedMessage(charge: Charge, urgency: ChargeUrgency, now = new
     case "paid":
       return `Pagamento de ${charge.amount} recebido de ${charge.customer}. Fluxo pronto para seguir para conciliação ou fiscal.`;
   }
+}
+
+function inferReminderChannel(charge: Charge, action: ChargeFollowUpAction) {
+  const source = charge.source.toLowerCase();
+
+  if (source.includes("pix") && (action.slaStatus === "overdue" || action.slaStatus === "today")) {
+    return "Pix reenviado" as const;
+  }
+
+  if (source.includes("email")) {
+    return "Email" as const;
+  }
+
+  if (action.slaStatus === "waiting") {
+    return "Ligacao" as const;
+  }
+
+  return "WhatsApp" as const;
+}
+
+function buildReminderReason(action: ChargeFollowUpAction) {
+  switch (action.slaStatus) {
+    case "overdue":
+      return "Lembrete em atraso e com SLA vencido.";
+    case "today":
+      return "Contato precisa acontecer hoje para não escorregar o caixa.";
+    case "scheduled":
+      return "Contato preventivo para manter a cobrança no radar.";
+    case "waiting":
+      return "Último retorno pede conferência antes de insistir no mesmo canal.";
+    case "settled":
+      return "Cobrança sem necessidade de lembrete.";
+  }
+}
+
+function buildReminderTitle(charge: Charge, action: ChargeFollowUpAction) {
+  switch (action.slaStatus) {
+    case "overdue":
+      return `Cobrar ${charge.customer} agora`;
+    case "today":
+      return `Lembrar ${charge.customer} hoje`;
+    case "scheduled":
+      return `Programar próximo toque com ${charge.customer}`;
+    case "waiting":
+      return `Checar retorno de ${charge.customer}`;
+    case "settled":
+      return `Sem lembrete para ${charge.customer}`;
+  }
+}
+
+function buildReminderMessage(charge: Charge, action: ChargeFollowUpAction, channel: ChargeReminderTask["channel"]) {
+  if (channel === "Pix reenviado") {
+    return `Oi, ${charge.customer}. Reenviei o Pix da cobrança de ${charge.amount}. Se preferir, me confirma o horário em que consegue regularizar para eu acompanhar por aqui.`;
+  }
+
+  if (channel === "Ligacao") {
+    return `Ligar para ${charge.customer} e confirmar o melhor plano para a cobrança de ${charge.amount}, registrando a resposta ainda no painel.`;
+  }
+
+  if (channel === "Email") {
+    return `Olá, ${charge.customer}. Reforço a cobrança de ${charge.amount}. ${action.suggestedMessage.replace(/^Oi,\s[^.]+\.\s?/u, "")}`;
+  }
+
+  return action.suggestedMessage;
+}
+
+function buildReminderDelivery(task: {
+  channel: ChargeReminderTask["channel"];
+  customer: string;
+  message: string;
+  amount: string;
+}) {
+  switch (task.channel) {
+    case "WhatsApp":
+    case "Pix reenviado":
+      return {
+        deliveryLabel: task.channel === "Pix reenviado" ? "Abrir WhatsApp com Pix" : "Abrir WhatsApp",
+        deliveryUrl: `https://wa.me/?text=${encodeURIComponent(task.message)}`,
+      };
+    case "Email":
+      return {
+        deliveryLabel: "Abrir email",
+        deliveryUrl: `mailto:?subject=${encodeURIComponent(`Cobranca ${task.amount} - ${task.customer}`)}&body=${encodeURIComponent(task.message)}`,
+      };
+    case "Ligacao":
+      return {
+        deliveryLabel: undefined,
+        deliveryUrl: undefined,
+      };
+  }
+}
+
+export function buildChargeReminderQueue(charges: Charge[], now = new Date()): ChargeReminderTask[] {
+  const actions = buildChargeFollowUpActions(charges, now);
+  const chargeMap = new Map(charges.map((charge) => [charge.id, charge]));
+
+  return actions
+    .filter((action) => action.slaStatus !== "settled")
+    .filter((action) => action.slaStatus !== "scheduled" || action.nextFollowUpDate)
+    .slice(0, 6)
+    .reduce<ChargeReminderTask[]>((tasks, action) => {
+      const charge = chargeMap.get(action.id);
+
+      if (!charge) {
+        return tasks;
+      }
+
+      const channel = inferReminderChannel(charge, action);
+      const message = buildReminderMessage(charge, action, channel);
+      const delivery = buildReminderDelivery({
+        channel,
+        customer: charge.customer,
+        message,
+        amount: charge.amount,
+      });
+
+      tasks.push({
+        id: `${action.id}:${channel}`,
+        chargeId: action.id,
+        customer: charge.customer,
+        amount: charge.amount,
+        channel,
+        title: buildReminderTitle(charge, action),
+        reason: buildReminderReason(action),
+        message,
+        suggestedOutcome: action.slaStatus === "waiting" ? "Prometeu pagar" : "Sem resposta",
+        slaLabel: action.slaLabel,
+        nextFollowUpLabel: action.nextFollowUpLabel,
+        deliveryLabel: delivery.deliveryLabel,
+        deliveryUrl: delivery.deliveryUrl,
+      });
+
+      return tasks;
+    }, []);
 }
 
 function buildRecommendedAction(charge: Charge, urgency: ChargeUrgency) {

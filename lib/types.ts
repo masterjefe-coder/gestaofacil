@@ -66,6 +66,7 @@ export type PipelineColumn = {
 export type Customer = {
   id: string;
   name: string;
+  document?: string;
   segment: string;
   city: string;
   status: "Ativo" | "Aguardando retorno" | "Recorrente";
@@ -76,6 +77,7 @@ export type Customer = {
 
 export type CustomerInput = {
   name: string;
+  document?: string;
   segment: string;
   city: string;
   status: Customer["status"];
@@ -148,6 +150,19 @@ export type ChargeInput = {
   source: string;
 };
 
+export type NfseDocument = {
+  id: string;
+  customer: string;
+  orderId: string;
+  serviceAmount: string;
+  status: "Rascunho" | "Pronta" | "Emitida" | "Erro" | "Cancelada";
+  serviceDescription: string;
+  verificationCode?: string;
+  externalId?: string;
+  issuedAt?: string;
+  errorMessage?: string;
+};
+
 export type DemoWorkspaceData = {
   workspace: WorkspaceProfile;
   company: CompanyProfile;
@@ -155,4 +170,5 @@ export type DemoWorkspaceData = {
   quotes: Quote[];
   orders: Order[];
   charges: Charge[];
+  nfseDocuments: NfseDocument[];
 };

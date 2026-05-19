@@ -70,12 +70,19 @@ export async function ensureDemoCommerceSeeded() {
   const state = await ensureDemoWorkspaceRecord();
   const workspaceId = state.workspace.id;
 
-  const [customerCount, quoteCount, orderCount, chargeCount] = await Promise.all([
+  const { nfseCount, customerCount, quoteCount, orderCount, chargeCount } = await Promise.all([
+    prisma.nfseDocument.count({ where: { workspaceId } }),
     prisma.customer.count({ where: { workspaceId } }),
     prisma.quote.count({ where: { workspaceId } }),
     prisma.order.count({ where: { workspaceId } }),
     prisma.charge.count({ where: { workspaceId } }),
-  ]);
+  ]).then(([nfseCount, customerCount, quoteCount, orderCount, chargeCount]) => ({
+    nfseCount,
+    customerCount,
+    quoteCount,
+    orderCount,
+    chargeCount,
+  }));
 
   if (customerCount === 0) {
     for (const customer of state.localData.customers) {
@@ -247,6 +254,41 @@ export async function ensureDemoCommerceSeeded() {
           paymentMethod: inferPaymentMethod(charge.source),
           pixCode: encodeChargeMeta(charge),
           dueDate: charge.dueDate ? new Date(`${charge.dueDate}T12:00:00`) : inferDueDateFromLabel(charge.dueLabel),
+        },
+      });
+    }
+  }
+
+  if (nfseCount === 0) {
+    for (const document of state.localData.nfseDocuments || []) {
+      const customer = customersByName.get(document.customer);
+      const order = orders.find((item) => item.id === document.orderId);
+
+      if (!customer || !order) {
+        continue;
+      }
+
+      await prisma.nfseDocument.create({
+        data: {
+          id: document.id,
+          workspaceId,
+          customerId: customer.id,
+          orderId: order.id,
+          serviceAmount: parseCurrencyToNumber(document.serviceAmount),
+          status:
+            document.status === "Pronta"
+              ? "READY"
+              : document.status === "Emitida"
+                ? "ISSUED"
+                : document.status === "Erro"
+                  ? "ERROR"
+                  : document.status === "Cancelada"
+                    ? "CANCELED"
+                    : "DRAFT",
+          verificationCode: document.verificationCode || null,
+          externalId: document.externalId || null,
+          issuedAt: document.issuedAt ? new Date(document.issuedAt) : null,
+          errorMessage: document.errorMessage || null,
         },
       });
     }

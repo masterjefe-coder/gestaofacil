@@ -119,6 +119,27 @@ export async function addChargeFollowUpAction(formData: FormData) {
   revalidateBillingViews();
 }
 
+export async function runChargeReminderAction(formData: FormData) {
+  const id = getString(formData, "id");
+  const channel = getString(formData, "channel") as ChargeFollowUpChannel;
+  const outcome = (getString(formData, "outcome") as ChargeFollowUpOutcome) || "Sem resposta";
+  const message = getString(formData, "message");
+  const reason = getString(formData, "reason");
+
+  if (!id || !channel) {
+    return;
+  }
+
+  const note = [reason, message].filter(Boolean).join(" ");
+
+  await addChargeFollowUp(id, {
+    channel,
+    outcome,
+    note: note || "Lembrete operacional registrado na fila automática.",
+  });
+  revalidateBillingViews();
+}
+
 export async function deleteChargeAction(formData: FormData) {
   const id = getString(formData, "id");
 

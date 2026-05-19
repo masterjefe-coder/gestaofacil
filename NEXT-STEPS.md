@@ -19,7 +19,7 @@ Consolidar a persistencia real usando Prisma, sem refazer a interface.
 1. manter fallback local enquanto o banco nao estiver configurado
 2. executar `prisma db push` no ambiente com banco para aplicar `passwordHash`
 3. aproximar agenda e insights do dashboard do futuro fluxo de `NFS-e`
-4. transformar a fila automatica de follow-up em automacoes reais de lembrete e notificacao
+4. conectar canais externos de cobranca e emissao fiscal a integracoes reais
 5. expandir auditoria para pedidos e futuras operacoes fiscais
 
 Observacao:
@@ -40,7 +40,14 @@ Observacao:
 - a auditoria de cobrancas ja entra no modo `database`
 - o historico de follow-up financeiro agora ja fica persistido por cobranca
 - SLA, proximo contato e fila automatica de follow-up financeiro agora ja existem
-- o proximo alvo mais forte agora e ligar essa fila a automacoes reais de lembrete
+- a fila automatica agora ja gera lembretes operacionais com mensagem pronta e registro de envio
+- a fila automatica agora ja abre WhatsApp e email com mensagem pronta
+- o modulo fiscal inicial agora ja existe com fila de NFS-e e controle de status
+- o billing agora ja empurra recebimentos pagos para o proximo passo fiscal
+- o setup agora ja mostra quando a empresa ainda nao tem base suficiente para emissao
+- o fiscal agora ja tem base para emissao rapida por nome ou CPF/CNPJ
+- a integracao oficial da NFS-e Nacional agora ja tem client, envs, assinatura de DPS e tentativa de emissao pelo endpoint oficial
+- o proximo alvo mais forte agora e validar o leiaute DPS com um certificado real e ajustar os campos fiscais finos do primeiro municipio piloto
 
 ## Regra importante
 

@@ -7,9 +7,12 @@ import {
   markChargeAsDueTodayAction,
   markChargeAsPaidAction,
   postponeChargeAction,
+  runChargeReminderAction,
 } from "@/app/dashboard/billing/actions";
-import { buildChargeFollowUpActions, summarizeChargeFollowUp } from "@/lib/charge-follow-up";
+import { createNfseDraftAction } from "@/app/dashboard/fiscal/actions";
+import { buildChargeFollowUpActions, buildChargeReminderQueue, summarizeChargeFollowUp } from "@/lib/charge-follow-up";
 import { getChargeUrgency, getChargeUrgencyLabel, sortChargesByPriority } from "@/lib/charge-priority";
+import { listNfseDocuments } from "@/lib/nfse-repository";
 import { billingMoments } from "@/lib/site-data";
 import { listCharges } from "@/lib/charge-repository";
 import { listQuotes } from "@/lib/quote-repository";
@@ -30,14 +33,22 @@ function formatFollowUpDate(value: string) {
 }
 
 export default async function BillingPage() {
-  const quotes = await listQuotes();
-  const charges = sortChargesByPriority(await listCharges());
+  const [quotes, loadedCharges, nfseDocuments] = await Promise.all([
+    listQuotes(),
+    listCharges(),
+    listNfseDocuments(),
+  ]);
+  const charges = sortChargesByPriority(loadedCharges);
   const approvedQuotes = quotes.filter((quote) => quote.status === "Aprovado");
   const followUpActions = buildChargeFollowUpActions(charges);
+  const reminderQueue = buildChargeReminderQueue(charges);
   const followUpSummary = summarizeChargeFollowUp(followUpActions);
   const highlightedFollowUps = followUpActions.slice(0, 4);
   const unscheduledCount = followUpActions.filter((action) => action.bucket === "unmapped").length;
   const chargesById = new Map(charges.map((charge) => [charge.id, charge]));
+  const nfseByCustomerAndAmount = new Map(
+    nfseDocuments.map((document) => [`${document.customer}:::${document.serviceAmount}`, document]),
+  );
 
   return (
     <DashboardShell
@@ -170,6 +181,56 @@ export default async function BillingPage() {
       <section className="data-panel">
         <div className="card-header">
           <div>
+            <span className="section-label">Automações do dia</span>
+            <h2>Lembretes prontos para executar na fila financeira</h2>
+          </div>
+        </div>
+
+        {reminderQueue.length > 0 ? (
+          <div className="cards-grid quote-grid">
+            {reminderQueue.map((task) => (
+              <article key={task.id} className="dashboard-card">
+                <span className="dashboard-kicker">{task.channel}</span>
+                <h3>{task.title}</h3>
+                <strong className="quote-amount">{task.amount}</strong>
+                <p>{task.reason}</p>
+                <small className="muted-text">{task.slaLabel}</small>
+                <small className="muted-text">{task.nextFollowUpLabel}</small>
+                <div className="follow-up-entry">
+                  <strong>Mensagem pronta</strong>
+                  <small>{task.message}</small>
+                </div>
+                <div className="dashboard-actions">
+                  {task.deliveryUrl && task.deliveryLabel ? (
+                    <a href={task.deliveryUrl} target="_blank" rel="noreferrer" className="secondary-link">
+                      {task.deliveryLabel}
+                    </a>
+                  ) : null}
+                  <form action={runChargeReminderAction} className="card-action">
+                    <input type="hidden" name="id" value={task.chargeId} />
+                    <input type="hidden" name="channel" value={task.channel} />
+                    <input type="hidden" name="outcome" value={task.suggestedOutcome} />
+                    <input type="hidden" name="reason" value={task.reason} />
+                    <input type="hidden" name="message" value={task.message} />
+                    <button type="submit" className="primary-link">
+                      Registrar envio
+                    </button>
+                  </form>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Sem lembretes pendentes</strong>
+            <span>A fila automática não encontrou nenhum lembrete operacional novo agora.</span>
+          </div>
+        )}
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
             <span className="section-label">Fila de follow-up</span>
             <h2>Cobranças que pedem ação prática agora</h2>
           </div>
@@ -248,6 +309,7 @@ export default async function BillingPage() {
           {charges.map((charge) => (
             (() => {
               const automaticAction = followUpActions.find((action) => action.id === charge.id);
+              const relatedNfse = nfseByCustomerAndAmount.get(`${charge.customer}:::${charge.amount}`);
 
               return (
                 <article key={charge.id} className="dashboard-card">
@@ -269,6 +331,19 @@ export default async function BillingPage() {
                       ? `${charge.followUps.length} follow-up(s) financeiro(s) registrados`
                       : "Nenhum follow-up financeiro registrado ainda"}
                   </small>
+                  {charge.status === "Pago" ? (
+                    relatedNfse ? (
+                      <div className="auth-hint">
+                        <strong>Fiscal em andamento</strong>
+                        <span>NFS-e em status {relatedNfse.status.toLowerCase()} para este recebimento.</span>
+                      </div>
+                    ) : (
+                      <div className="auth-hint">
+                        <strong>Pronta para nota</strong>
+                        <span>Recebimento confirmado e sem rascunho fiscal criado ainda.</span>
+                      </div>
+                    )
+                  ) : null}
                   {charge.status !== "Pago" ? (
                     <div className="dashboard-actions">
                       {getChargeUrgency(charge) !== "today" ? (
@@ -292,6 +367,19 @@ export default async function BillingPage() {
                         </button>
                       </form>
                     </div>
+                  ) : null}
+                  {charge.status === "Pago" && !relatedNfse ? (
+                    <form action={createNfseDraftAction} className="card-action">
+                      <input type="hidden" name="chargeId" value={charge.id} />
+                      <button type="submit" className="primary-link">
+                        Criar rascunho fiscal
+                      </button>
+                    </form>
+                  ) : null}
+                  {charge.status === "Pago" && relatedNfse ? (
+                    <Link href="/dashboard/fiscal" className="secondary-link">
+                      Abrir fila fiscal
+                    </Link>
                   ) : null}
                   <div className="follow-up-block">
                     <strong>Registrar follow-up</strong>

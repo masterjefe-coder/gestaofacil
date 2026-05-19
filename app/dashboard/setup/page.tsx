@@ -12,6 +12,7 @@ import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-sessi
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
+import { getFiscalSetupReadiness } from "@/lib/nfse-repository";
 
 type SetupPageProps = {
   searchParams?: Promise<{
@@ -24,12 +25,13 @@ type SetupPageProps = {
 };
 
 export default async function SetupPage({ searchParams }: SetupPageProps) {
-  const [setup, members, auditEntries, context, params] = await Promise.all([
+  const [setup, members, auditEntries, context, params, fiscalReadiness] = await Promise.all([
     getWorkspaceSetup(),
     listWorkspaceMembers(),
     listAuditEntries(8),
     getCurrentWorkspaceContext(),
     searchParams,
+    getFiscalSetupReadiness(),
   ]);
   const teamCreated = params?.teamCreated === "1";
   const teamUpdated = params?.teamUpdated === "1";
@@ -56,6 +58,13 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <h2>Defina a identidade operacional do negócio</h2>
           </div>
         </div>
+
+        {!fiscalReadiness.ready ? (
+          <div className="auth-hint fiscal-warning">
+            <strong>Fiscal ainda não pronto</strong>
+            <span>{fiscalReadiness.helper}</span>
+          </div>
+        ) : null}
 
         {canManage ? (
           <form action={updateWorkspaceSetupAction} className="inline-form">

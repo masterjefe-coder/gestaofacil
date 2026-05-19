@@ -18,6 +18,7 @@
     {
       "id": "cus_001",
       "name": "Clinica Horizonte",
+      "document": "12.345.678/0001-10",
       "segment": "Clinica pequena",
       "city": "Belo Horizonte",
       "status": "Recorrente",
@@ -28,6 +29,7 @@
     {
       "id": "cus_002",
       "name": "Studio Lume",
+      "document": "48.321.654/0001-22",
       "segment": "Agencia pequena",
       "city": "Sao Paulo",
       "status": "Aguardando retorno",
@@ -38,6 +40,7 @@
     {
       "id": "cus_003",
       "name": "Oficina Ponto Certo",
+      "document": "22.444.888/0001-03",
       "segment": "Assistencia tecnica",
       "city": "Campinas",
       "status": "Ativo",
@@ -48,6 +51,7 @@
     {
       "id": "cus_004",
       "name": "Casa Nobre",
+      "document": "084.512.990-40",
       "segment": "Servico local",
       "city": "Curitiba",
       "status": "Ativo",
@@ -83,6 +87,15 @@
       "status": "Follow-up",
       "dueLabel": "Sem resposta ha 3 dias",
       "summary": "Precisa de mensagem curta com CTA para decisao."
+    },
+    {
+      "id": "quo_nfse_001",
+      "customer": "Clinica Horizonte",
+      "title": "Suporte tecnico recorrente",
+      "amount": "R$ 890",
+      "status": "Aprovado",
+      "dueLabel": "Servico concluido",
+      "summary": "Servico entregue e recebimento confirmado, pronto para nota."
     }
   ],
   "orders": [
@@ -94,6 +107,15 @@
       "status": "Pendente",
       "sourceQuoteId": "quo_002",
       "note": "Pedido gerado a partir de orcamento aprovado."
+    },
+    {
+      "id": "ord_nfse_001",
+      "customer": "Clinica Horizonte",
+      "title": "Suporte tecnico recorrente",
+      "amount": "R$ 890",
+      "status": "Concluido",
+      "sourceQuoteId": "quo_nfse_001",
+      "note": "Servico concluido e pagamento confirmado, pronto para nota."
     }
   ],
   "charges": [
@@ -147,6 +169,16 @@
           "note": "Comprovante recebido e aguardando apenas baixa final."
         }
       ]
+    }
+  ],
+  "nfseDocuments": [
+    {
+      "id": "nfse_001",
+      "customer": "Clinica Horizonte",
+      "orderId": "ord_nfse_001",
+      "serviceAmount": "R$ 890",
+      "status": "Pronta",
+      "serviceDescription": "Suporte tecnico recorrente pronto para emissao fiscal."
     }
   ]
 }

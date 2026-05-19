@@ -20,6 +20,7 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     name?: string;
+    document?: string;
     segment?: string;
     city?: string;
     status?: "Ativo" | "Aguardando retorno" | "Recorrente";
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
 
   const customer = await createCustomer({
     name: body.name,
+    document: body.document || undefined,
     segment: body.segment,
     city: body.city,
     status: body.status || "Ativo",

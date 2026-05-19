@@ -37,6 +37,10 @@ export default async function CustomersPage() {
             <input name="name" type="text" placeholder="Ex.: Oficina Centro Sul" required />
           </label>
           <label>
+            <span>CPF/CNPJ</span>
+            <input name="document" type="text" placeholder="Opcional para emissão rápida" />
+          </label>
+          <label>
             <span>Segmento</span>
             <input name="segment" type="text" placeholder="Ex.: Assistência técnica" required />
           </label>
@@ -87,7 +91,7 @@ export default async function CustomersPage() {
             <article key={customer.id} className="data-table-row">
               <div>
                 <strong>{customer.name}</strong>
-                <small>{customer.city}</small>
+                <small>{customer.document ? `${customer.city} · ${customer.document}` : customer.city}</small>
               </div>
               <span>{customer.segment}</span>
               <span>{customer.lastSale}</span>

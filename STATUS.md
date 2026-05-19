@@ -57,6 +57,15 @@
 - o painel de cobrancas agora permite registrar novos contatos financeiros por item
 - o follow-up financeiro agora calcula SLA, proximo contato e prioridade automatica por cobranca
 - dashboard e cobrancas agora usam a mesma fila automatica de follow-up financeiro
+- cobrancas agora geram fila de lembretes operacionais com canal sugerido e mensagem pronta
+- o painel financeiro agora registra envio de lembrete direto da automacao operacional
+- a fila automatica agora abre WhatsApp e email com mensagem pronta a partir de cada lembrete
+- modulo fiscal inicial em `/dashboard/fiscal` agora organiza rascunhos, prontas, emitidas e erros
+- a fila fiscal agora nasce de recebimentos confirmados e permite criar rascunho de NFS-e
+- cobrancas pagas agora já mostram o próximo passo fiscal direto no painel financeiro
+- o setup e o fiscal agora expõem prontidão fiscal da empresa antes da emissão
+- o fiscal agora já aceita emissão rápida por nome ou CPF/CNPJ para cliente cadastrado
+- o fiscal agora já conhece o ambiente oficial da NFS-e Nacional com configuração por ambiente, assinatura de DPS e teste de conectividade
 - endpoint `/api/health` criado
 - schema Prisma inicial criado em `prisma/schema.prisma`
 - `.env.example` e scripts de banco adicionados
@@ -122,4 +131,6 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 - a auditoria de cobrancas depende do modo `database`, mas ja esta encaixada no fluxo
 - o historico de follow-up financeiro agora persiste no metadata da cobranca sem exigir migration imediata
 - a cadencia de follow-up agora nasce do vencimento e do ultimo retorno do cliente
+- a automacao atual abre canais externos com mensagem pronta, mas ainda nao confirma entrega real por integracao
+- o bloco fiscal atual agora ja prepara DPS assinada e tenta emitir pela SEFIN Nacional, mas ainda depende de alinhamento fino do leiaute/campos por municipio e certificado real do emitente
 - o workspace local serve como ambiente de produto enquanto o banco real nao entra

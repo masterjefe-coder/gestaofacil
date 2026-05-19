@@ -61,6 +61,7 @@ export async function listCustomers(): Promise<Customer[]> {
     return {
       id: customer.id,
       name: customer.name,
+      document: customer.document || undefined,
       segment: meta.segment,
       city: customer.city || "Sem cidade",
       status: meta.status,
@@ -77,6 +78,7 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
     const customer: Customer = {
       id: randomUUID(),
       name: input.name,
+      document: input.document,
       segment: input.segment,
       city: input.city,
       status: input.status,
@@ -96,6 +98,7 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
     data: {
       workspaceId: workspace.id,
       name: input.name,
+      document: input.document,
       city: input.city,
       notes: encodeCustomerNotes(input),
     },
@@ -104,6 +107,7 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
   return {
     id: customer.id,
     name: customer.name,
+    document: customer.document || undefined,
     segment: input.segment,
     city: customer.city || "Sem cidade",
     status: input.status,
@@ -111,6 +115,27 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
     openAmount: "R$ 0",
     note: input.note || "Novo cliente criado no dashboard.",
   } satisfies Customer;
+}
+
+function normalizeLookup(value: string) {
+  return value.replace(/\W/g, "").toLowerCase();
+}
+
+export async function findCustomerByLookup(lookup: string): Promise<Customer | null> {
+  const normalizedLookup = normalizeLookup(lookup);
+
+  if (!normalizedLookup) {
+    return null;
+  }
+
+  const customers = await listCustomers();
+
+  return customers.find((customer) => {
+    const normalizedName = normalizeLookup(customer.name);
+    const normalizedDocument = normalizeLookup(customer.document || "");
+
+    return normalizedDocument === normalizedLookup || normalizedName.includes(normalizedLookup);
+  }) || null;
 }
 
 export async function deleteCustomer(id: string): Promise<void> {

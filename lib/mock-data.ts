@@ -1,10 +1,11 @@
-import type { Charge, Customer, NavItem, Order, PipelineColumn, Quote, Stat } from "@/lib/types";
+import type { Charge, Customer, NavItem, NfseDocument, Order, PipelineColumn, Quote, Stat } from "@/lib/types";
 
 export const dashboardNav: NavItem[] = [
   { href: "/dashboard", label: "Visao geral", helper: "Resumo do dia" },
   { href: "/dashboard/customers", label: "Clientes", helper: "Historico comercial" },
   { href: "/dashboard/quotes", label: "Orcamentos", helper: "Propostas e follow-up" },
   { href: "/dashboard/billing", label: "Cobrancas", helper: "Pix e recebimentos" },
+  { href: "/dashboard/fiscal", label: "Fiscal", helper: "Fila de NFS-e" },
   { href: "/dashboard/setup", label: "Setup", helper: "Workspace e empresa" },
 ];
 
@@ -81,6 +82,7 @@ export const customers: Customer[] = [
   {
     id: "cus_001",
     name: "Clinica Horizonte",
+    document: "12.345.678/0001-10",
     segment: "Clinica pequena",
     city: "Belo Horizonte",
     status: "Recorrente",
@@ -91,6 +93,7 @@ export const customers: Customer[] = [
   {
     id: "cus_002",
     name: "Studio Lume",
+    document: "48.321.654/0001-22",
     segment: "Agencia pequena",
     city: "Sao Paulo",
     status: "Aguardando retorno",
@@ -101,6 +104,7 @@ export const customers: Customer[] = [
   {
     id: "cus_003",
     name: "Oficina Ponto Certo",
+    document: "22.444.888/0001-03",
     segment: "Assistencia tecnica",
     city: "Campinas",
     status: "Ativo",
@@ -111,6 +115,7 @@ export const customers: Customer[] = [
   {
     id: "cus_004",
     name: "Casa Nobre",
+    document: "084.512.990-40",
     segment: "Servico local",
     city: "Curitiba",
     status: "Ativo",
@@ -147,6 +152,15 @@ export const quotes: Quote[] = [
     status: "Follow-up",
     dueLabel: "Sem resposta ha 3 dias",
     summary: "Precisa de mensagem curta com CTA para decisao.",
+  },
+  {
+    id: "quo_nfse_001",
+    customer: "Clinica Horizonte",
+    title: "Suporte tecnico recorrente",
+    amount: "R$ 890",
+    status: "Aprovado",
+    dueLabel: "Servico concluido",
+    summary: "Servico entregue e recebimento confirmado, pronto para nota.",
   },
 ];
 
@@ -213,5 +227,25 @@ export const orders: Order[] = [
     status: "Pendente",
     sourceQuoteId: "quo_002",
     note: "Pedido gerado a partir de orcamento aprovado.",
+  },
+  {
+    id: "ord_nfse_001",
+    customer: "Clinica Horizonte",
+    title: "Suporte tecnico recorrente",
+    amount: "R$ 890",
+    status: "Concluido",
+    sourceQuoteId: "quo_nfse_001",
+    note: "Servico concluido e pagamento confirmado, pronto para nota.",
+  },
+];
+
+export const nfseDocuments: NfseDocument[] = [
+  {
+    id: "nfse_001",
+    customer: "Clinica Horizonte",
+    orderId: "ord_nfse_001",
+    serviceAmount: "R$ 890",
+    status: "Pronta",
+    serviceDescription: "Suporte tecnico recorrente pronto para emissao fiscal.",
   },
 ];

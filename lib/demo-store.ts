@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { charges, customers, orders, quotes } from "@/lib/mock-data";
+import { charges, customers, nfseDocuments, orders, quotes } from "@/lib/mock-data";
 import type { CompanyProfile, DemoWorkspaceData, WorkspaceProfile } from "@/lib/types";
 
 const dataDir = path.join(process.cwd(), "data");
@@ -31,6 +31,7 @@ const defaultData: DemoWorkspaceData = {
   quotes,
   orders,
   charges,
+  nfseDocuments,
 };
 
 async function ensureStore() {
@@ -55,6 +56,7 @@ export async function readDemoWorkspaceData() {
     quotes: parsed.quotes ?? quotes,
     orders: parsed.orders ?? orders,
     charges: parsed.charges ?? charges,
+    nfseDocuments: parsed.nfseDocuments ?? nfseDocuments,
   } satisfies DemoWorkspaceData;
 }
 

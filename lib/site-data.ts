@@ -147,6 +147,12 @@ export const dashboardSections = [
     title: "Pix e recebimento no centro da rotina",
     description: "Painel com status de cobrancas, vencimentos, follow-up e gatilho para emissao.",
   },
+  {
+    href: "/dashboard/fiscal",
+    kicker: "Fiscal",
+    title: "NFS-e no fluxo da operacao",
+    description: "Fila fiscal ligada ao recebimento para preparar, revisar e emitir sem retrabalho.",
+  },
 ];
 
 export const pipelineColumns = [

@@ -138,6 +138,11 @@ a {
   border: 1px solid rgba(13, 99, 255, 0.14);
 }
 
+.fiscal-warning {
+  background: rgba(194, 70, 92, 0.07);
+  border-color: rgba(194, 70, 92, 0.18);
+}
+
 .workspace-shell {
   display: grid;
   grid-template-columns: 290px minmax(0, 1fr);
