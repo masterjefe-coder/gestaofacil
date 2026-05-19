@@ -49,6 +49,7 @@
 - equipe do workspace agora permite trocar papel, redefinir senha e remover membro
 - regras de seguranca evitam remover o ultimo `OWNER` ou deixar o workspace sem dono
 - `dueDate` agora ordena cobrancas por prioridade real e influencia agenda/indicadores do dashboard
+- auditoria minima agora registra alteracoes de setup, criacao/remocao de membro, troca de papel e reset de senha
 - dashboard, orcamentos e cobrancas lendo da fonte central do workspace
 - endpoint `/api/health` criado
 - schema Prisma inicial criado em `prisma/schema.prisma`
@@ -109,5 +110,6 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 - o mesmo workspace ja aceita mais de um usuario real com papel definido
 - o ciclo basico de gestao de equipe ja esta operacional no `setup`
 - cobrancas com data real ja sobem e descem na fila conforme urgencia
+- o `setup` agora ja mostra trilha recente de auditoria para operacoes sensiveis
 - `charges` agora usam `orders` como base estrutural
 - o workspace local serve como ambiente de produto enquanto o banco real nao entra

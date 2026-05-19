@@ -1,4 +1,5 @@
 import { WorkspaceRole } from "@prisma/client";
+import { recordAuditEvent } from "@/lib/audit-repository";
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
@@ -157,13 +158,31 @@ export async function createWorkspaceMember(input: CreateWorkspaceMemberInput) {
       });
     }
 
-    await tx.workspaceMembership.create({
+    const membership = await tx.workspaceMembership.create({
       data: {
         userId: user.id,
         workspaceId: context.workspaceId,
         role: input.role,
       },
     });
+
+    await recordAuditEvent(
+      {
+        action: "workspace.member.created",
+        entityType: "workspace_membership",
+        entityId: membership.id,
+        context,
+        payload: {
+          summary: `${email} entrou no workspace com papel ${input.role}.`,
+          metadata: {
+            email,
+            role: input.role,
+            userId: user.id,
+          },
+        },
+      },
+      tx,
+    );
   });
 }
 
@@ -176,6 +195,9 @@ export async function updateWorkspaceMemberRole(input: UpdateWorkspaceMemberRole
 
   const membership = await prisma.workspaceMembership.findUnique({
     where: { id: input.membershipId },
+    include: {
+      user: true,
+    },
   });
 
   if (!membership || membership.workspaceId !== context.workspaceId) {
@@ -196,11 +218,32 @@ export async function updateWorkspaceMemberRole(input: UpdateWorkspaceMemberRole
     throw new WorkspaceMemberError("Voce nao pode rebaixar o proprio acesso de owner enquanto for o ultimo owner.");
   }
 
-  await prisma.workspaceMembership.update({
-    where: { id: input.membershipId },
-    data: {
-      role: input.role,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.workspaceMembership.update({
+      where: { id: input.membershipId },
+      data: {
+        role: input.role,
+      },
+    });
+
+    await recordAuditEvent(
+      {
+        action: "workspace.member.role_updated",
+        entityType: "workspace_membership",
+        entityId: membership.id,
+        context,
+        payload: {
+          summary: `${membership.user.email} mudou de ${membership.role} para ${input.role}.`,
+          metadata: {
+            email: membership.user.email,
+            fromRole: membership.role,
+            toRole: input.role,
+            userId: membership.userId,
+          },
+        },
+      },
+      tx,
+    );
   });
 }
 
@@ -213,6 +256,9 @@ export async function removeWorkspaceMember(membershipId: string) {
 
   const membership = await prisma.workspaceMembership.findUnique({
     where: { id: membershipId },
+    include: {
+      user: true,
+    },
   });
 
   if (!membership || membership.workspaceId !== context.workspaceId) {
@@ -229,8 +275,28 @@ export async function removeWorkspaceMember(membershipId: string) {
     throw new WorkspaceMemberError("O ultimo owner do workspace nao pode ser removido.");
   }
 
-  await prisma.workspaceMembership.delete({
-    where: { id: membershipId },
+  await prisma.$transaction(async (tx) => {
+    await tx.workspaceMembership.delete({
+      where: { id: membershipId },
+    });
+
+    await recordAuditEvent(
+      {
+        action: "workspace.member.removed",
+        entityType: "workspace_membership",
+        entityId: membership.id,
+        context,
+        payload: {
+          summary: `${membership.user.email} foi removido do workspace.`,
+          metadata: {
+            email: membership.user.email,
+            role: membership.role,
+            userId: membership.userId,
+          },
+        },
+      },
+      tx,
+    );
   });
 }
 
@@ -256,10 +322,29 @@ export async function resetWorkspaceMemberPassword(input: ResetWorkspaceMemberPa
     throw new WorkspaceMemberError("Membro do workspace nao encontrado.");
   }
 
-  await prisma.user.update({
-    where: { id: membership.userId },
-    data: {
-      passwordHash: hashPassword(input.password.trim()),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: membership.userId },
+      data: {
+        passwordHash: hashPassword(input.password.trim()),
+      },
+    });
+
+    await recordAuditEvent(
+      {
+        action: "workspace.member.password_reset",
+        entityType: "workspace_membership",
+        entityId: membership.id,
+        context,
+        payload: {
+          summary: `Senha redefinida para ${membership.user.email}.`,
+          metadata: {
+            email: membership.user.email,
+            userId: membership.userId,
+          },
+        },
+      },
+      tx,
+    );
   });
 }

@@ -7,6 +7,7 @@ import {
   updateWorkspaceMemberRoleAction,
   updateWorkspaceSetupAction,
 } from "@/app/dashboard/setup/actions";
+import { listAuditEntries } from "@/lib/audit-repository";
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
@@ -23,9 +24,10 @@ type SetupPageProps = {
 };
 
 export default async function SetupPage({ searchParams }: SetupPageProps) {
-  const [setup, members, context, params] = await Promise.all([
+  const [setup, members, auditEntries, context, params] = await Promise.all([
     getWorkspaceSetup(),
     listWorkspaceMembers(),
+    listAuditEntries(8),
     getCurrentWorkspaceContext(),
     searchParams,
   ]);
@@ -265,6 +267,35 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             certas para reduzir digitacao e passar mais confianca.
           </p>
         </article>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Auditoria recente</span>
+            <h2>Equipe e configuracoes sensiveis ficam registradas no workspace</h2>
+          </div>
+        </div>
+
+        <div className="data-table">
+          <div className="data-table-head">
+            <span>Quando</span>
+            <span>Responsavel</span>
+            <span>Evento</span>
+            <span>Resumo</span>
+          </div>
+          {auditEntries.map((entry) => (
+            <article key={entry.id} className="data-table-row">
+              <span>{entry.createdAt}</span>
+              <div>
+                <strong>{entry.actorName}</strong>
+                <small>{entry.actorEmail}</small>
+              </div>
+              <span>{entry.action}</span>
+              <span>{entry.summary}</span>
+            </article>
+          ))}
+        </div>
       </section>
     </DashboardShell>
   );

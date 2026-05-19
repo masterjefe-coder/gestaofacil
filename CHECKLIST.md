@@ -43,6 +43,7 @@
 - [x] login por credenciais com usuario real do banco
 - [x] gestao basica de membros no setup
 - [x] priorizacao operacional de cobrancas por `dueDate`
+- [x] auditoria minima de setup e equipe
 
 ## APIs
 

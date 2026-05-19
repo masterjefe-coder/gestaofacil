@@ -19,8 +19,8 @@ Consolidar a persistencia real usando Prisma, sem refazer a interface.
 1. manter fallback local enquanto o banco nao estiver configurado
 2. executar `prisma db push` no ambiente com banco para aplicar `passwordHash`
 3. aproximar agenda e insights do dashboard do futuro fluxo de `NFS-e`
-4. registrar auditoria minima para mudancas de equipe e setup
-5. criar gatilhos mais acionaveis para cobrancas atrasadas e follow-up financeiro
+4. criar gatilhos mais acionaveis para cobrancas atrasadas e follow-up financeiro
+5. expandir auditoria para cobrancas, pedidos e futuras operacoes fiscais
 
 Observacao:
 
@@ -35,7 +35,8 @@ Observacao:
 - o workspace ja aceita colaboracao com mais de um usuario
 - o ciclo basico de equipe ja cobre papel, senha e remocao
 - `dueDate` ja entrou na prioridade operacional do dashboard e das cobrancas
-- o proximo alvo mais forte agora e auditoria e gatilhos financeiros mais acionaveis
+- a auditoria minima de equipe e setup ja entrou no produto
+- o proximo alvo mais forte agora e transformar cobrancas atrasadas em gatilhos financeiros mais acionaveis
 
 ## Regra importante
 

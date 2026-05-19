@@ -1,4 +1,5 @@
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
+import { recordAuditEvent } from "@/lib/audit-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { prisma } from "@/lib/prisma";
@@ -41,43 +42,92 @@ export async function getWorkspaceSetup() {
 export async function updateWorkspaceSetup(input: SetupInput) {
   if (!isLocalDataMode()) {
     await ensureDemoCommerceSeeded();
-    const { workspaceId, workspaceRole } = await getCurrentWorkspaceContext();
+    const context = await getCurrentWorkspaceContext();
 
-    if (!canManageWorkspace(workspaceRole)) {
+    if (!canManageWorkspace(context.workspaceRole)) {
       throw new Error("Apenas owner ou admin podem atualizar o setup do workspace.");
     }
 
-    await prisma.workspace.update({
-      where: { id: workspaceId },
-      data: {
-        name: input.name,
-        slug: input.slug,
-      },
-    });
+    const [workspace, company] = await Promise.all([
+      prisma.workspace.findUniqueOrThrow({
+        where: { id: context.workspaceId },
+      }),
+      prisma.company.findUnique({
+        where: { workspaceId: context.workspaceId },
+      }),
+    ]);
 
-    await prisma.company.upsert({
-      where: { workspaceId },
-      update: {
-        legalName: input.legalName,
-        tradeName: input.tradeName,
-        document: input.document,
-        city: input.city,
-        state: input.state,
-        serviceDescription: input.serviceDescription || input.niche,
-        defaultPixKey: input.defaultPixKey,
-        defaultPaymentMessage: input.defaultPaymentMessage,
-      },
-      create: {
-        workspaceId,
-        legalName: input.legalName,
-        tradeName: input.tradeName,
-        document: input.document,
-        city: input.city,
-        state: input.state,
-        serviceDescription: input.serviceDescription || input.niche,
-        defaultPixKey: input.defaultPixKey,
-        defaultPaymentMessage: input.defaultPaymentMessage,
-      },
+    const changedFields = [
+      workspace.name !== input.name ? "nome do workspace" : null,
+      workspace.slug !== input.slug ? "slug" : null,
+      (company?.legalName || "") !== input.legalName ? "razao social" : null,
+      (company?.tradeName || workspace.name) !== input.tradeName ? "nome fantasia" : null,
+      (company?.document || "") !== input.document ? "documento" : null,
+      (company?.city || "") !== input.city ? "cidade" : null,
+      (company?.state || "") !== input.state ? "UF" : null,
+      (company?.serviceDescription || "") !== (input.serviceDescription || input.niche)
+        ? "descricao de servicos"
+        : null,
+      (company?.defaultPixKey || "") !== input.defaultPixKey ? "chave Pix" : null,
+      (company?.defaultPaymentMessage || "") !== input.defaultPaymentMessage
+        ? "mensagem de cobranca"
+        : null,
+    ].filter(Boolean);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.workspace.update({
+        where: { id: context.workspaceId },
+        data: {
+          name: input.name,
+          slug: input.slug,
+        },
+      });
+
+      await tx.company.upsert({
+        where: { workspaceId: context.workspaceId },
+        update: {
+          legalName: input.legalName,
+          tradeName: input.tradeName,
+          document: input.document,
+          city: input.city,
+          state: input.state,
+          serviceDescription: input.serviceDescription || input.niche,
+          defaultPixKey: input.defaultPixKey,
+          defaultPaymentMessage: input.defaultPaymentMessage,
+        },
+        create: {
+          workspaceId: context.workspaceId,
+          legalName: input.legalName,
+          tradeName: input.tradeName,
+          document: input.document,
+          city: input.city,
+          state: input.state,
+          serviceDescription: input.serviceDescription || input.niche,
+          defaultPixKey: input.defaultPixKey,
+          defaultPaymentMessage: input.defaultPaymentMessage,
+        },
+      });
+
+      await recordAuditEvent(
+        {
+          action: "workspace.setup.updated",
+          entityType: "workspace",
+          entityId: context.workspaceId,
+          context,
+          payload: {
+            summary: changedFields.length
+              ? `Setup atualizado: ${changedFields.join(", ")}.`
+              : "Setup salvo sem alteracoes materiais.",
+            metadata: {
+              changedFieldCount: changedFields.length,
+              tradeName: input.tradeName,
+              city: input.city || null,
+              state: input.state || null,
+            },
+          },
+        },
+        tx,
+      );
     });
 
     return {
