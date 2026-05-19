@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 import {
   commercialHighlights,
   dashboardCards,
@@ -14,6 +15,7 @@ export default function HomePage() {
     <main className="page-shell">
       <section className="hero">
         <div className="hero-copy">
+          <BrandLogo className="hero-wordmark" priority />
           <span className="eyebrow">Gestao comercial para servicos</span>
           <h1>Venda pelo WhatsApp, cobre por Pix e emita nota sem retrabalho.</h1>
           <p className="hero-text">
@@ -41,6 +43,13 @@ export default function HomePage() {
         <div className="hero-panel">
           <div className="panel-glow" />
           <div className="panel-card">
+            <div className="panel-brand">
+              <BrandLogo variant="mark" className="panel-brand-mark" />
+              <div>
+                <strong>Gestao Facil Sistemas</strong>
+                <small>Operacao comercial enxuta, visual forte e foco em servicos.</small>
+              </div>
+            </div>
             <div className="panel-kicker">Fluxo vencedor</div>
             <ol className="flow-list">
               <li>Conversa vira oportunidade</li>

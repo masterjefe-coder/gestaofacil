@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { AuthSignInForm } from "@/components/auth-sign-in-form";
+import { BrandLogo } from "@/components/brand-logo";
 import { authOptions } from "@/lib/auth-options";
 
 type LoginPageProps = {
@@ -18,8 +19,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (session) {
     return (
       <main className="auth-shell">
-        <section className="auth-card">
-          <span className="eyebrow">Sessao ativa</span>
+      <section className="auth-card">
+        <BrandLogo className="auth-wordmark" priority />
+        <span className="eyebrow">Sessao ativa</span>
           <h1>Voce ja entrou no Gestao Facil.</h1>
           <p>
             O dashboard ja esta disponivel para continuar a configuracao e operar o workspace.
@@ -40,6 +42,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="auth-shell">
       <section className="auth-card">
+        <BrandLogo className="auth-wordmark" priority />
         <span className="eyebrow">Acesso ao workspace</span>
         <h1>Entrar no Gestao Facil.</h1>
         <p>

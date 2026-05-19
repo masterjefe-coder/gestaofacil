@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import { BrandLogo } from "@/components/brand-logo";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { authOptions } from "@/lib/auth-options";
 import { isLocalDataMode } from "@/lib/data-mode";
@@ -15,6 +16,7 @@ export default async function OnboardingPage() {
   return (
     <main className="auth-shell">
       <section className="auth-card">
+        <BrandLogo className="auth-wordmark" priority />
         <span className="eyebrow">Primeiro workspace</span>
         <h1>Criar conta real no Gestao Facil.</h1>
         <p>

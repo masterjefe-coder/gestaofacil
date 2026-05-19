@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getServerSession } from "next-auth";
+import { BrandLogo } from "@/components/brand-logo";
 import { LogoutButton } from "@/components/logout-button";
 import { authOptions } from "@/lib/auth-options";
 import { dashboardNav } from "@/lib/mock-data";
@@ -34,7 +35,8 @@ export async function DashboardShell({
     <main className="workspace-shell">
       <aside className="workspace-sidebar">
         <div className="sidebar-brand">
-          <span className="eyebrow">Gestao Facil</span>
+          <BrandLogo className="sidebar-wordmark" />
+          <span className="eyebrow">Workspace ativo</span>
           <h2>{setup.tradeName || setup.name}</h2>
           <p>{setup.niche || "Vendas, cobrancas e nota fiscal no mesmo caminho."}</p>
         </div>
