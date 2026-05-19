@@ -10,3 +10,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 *.tsbuildinfo
+
+.vercel
+.neon
+.tmp-vercel-env/

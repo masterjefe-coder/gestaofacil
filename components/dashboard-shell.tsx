@@ -23,11 +23,12 @@ export async function DashboardShell({
   actions,
 }: DashboardShellProps) {
   const session = await getServerSession(authOptions);
-  const setup = await getWorkspaceSetup();
 
   if (!session?.user?.email) {
     redirect("/login");
   }
+
+  const setup = await getWorkspaceSetup();
 
   return (
     <main className="workspace-shell">
