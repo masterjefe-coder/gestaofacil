@@ -1,11 +1,33 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { createChargeAction, deleteChargeAction } from "@/app/dashboard/billing/actions";
+import {
+  addChargeFollowUpAction,
+  createChargeAction,
+  deleteChargeAction,
+  markChargeAsDueTodayAction,
+  markChargeAsPaidAction,
+  postponeChargeAction,
+} from "@/app/dashboard/billing/actions";
 import { buildChargeFollowUpActions, summarizeChargeFollowUp } from "@/lib/charge-follow-up";
 import { getChargeUrgency, getChargeUrgencyLabel, sortChargesByPriority } from "@/lib/charge-priority";
 import { billingMoments } from "@/lib/site-data";
 import { listCharges } from "@/lib/charge-repository";
 import { listQuotes } from "@/lib/quote-repository";
+
+function formatFollowUpDate(value: string) {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
+}
 
 export default async function BillingPage() {
   const quotes = await listQuotes();
@@ -16,6 +38,8 @@ export default async function BillingPage() {
   const followUpActions = buildChargeFollowUpActions(charges);
   const followUpSummary = summarizeChargeFollowUp(followUpActions);
   const highlightedFollowUps = followUpActions.slice(0, 4);
+  const unscheduledCount = followUpActions.filter((action) => action.bucket === "unmapped").length;
+  const chargesById = new Map(charges.map((charge) => [charge.id, charge]));
 
   return (
     <DashboardShell
@@ -134,6 +158,15 @@ export default async function BillingPage() {
           <strong>{upcomingCharges.length}</strong>
           <p>{followUpSummary.helper}</p>
         </article>
+        <article className="stat-card">
+          <span>Sem data real</span>
+          <strong>{unscheduledCount}</strong>
+          <p>
+            {unscheduledCount > 0
+              ? "Cobranças sem vencimento exato ainda prejudicam a previsibilidade do caixa."
+              : "Toda cobrança aberta já tem ou não precisa de data operacional."}
+          </p>
+        </article>
       </section>
 
       <section className="data-panel">
@@ -147,14 +180,52 @@ export default async function BillingPage() {
         {highlightedFollowUps.length > 0 ? (
           <div className="cards-grid quote-grid">
             {highlightedFollowUps.map((action) => (
-              <article key={action.id} className="dashboard-card">
-                <span className="dashboard-kicker">{action.urgencyLabel}</span>
-                <h3>{action.customer}</h3>
-                <strong className="quote-amount">{action.amount}</strong>
-                <p>{action.summary}</p>
-                <small className="muted-text">{action.recommendedAction}</small>
-                <small className="muted-text">{action.suggestedMessage}</small>
-              </article>
+              (() => {
+                const linkedCharge = chargesById.get(action.id);
+                const latestFollowUp = linkedCharge?.followUps[0];
+
+                return (
+                  <article key={action.id} className="dashboard-card">
+                    <span className="dashboard-kicker">{action.urgencyLabel}</span>
+                    <h3>{action.customer}</h3>
+                    <strong className="quote-amount">{action.amount}</strong>
+                    <p>{action.summary}</p>
+                    <small className="muted-text">{action.recommendedAction}</small>
+                    <small className="muted-text">{action.suggestedMessage}</small>
+                    {latestFollowUp ? (
+                      <small className="muted-text">
+                        Ultimo contato: {formatFollowUpDate(latestFollowUp.createdAt)} via {latestFollowUp.channel.toLowerCase()}.
+                      </small>
+                    ) : null}
+                    <div className="auth-hint">
+                      <strong>Próxima ação</strong>
+                      <span>Ações rápidas daqui também entram na auditoria do workspace quando o banco estiver ativo.</span>
+                    </div>
+                    <div className="dashboard-actions">
+                      {action.urgency !== "today" ? (
+                        <form action={markChargeAsDueTodayAction} className="card-action">
+                          <input type="hidden" name="id" value={action.id} />
+                          <button type="submit" className="secondary-link">
+                            Puxar para hoje
+                          </button>
+                        </form>
+                      ) : null}
+                      <form action={postponeChargeAction} className="card-action">
+                        <input type="hidden" name="id" value={action.id} />
+                        <button type="submit" className="secondary-link">
+                          Reagendar +3d
+                        </button>
+                      </form>
+                      <form action={markChargeAsPaidAction} className="card-action">
+                        <input type="hidden" name="id" value={action.id} />
+                        <button type="submit" className="primary-link">
+                          Marcar pago
+                        </button>
+                      </form>
+                    </div>
+                  </article>
+                );
+              })()
             ))}
           </div>
         ) : (
@@ -183,6 +254,84 @@ export default async function BillingPage() {
               <small className="muted-text">{charge.dueLabel}</small>
               {charge.dueDate ? <small className="muted-text">Data real: {charge.dueDate}</small> : null}
               <small className="muted-text">Status operacional: {charge.status}</small>
+              <small className="muted-text">
+                {charge.followUps.length > 0
+                  ? `${charge.followUps.length} follow-up(s) financeiro(s) registrados`
+                  : "Nenhum follow-up financeiro registrado ainda"}
+              </small>
+              {charge.status !== "Pago" ? (
+                <div className="dashboard-actions">
+                  {getChargeUrgency(charge) !== "today" ? (
+                    <form action={markChargeAsDueTodayAction} className="card-action">
+                      <input type="hidden" name="id" value={charge.id} />
+                      <button type="submit" className="secondary-link">
+                        Hoje
+                      </button>
+                    </form>
+                  ) : null}
+                  <form action={postponeChargeAction} className="card-action">
+                    <input type="hidden" name="id" value={charge.id} />
+                    <button type="submit" className="secondary-link">
+                      +3d
+                    </button>
+                  </form>
+                  <form action={markChargeAsPaidAction} className="card-action">
+                    <input type="hidden" name="id" value={charge.id} />
+                    <button type="submit" className="primary-link">
+                      Pago
+                    </button>
+                  </form>
+                </div>
+              ) : null}
+              <div className="follow-up-block">
+                <strong>Registrar follow-up</strong>
+                <form action={addChargeFollowUpAction} className="follow-up-form">
+                  <input type="hidden" name="id" value={charge.id} />
+                  <label>
+                    <span>Canal</span>
+                    <select name="channel" defaultValue="WhatsApp">
+                      <option value="WhatsApp">WhatsApp</option>
+                      <option value="Ligacao">Ligação</option>
+                      <option value="Email">Email</option>
+                      <option value="Pix reenviado">Pix reenviado</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Retorno</span>
+                    <select name="outcome" defaultValue="Sem resposta">
+                      <option value="Sem resposta">Sem resposta</option>
+                      <option value="Prometeu pagar">Prometeu pagar</option>
+                      <option value="Pago em analise">Pago em análise</option>
+                      <option value="Reagendado">Reagendado</option>
+                      <option value="Contestou">Contestou</option>
+                    </select>
+                  </label>
+                  <label className="form-span-2">
+                    <span>Observação</span>
+                    <textarea
+                      name="note"
+                      rows={3}
+                      placeholder="Ex.: Cliente pediu reenvio do Pix e prometeu pagar até sexta."
+                    />
+                  </label>
+                  <button type="submit" className="secondary-link">
+                    Registrar contato
+                  </button>
+                </form>
+                {charge.followUps.length > 0 ? (
+                  <div className="follow-up-list">
+                    {charge.followUps.slice(0, 3).map((entry) => (
+                      <article key={entry.id} className="follow-up-entry">
+                        <strong>
+                          {entry.channel} · {entry.outcome}
+                        </strong>
+                        <span>{formatFollowUpDate(entry.createdAt)}</span>
+                        <small>{entry.note}</small>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
               <form action={deleteChargeAction} className="card-action">
                 <input type="hidden" name="id" value={charge.id} />
                 <button type="submit" className="ghost-button">

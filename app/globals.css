@@ -615,7 +615,7 @@ p {
 
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
 }
 
@@ -709,7 +709,10 @@ p {
 }
 
 .inline-form input,
-.inline-form select {
+.inline-form select,
+.follow-up-form textarea,
+.follow-up-form input,
+.follow-up-form select {
   width: 100%;
   min-height: 48px;
   padding: 0.8rem 0.9rem;
@@ -718,6 +721,11 @@ p {
   background: rgba(255, 255, 255, 0.85);
   color: var(--text);
   font: inherit;
+}
+
+.follow-up-form textarea {
+  min-height: 96px;
+  resize: vertical;
 }
 
 .form-span-2 {
@@ -754,6 +762,44 @@ p {
 
 .quote-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.follow-up-block {
+  display: grid;
+  gap: 0.8rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(7, 26, 71, 0.08);
+}
+
+.follow-up-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.follow-up-form label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-soft);
+}
+
+.follow-up-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.follow-up-entry {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(7, 26, 71, 0.08);
+}
+
+.follow-up-entry span,
+.follow-up-entry small {
+  color: var(--text-soft);
 }
 
 .quote-amount {
@@ -869,6 +915,10 @@ p {
   }
 
   .inline-form {
+    grid-template-columns: 1fr;
+  }
+
+  .follow-up-form {
     grid-template-columns: 1fr;
   }
 

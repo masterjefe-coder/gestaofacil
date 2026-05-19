@@ -111,6 +111,23 @@ export type Order = {
   note: string;
 };
 
+export type ChargeFollowUpChannel = "WhatsApp" | "Ligacao" | "Email" | "Pix reenviado";
+
+export type ChargeFollowUpOutcome =
+  | "Sem resposta"
+  | "Prometeu pagar"
+  | "Pago em analise"
+  | "Reagendado"
+  | "Contestou";
+
+export type ChargeFollowUpEntry = {
+  id: string;
+  createdAt: string;
+  channel: ChargeFollowUpChannel;
+  outcome: ChargeFollowUpOutcome;
+  note: string;
+};
+
 export type Charge = {
   id: string;
   customer: string;
@@ -119,6 +136,7 @@ export type Charge = {
   dueDate?: string;
   status: "Pendente" | "Hoje" | "Pago";
   source: string;
+  followUps: ChargeFollowUpEntry[];
 };
 
 export type ChargeInput = {

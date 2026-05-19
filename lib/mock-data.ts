@@ -158,6 +158,15 @@ export const charges: Charge[] = [
     dueLabel: "vence hoje",
     status: "Hoje",
     source: "Pix copia e cola",
+    followUps: [
+      {
+        id: "fup_mock_001",
+        createdAt: "2026-05-18T14:30:00.000Z",
+        channel: "WhatsApp",
+        outcome: "Prometeu pagar",
+        note: "Cliente pediu reenvio do Pix e prometeu regularizar no fim do dia.",
+      },
+    ],
   },
   {
     id: "chg_002",
@@ -166,6 +175,15 @@ export const charges: Charge[] = [
     dueLabel: "vence amanha",
     status: "Pendente",
     source: "Link de pagamento",
+    followUps: [
+      {
+        id: "fup_mock_002",
+        createdAt: "2026-05-18T11:15:00.000Z",
+        channel: "Email",
+        outcome: "Sem resposta",
+        note: "Lembrete enviado com link atualizado e sem retorno ate agora.",
+      },
+    ],
   },
   {
     id: "chg_003",
@@ -174,6 +192,15 @@ export const charges: Charge[] = [
     dueLabel: "recebido ontem",
     status: "Pago",
     source: "Pix confirmado",
+    followUps: [
+      {
+        id: "fup_mock_003",
+        createdAt: "2026-05-17T15:00:00.000Z",
+        channel: "Pix reenviado",
+        outcome: "Pago em analise",
+        note: "Comprovante recebido; aguardando apenas conciliacao final.",
+      },
+    ],
   },
 ];
 

@@ -1,4 +1,4 @@
-import type { Charge, Customer, Quote } from "@/lib/types";
+import type { Charge, ChargeFollowUpEntry, Customer, Quote } from "@/lib/types";
 
 const CUSTOMER_META_PREFIX = "GF_CUSTOMER_META::";
 const QUOTE_META_PREFIX = "GF_QUOTE_META::";
@@ -19,6 +19,7 @@ type QuoteMeta = {
 type ChargeMeta = {
   dueLabel: string;
   source: string;
+  followUps: ChargeFollowUpEntry[];
 };
 
 function parsePrefixedJson<T>(value: string | null, prefix: string): Partial<T> | null {
@@ -172,12 +173,13 @@ export function encodeChargeMeta(input: ChargeInputLike) {
   return `${CHARGE_META_PREFIX}${JSON.stringify({
     dueLabel: input.dueLabel || "acompanhar cobranca",
     source: input.source,
+    followUps: input.followUps || [],
   } satisfies ChargeMeta)}`;
 }
 
 export function decodeChargeMeta(
   value: string | null,
-  fallback: { dueLabel: string; source: string },
+  fallback: { dueLabel: string; source: string; followUps?: ChargeFollowUpEntry[] },
 ) {
   const parsed = parsePrefixedJson<ChargeMeta>(value, CHARGE_META_PREFIX);
 
@@ -185,10 +187,31 @@ export function decodeChargeMeta(
     return {
       dueLabel: parsed.dueLabel?.trim() || fallback.dueLabel,
       source: parsed.source?.trim() || fallback.source,
+      followUps: Array.isArray(parsed.followUps) ? parsed.followUps.filter(isFollowUpEntry) : (fallback.followUps || []),
     };
   }
 
-  return fallback;
+  return {
+    dueLabel: fallback.dueLabel,
+    source: fallback.source,
+    followUps: fallback.followUps || [],
+  };
+}
+
+function isFollowUpEntry(value: unknown): value is ChargeFollowUpEntry {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.createdAt === "string" &&
+    typeof candidate.channel === "string" &&
+    typeof candidate.outcome === "string" &&
+    typeof candidate.note === "string"
+  );
 }
 
 export function inferPaymentMethod(source: string) {
@@ -294,4 +317,4 @@ export function inferDueDateFromLabel(label: string | undefined, now = new Date(
 
 type CustomerInputLike = Pick<Customer, "segment" | "status" | "note">;
 type QuoteInputLike = Pick<Quote, "dueLabel" | "summary" | "status">;
-type ChargeInputLike = Pick<Charge, "dueLabel" | "source">;
+type ChargeInputLike = Pick<Charge, "dueLabel" | "source"> & { followUps?: ChargeFollowUpEntry[] };

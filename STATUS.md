@@ -51,6 +51,10 @@
 - `dueDate` agora ordena cobrancas por prioridade real e influencia agenda/indicadores do dashboard
 - auditoria minima agora registra alteracoes de setup, criacao/remocao de membro, troca de papel e reset de senha
 - dashboard, orcamentos e cobrancas lendo da fonte central do workspace
+- cobrancas agora aceitam acoes operacionais rapidas para marcar hoje, reagendar ou dar baixa
+- cobrancas em modo `database` agora registram auditoria em criacao, atualizacao e remocao
+- cobrancas agora carregam historico de follow-up financeiro com canal, retorno e observacao
+- o painel de cobrancas agora permite registrar novos contatos financeiros por item
 - endpoint `/api/health` criado
 - schema Prisma inicial criado em `prisma/schema.prisma`
 - `.env.example` e scripts de banco adicionados
@@ -112,4 +116,7 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 - cobrancas com data real ja sobem e descem na fila conforme urgencia
 - o `setup` agora ja mostra trilha recente de auditoria para operacoes sensiveis
 - `charges` agora usam `orders` como base estrutural
+- a fila financeira agora permite acao rapida direto do painel de cobrancas
+- a auditoria de cobrancas depende do modo `database`, mas ja esta encaixada no fluxo
+- o historico de follow-up financeiro agora persiste no metadata da cobranca sem exigir migration imediata
 - o workspace local serve como ambiente de produto enquanto o banco real nao entra
