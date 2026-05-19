@@ -73,3 +73,33 @@ Nao comecar por modulos secundarios.
 Toda decisao de produto deve responder:
 
 `Isso ajuda o pequeno negocio a vender, cobrar ou emitir com menos trabalho?`
+
+## Producao
+
+Stack recomendada:
+
+- `Vercel` para o app `Next.js`
+- `Neon` para `Postgres`
+
+Variaveis de ambiente minimas na Vercel:
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `AUTH_DEMO_EMAIL`
+- `AUTH_DEMO_PASSWORD`
+- `GESTAO_FACIL_DATA_MODE=database`
+
+Checklist de deploy:
+
+1. importar o repositorio na `Vercel`
+2. deixar `Framework Preset` como `Next.js`
+3. deixar `Output Directory` vazio
+4. cadastrar as variaveis de ambiente
+5. criar o banco no `Neon`
+6. rodar `npm run db:push` com a `DATABASE_URL` de producao
+7. abrir `/onboarding` para criar o primeiro usuario real do workspace
+
+Observacao:
+
+- sem `DATABASE_URL`, o app cai em modo local/demo
+- o campo `passwordHash` do schema precisa existir no banco de producao, entao o passo `db:push` e obrigatorio
