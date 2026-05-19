@@ -47,6 +47,40 @@ a {
   padding: 2rem 0 4rem;
 }
 
+.site-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+  padding: 1rem 1.15rem;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+}
+
+.topbar-wordmark {
+  width: min(100%, 220px);
+  height: auto;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 0.75rem;
+}
+
+.topbar-link {
+  padding: 0.65rem 0.85rem;
+  border-radius: 999px;
+  color: var(--brand-strong);
+  font-weight: 700;
+}
+
 .auth-shell {
   min-height: 100vh;
   display: grid;
@@ -430,6 +464,10 @@ p {
   background: linear-gradient(135deg, rgba(13, 99, 255, 0.08), rgba(8, 31, 88, 0.06));
 }
 
+.brand-strip {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(226, 238, 255, 0.78));
+}
+
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -477,6 +515,15 @@ p {
 
 .split-panel.success {
   background: linear-gradient(180deg, rgba(31, 140, 109, 0.11), rgba(255, 255, 255, 0.9));
+}
+
+.brand-footer-panel {
+  background: linear-gradient(180deg, rgba(8, 31, 88, 0.06), rgba(255, 255, 255, 0.92));
+}
+
+.footer-wordmark {
+  width: min(100%, 320px);
+  height: auto;
 }
 
 .stack-list,
@@ -774,6 +821,14 @@ p {
   .cta-band {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .site-topbar {
+    display: grid;
+  }
+
+  .topbar-actions {
+    justify-content: start;
   }
 
   .cards-grid,

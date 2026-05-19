@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import {
+  brandPillars,
   commercialHighlights,
   dashboardCards,
   growthLoops,
@@ -8,11 +9,27 @@ import {
   launchPlan,
   painPoints,
   proofNumbers,
+  trustSignals,
 } from "@/lib/site-data";
 
 export default function HomePage() {
   return (
     <main className="page-shell">
+      <section className="site-topbar">
+        <BrandLogo className="topbar-wordmark" priority />
+        <div className="topbar-actions">
+          <a href="#produto" className="topbar-link">
+            Produto
+          </a>
+          <a href="#direcao" className="topbar-link">
+            Direcao
+          </a>
+          <Link href="/login" className="secondary-link">
+            Entrar
+          </Link>
+        </div>
+      </section>
+
       <section className="hero">
         <div className="hero-copy">
           <BrandLogo className="hero-wordmark" priority />
@@ -63,6 +80,21 @@ export default function HomePage() {
               <span>Sem cara de ERP pesado</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="section-grid brand-strip">
+        <div>
+          <span className="section-label">Identidade do produto</span>
+          <h2>A marca precisa parecer tecnologia confiavel, nao software genérico.</h2>
+        </div>
+        <div className="cards-grid">
+          {brandPillars.map((item) => (
+            <article key={item.title} className="info-card">
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -133,7 +165,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="cta-band">
+      <section id="direcao" className="cta-band">
         <div>
           <span className="section-label">Direcao de construcao</span>
           <h2>Primeiro vender e receber melhor. Depois expandir automacoes, recorrencia e fiscal.</h2>
@@ -157,6 +189,34 @@ export default function HomePage() {
             </article>
           ))}
         </div>
+      </section>
+
+      <section className="section-split">
+        <article className="split-panel success">
+          <span className="section-label">Sinais de confianca</span>
+          <h2>O site ja precisa comunicar a proposta completa com clareza.</h2>
+          <ul className="stack-list">
+            {trustSignals.map((signal) => (
+              <li key={signal}>{signal}</li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="split-panel brand-footer-panel">
+          <BrandLogo className="footer-wordmark" />
+          <p>
+            Gestao Facil Sistemas foi desenhado para transformar venda, cobranca e emissao
+            em um fluxo unico, elegante e usavel no dia real da empresa.
+          </p>
+          <div className="hero-actions">
+            <Link href="/onboarding" className="primary-link">
+              Criar primeiro workspace
+            </Link>
+            <Link href="/login" className="secondary-link">
+              Acessar plataforma
+            </Link>
+          </div>
+        </article>
       </section>
     </main>
   );

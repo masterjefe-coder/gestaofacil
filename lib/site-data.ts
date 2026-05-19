@@ -4,6 +4,27 @@ export const proofNumbers = [
   { value: "MVP lean", label: "para validar sem custo inchado" },
 ];
 
+export const brandPillars = [
+  {
+    title: "Visual profissional",
+    description: "A marca passa tecnologia e organizacao sem ficar fria ou distante do pequeno negocio.",
+  },
+  {
+    title: "Operacao no centro",
+    description: "Cada tela precisa ajudar a vender, cobrar, acompanhar e emitir melhor no mesmo dia.",
+  },
+  {
+    title: "Sistema que nao pesa",
+    description: "A experiencia continua leve mesmo quando o produto ganha mais profundidade comercial e fiscal.",
+  },
+];
+
+export const trustSignals = [
+  "WhatsApp-first para pequenos negocios de servico",
+  "Fluxo comercial, financeiro e fiscal no mesmo caminho",
+  "Workspace real com membros, papeis e auditoria minima",
+];
+
 export const commercialHighlights = [
   {
     index: "01",
