@@ -1,0 +1,125 @@
+{
+  "workspace": {
+    "name": "Gestao Facil Demo",
+    "slug": "gestao-facil-demo",
+    "niche": "Servicos locais e operacao comercial enxuta"
+  },
+  "company": {
+    "legalName": "Gestao Facil Servicos Digitais LTDA",
+    "tradeName": "Gestao Facil",
+    "document": "12.345.678/0001-90",
+    "city": "Belo Horizonte",
+    "state": "MG",
+    "serviceDescription": "Operacao comercial, cobranca e emissao para pequenos negocios de servico.",
+    "defaultPixKey": "financeiro@gestaofacil.local",
+    "defaultPaymentMessage": "Pagamento referente ao servico contratado. Envie o comprovante por WhatsApp."
+  },
+  "customers": [
+    {
+      "id": "cus_001",
+      "name": "Clinica Horizonte",
+      "segment": "Clinica pequena",
+      "city": "Belo Horizonte",
+      "status": "Recorrente",
+      "lastSale": "15 maio",
+      "openAmount": "R$ 0",
+      "note": "Cliente ideal para contrato mensal."
+    },
+    {
+      "id": "cus_002",
+      "name": "Studio Lume",
+      "segment": "Agencia pequena",
+      "city": "Sao Paulo",
+      "status": "Aguardando retorno",
+      "lastSale": "Sem venda ainda",
+      "openAmount": "R$ 0",
+      "note": "Orcamento enviado e follow-up hoje as 17h."
+    },
+    {
+      "id": "cus_003",
+      "name": "Oficina Ponto Certo",
+      "segment": "Assistencia tecnica",
+      "city": "Campinas",
+      "status": "Ativo",
+      "lastSale": "17 maio",
+      "openAmount": "R$ 2.400",
+      "note": "Pagamento parcial aguardando confirmacao."
+    },
+    {
+      "id": "cus_004",
+      "name": "Casa Nobre",
+      "segment": "Servico local",
+      "city": "Curitiba",
+      "status": "Ativo",
+      "lastSale": "18 maio",
+      "openAmount": "R$ 1.180",
+      "note": "Servico em execucao e nota apos entrega."
+    }
+  ],
+  "quotes": [
+    {
+      "id": "quo_001",
+      "customer": "Studio Lume",
+      "title": "Gestao mensal de campanhas",
+      "amount": "R$ 1.900",
+      "status": "Enviado",
+      "dueLabel": "Follow-up hoje",
+      "summary": "Proposta com setup inicial e recorrencia mensal."
+    },
+    {
+      "id": "quo_002",
+      "customer": "Oficina Ponto Certo",
+      "title": "Instalacao de rede e ajuste",
+      "amount": "R$ 2.400",
+      "status": "Aprovado",
+      "dueLabel": "Virar pedido",
+      "summary": "Aprovado por WhatsApp, pronto para cobranca."
+    },
+    {
+      "id": "quo_003",
+      "customer": "Clinica Viva",
+      "title": "Plano trimestral de suporte",
+      "amount": "R$ 3.600",
+      "status": "Follow-up",
+      "dueLabel": "Sem resposta ha 3 dias",
+      "summary": "Precisa de mensagem curta com CTA para decisao."
+    }
+  ],
+  "orders": [
+    {
+      "id": "ord_001",
+      "customer": "Oficina Ponto Certo",
+      "title": "Instalacao de rede e ajuste",
+      "amount": "R$ 2.400",
+      "status": "Pendente",
+      "sourceQuoteId": "quo_002",
+      "note": "Pedido gerado a partir de orcamento aprovado."
+    }
+  ],
+  "charges": [
+    {
+      "id": "chg_001",
+      "customer": "Oficina Ponto Certo",
+      "amount": "R$ 2.400",
+      "dueLabel": "vence hoje",
+      "status": "Hoje",
+      "source": "Pix copia e cola"
+    },
+    {
+      "id": "chg_002",
+      "customer": "Casa Nobre",
+      "amount": "R$ 1.180",
+      "dueLabel": "vence amanha",
+      "status": "Pendente",
+      "source": "Link de pagamento"
+    },
+    {
+      "id": "chg_003",
+      "customer": "Clinica Horizonte",
+      "amount": "R$ 890",
+      "dueLabel": "recebido ontem",
+      "status": "Pago",
+      "source": "Pix confirmado"
+    }
+  ]
+}

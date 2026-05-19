@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum OpportunityStage {
+  LEAD
+  QUALIFIED
+  QUOTE_SENT
+  WON
+  LOST
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum OrderStatus {
+  PENDING
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+enum ChargeStatus {
+  PENDING
+  DUE_TODAY
+  PAID
+  OVERDUE
+  CANCELED
+}
+
+enum NfseStatus {
+  DRAFT
+  READY
+  ISSUED
+  ERROR
+  CANCELED
+}
+
+model User {
+  id          String               @id @default(cuid())
+  name        String?
+  email       String               @unique
+  passwordHash String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  memberships WorkspaceMembership[]
+  auditEvents AuditEvent[]         @relation("AuditActor")
+}
+
+model Workspace {
+  id            String                @id @default(cuid())
+  name          String
+  slug          String                @unique
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  memberships   WorkspaceMembership[]
+  company       Company?
+  customers     Customer[]
+  services      ServiceCatalogItem[]
+  opportunities Opportunity[]
+  quotes        Quote[]
+  orders        Order[]
+  charges       Charge[]
+  nfseDocuments NfseDocument[]
+  auditEvents   AuditEvent[]
+}
+
+model WorkspaceMembership {
+  id          String        @id @default(cuid())
+  role        WorkspaceRole @default(OWNER)
+  createdAt   DateTime      @default(now())
+  userId      String
+  workspaceId String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+model Company {
+  id                    String    @id @default(cuid())
+  legalName             String
+  tradeName             String?
+  document              String    @unique
+  city                  String?
+  state                 String?
+  serviceDescription    String?
+  defaultPixKey         String?
+  defaultPaymentMessage String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  workspaceId           String    @unique
+  workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id            String        @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  document      String?
+  city          String?
+  state         String?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  workspaceId   String
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  opportunities Opportunity[]
+  quotes        Quote[]
+  orders        Order[]
+  charges       Charge[]
+  nfseDocuments NfseDocument[]
+
+  @@index([workspaceId, name])
+}
+
+model ServiceCatalogItem {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  unitPrice   Decimal     @db.Decimal(10, 2)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  quoteItems  QuoteItem[]
+  orderItems  OrderItem[]
+
+  @@index([workspaceId, active])
+}
+
+model Opportunity {
+  id             String           @id @default(cuid())
+  title          String
+  description    String?
+  stage          OpportunityStage @default(LEAD)
+  source         String?
+  estimatedValue Decimal?         @db.Decimal(10, 2)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  customerId     String
+  workspaceId    String
+  customer       Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  quote          Quote?
+
+  @@index([workspaceId, stage])
+}
+
+model Quote {
+  id            String       @id @default(cuid())
+  title         String
+  summary       String?
+  status        QuoteStatus  @default(DRAFT)
+  subtotal      Decimal      @db.Decimal(10, 2)
+  discount      Decimal      @default(0) @db.Decimal(10, 2)
+  total         Decimal      @db.Decimal(10, 2)
+  approvalToken String?      @unique
+  approvedAt    DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  customerId    String
+  workspaceId   String
+  opportunityId String?      @unique
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  items         QuoteItem[]
+  order         Order?
+
+  @@index([workspaceId, status])
+}
+
+model QuoteItem {
+  id            String              @id @default(cuid())
+  description   String
+  quantity      Int                 @default(1)
+  unitPrice     Decimal             @db.Decimal(10, 2)
+  total         Decimal             @db.Decimal(10, 2)
+  quoteId       String
+  serviceItemId String?
+  quote         Quote               @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  serviceItem   ServiceCatalogItem? @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  status        OrderStatus @default(PENDING)
+  scheduledFor  DateTime?
+  completedAt   DateTime?
+  internalNotes String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  quoteId       String      @unique
+  customerId    String
+  workspaceId   String
+  quote         Quote       @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  customer      Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workspace     Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  items         OrderItem[]
+  charges       Charge[]
+  nfseDocument  NfseDocument?
+
+  @@index([workspaceId, status])
+}
+
+model OrderItem {
+  id            String              @id @default(cuid())
+  description   String
+  quantity      Int                 @default(1)
+  unitPrice     Decimal             @db.Decimal(10, 2)
+  total         Decimal             @db.Decimal(10, 2)
+  orderId       String
+  serviceItemId String?
+  order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  serviceItem   ServiceCatalogItem? @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+}
+
+model Charge {
+  id            String       @id @default(cuid())
+  amount        Decimal      @db.Decimal(10, 2)
+  status        ChargeStatus @default(PENDING)
+  paymentMethod String
+  paymentLink   String?
+  pixCode       String?
+  dueDate       DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  workspaceId   String
+  customerId    String
+  orderId       String
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  order         Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+}
+
+model NfseDocument {
+  id               String     @id @default(cuid())
+  status           NfseStatus @default(DRAFT)
+  externalId       String?
+  verificationCode String?
+  serviceAmount    Decimal    @db.Decimal(10, 2)
+  issuedAt         DateTime?
+  errorMessage     String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  workspaceId      String
+  customerId       String
+  orderId          String     @unique
+  workspace        Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer         Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  order            Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+}
+
+model AuditEvent {
+  id          String    @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  payload     Json?
+  createdAt   DateTime  @default(now())
+  workspaceId String
+  actorId     String?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor       User?     @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, entityType, entityId])
+}
