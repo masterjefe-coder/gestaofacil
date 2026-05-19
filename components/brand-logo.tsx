@@ -13,25 +13,29 @@ export function BrandLogo({
 }: BrandLogoProps) {
   if (variant === "mark") {
     return (
-      <Image
-        src="/brand/logo-mark.png"
-        alt="Gestao Facil"
-        width={84}
-        height={84}
-        priority={priority}
-        className={className}
-      />
+      <span className={className}>
+        <Image
+          src="/brand/logo-mark.png"
+          alt="Gestão Fácil"
+          width={84}
+          height={84}
+          priority={priority}
+          className="brand-logo-image"
+        />
+      </span>
     );
   }
 
   return (
-    <Image
-      src="/brand/logo-wordmark.png"
-      alt="Gestao Facil Sistemas"
-      width={485}
-      height={123}
-      priority={priority}
-      className={className}
-    />
+    <span className={className}>
+      <Image
+        src="/brand/logo-wordmark.png"
+        alt="Gestão Fácil Sistemas"
+        width={485}
+        height={123}
+        priority={priority}
+        className="brand-logo-image brand-logo-image-wordmark"
+      />
+    </span>
   );
 }

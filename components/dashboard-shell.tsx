@@ -38,7 +38,7 @@ export async function DashboardShell({
           <BrandLogo className="sidebar-wordmark" />
           <span className="eyebrow">Workspace ativo</span>
           <h2>{setup.tradeName || setup.name}</h2>
-          <p>{setup.niche || "Vendas, cobrancas e nota fiscal no mesmo caminho."}</p>
+          <p>{setup.niche || "Vendas, cobranças e nota fiscal no mesmo caminho."}</p>
         </div>
 
         <div className="sidebar-meta">
@@ -52,7 +52,7 @@ export async function DashboardShell({
           <LogoutButton />
         </div>
 
-        <nav className="sidebar-nav" aria-label="Navegacao do dashboard">
+        <nav className="sidebar-nav" aria-label="Navegação do dashboard">
           {dashboardNav.map((item) => (
             <Link key={item.href} href={item.href} className="sidebar-link">
               <span>{item.label}</span>

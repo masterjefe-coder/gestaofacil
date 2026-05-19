@@ -34,7 +34,7 @@ export async function createWorkspaceOnboardingAction(
       return { error: error.message };
     }
 
-    return { error: "Nao foi possivel criar o workspace agora." };
+    return { error: "Não foi possível criar o workspace agora." };
   }
 
   const email = encodeURIComponent(getString(formData, "email"));

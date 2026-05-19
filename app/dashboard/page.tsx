@@ -13,8 +13,8 @@ export default async function DashboardPage() {
   return (
     <DashboardShell
       eyebrow="Dashboard conceitual"
-      title="Um painel que fala de vendas, cobrancas e proximos passos."
-      description="Esta primeira versao do dashboard organiza o produto em torno do fluxo comercial, nao em torno de modulos isolados."
+      title="Um painel que fala de vendas, cobranças e próximos passos."
+      description="Esta primeira versão do dashboard organiza o produto em torno do fluxo comercial, não em torno de módulos isolados."
       actions={
         <>
           <Link href="/" className="secondary-link">
@@ -39,8 +39,8 @@ export default async function DashboardPage() {
 
       <section className="section-grid dashboard-preview">
         <div>
-          <span className="section-label">Navegacao do MVP</span>
-          <h2>Os primeiros modulos precisam seguir o fluxo comercial, nao a logica de ERP.</h2>
+          <span className="section-label">Navegação do MVP</span>
+          <h2>Os primeiros módulos precisam seguir o fluxo comercial, não a lógica de ERP.</h2>
         </div>
         <div className="cards-grid">
           {dashboardSections.map((section) => (
@@ -58,7 +58,7 @@ export default async function DashboardPage() {
           <div className="card-header">
             <div>
               <span className="section-label">Funil comercial</span>
-              <h2>Visao de oportunidades e orcamentos</h2>
+              <h2>Visão de oportunidades e orçamentos</h2>
             </div>
           </div>
 
@@ -86,8 +86,8 @@ export default async function DashboardPage() {
         <aside className="agenda-card">
           <div className="card-header">
             <div>
-              <span className="section-label">Proximas acoes</span>
-              <h2>Hoje no Gestao Facil</h2>
+              <span className="section-label">Próximas ações</span>
+              <h2>Hoje no Gestão Fácil</h2>
             </div>
           </div>
 

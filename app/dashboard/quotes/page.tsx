@@ -11,16 +11,16 @@ export default async function QuotesPage() {
 
   return (
     <DashboardShell
-      eyebrow="Orcamentos"
-      title="O orcamento precisa vender, nao ser apenas um PDF burocratico."
-      description="O MVP de orcamentos deve acelerar resposta, aumentar aprovacao e diminuir retrabalho quando a venda andar."
+      eyebrow="Orçamentos"
+      title="O orçamento precisa vender, não ser apenas um PDF burocrático."
+      description="O MVP de orçamentos deve acelerar resposta, aumentar aprovação e diminuir retrabalho quando a venda andar."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
             Voltar ao dashboard
           </Link>
           <a href="#novo-orcamento" className="primary-link">
-            Criar orcamento
+            Criar orçamento
           </a>
         </>
       }
@@ -28,7 +28,7 @@ export default async function QuotesPage() {
       <section id="novo-orcamento" className="data-panel">
         <div className="card-header">
           <div>
-            <span className="section-label">Novo orcamento</span>
+            <span className="section-label">Novo orçamento</span>
             <h2>Montar proposta sem sair do ritmo comercial</h2>
           </div>
         </div>
@@ -48,7 +48,7 @@ export default async function QuotesPage() {
             </select>
           </label>
           <label>
-            <span>Titulo</span>
+            <span>Título</span>
             <input name="title" type="text" placeholder="Ex.: Suporte mensal" required />
           </label>
           <label>
@@ -64,11 +64,11 @@ export default async function QuotesPage() {
             </select>
           </label>
           <label className="form-span-2">
-            <span>Prazo ou proximo passo</span>
+            <span>Prazo ou próximo passo</span>
             <input
               name="dueLabel"
               type="text"
-              placeholder="Ex.: Follow-up amanha as 10h"
+              placeholder="Ex.: Follow-up amanhã às 10h"
             />
           </label>
           <label className="form-span-2">
@@ -80,7 +80,7 @@ export default async function QuotesPage() {
             />
           </label>
           <button type="submit" className="primary-link form-submit">
-            Salvar orcamento
+            Salvar orçamento
           </button>
         </form>
       </section>
@@ -106,8 +106,8 @@ export default async function QuotesPage() {
 
       <section className="section-grid tinted">
         <div>
-          <span className="section-label">Objetivos do modulo</span>
-          <h2>O cliente aprova mais rapido quando a proposta parece simples e pronta para agir.</h2>
+          <span className="section-label">Objetivos do módulo</span>
+          <h2>O cliente aprova mais rápido quando a proposta parece simples e pronta para agir.</h2>
         </div>
         <div className="cards-grid">
           {quoteGoals.map((item) => (

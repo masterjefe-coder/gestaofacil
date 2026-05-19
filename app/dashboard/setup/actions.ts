@@ -58,7 +58,7 @@ export async function createWorkspaceMemberAction(formData: FormData) {
     const message =
       error instanceof WorkspaceMemberError
         ? error.message
-        : "Nao foi possivel adicionar o usuario ao workspace.";
+        : "Não foi possível adicionar o usuário ao workspace.";
 
     redirect(`/dashboard/setup?teamError=${encodeURIComponent(message)}`);
   }
@@ -81,7 +81,7 @@ export async function updateWorkspaceMemberRoleAction(formData: FormData) {
     const message =
       error instanceof WorkspaceMemberError
         ? error.message
-        : "Nao foi possivel atualizar o papel do usuario.";
+        : "Não foi possível atualizar o papel do usuário.";
 
     redirect(`/dashboard/setup?teamError=${encodeURIComponent(message)}`);
   }
@@ -100,7 +100,7 @@ export async function removeWorkspaceMemberAction(formData: FormData) {
     const message =
       error instanceof WorkspaceMemberError
         ? error.message
-        : "Nao foi possivel remover o usuario do workspace.";
+        : "Não foi possível remover o usuário do workspace.";
 
     redirect(`/dashboard/setup?teamError=${encodeURIComponent(message)}`);
   }
@@ -123,7 +123,7 @@ export async function resetWorkspaceMemberPasswordAction(formData: FormData) {
     const message =
       error instanceof WorkspaceMemberError
         ? error.message
-        : "Nao foi possivel redefinir a senha do usuario.";
+        : "Não foi possível redefinir a senha do usuário.";
 
     redirect(`/dashboard/setup?teamError=${encodeURIComponent(message)}`);
   }

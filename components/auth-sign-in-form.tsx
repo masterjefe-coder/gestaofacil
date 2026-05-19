@@ -35,7 +35,7 @@ export function AuthSignInForm() {
     setIsPending(false);
 
     if (!result || result.error) {
-      setErrorMessage("Email ou senha invalidos para o workspace demo.");
+      setErrorMessage("Email ou senha inválidos para o workspace demo.");
       return;
     }
 
@@ -65,7 +65,7 @@ export function AuthSignInForm() {
       </form>
 
       {hasError || errorMessage ? (
-        <p className="auth-error">{errorMessage || "Email ou senha invalidos para o workspace demo."}</p>
+        <p className="auth-error">{errorMessage || "Email ou senha inválidos para o workspace demo."}</p>
       ) : null}
 
       {created ? (
@@ -76,7 +76,7 @@ export function AuthSignInForm() {
       ) : null}
 
       <div className="auth-hint">
-        <strong>Ainda nao tem acesso?</strong>
+        <strong>Ainda não tem acesso?</strong>
         <Link href="/onboarding">Criar conta e workspace real</Link>
       </div>
     </>

@@ -19,12 +19,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (session) {
     return (
       <main className="auth-shell">
-      <section className="auth-card">
-        <BrandLogo className="auth-wordmark" priority />
-        <span className="eyebrow">Sessao ativa</span>
-          <h1>Voce ja entrou no Gestao Facil.</h1>
+        <section className="auth-card">
+          <BrandLogo className="auth-wordmark" priority />
+          <span className="eyebrow">Sessão ativa</span>
+          <h1>Você já entrou no Gestão Fácil.</h1>
           <p>
-            O dashboard ja esta disponivel para continuar a configuracao e operar o workspace.
+            O dashboard já está disponível para continuar a configuração e operar o workspace.
           </p>
           <div className="hero-actions">
             <Link href="/dashboard" className="primary-link">
@@ -44,16 +44,16 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <section className="auth-card">
         <BrandLogo className="auth-wordmark" priority />
         <span className="eyebrow">Acesso ao workspace</span>
-        <h1>Entrar no Gestao Facil.</h1>
+        <h1>Entrar no Gestão Fácil.</h1>
         <p>
-          Esta primeira camada de autenticacao protege o dashboard e prepara o terreno para
+          Esta primeira camada de autenticação protege o dashboard e prepara o terreno para
           evoluirmos do acesso demo para contas reais por workspace.
         </p>
 
         <AuthSignInForm />
 
         <div className="auth-hint">
-          <strong>Credenciais demo padrao</strong>
+          <strong>Credenciais demo padrão</strong>
           <span>`demo@gestaofacil.local`</span>
           <span>`gestao123`</span>
         </div>

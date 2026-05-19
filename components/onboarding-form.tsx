@@ -27,7 +27,7 @@ export function OnboardingForm() {
       </label>
       <label>
         <span>Nome do workspace</span>
-        <input name="workspaceName" type="text" placeholder="Ex.: Operacao Lume" required />
+        <input name="workspaceName" type="text" placeholder="Ex.: Operação Lume" required />
       </label>
       <label>
         <span>Slug do workspace</span>
@@ -54,11 +54,11 @@ export function OnboardingForm() {
         <input name="state" type="text" placeholder="Ex.: MG" maxLength={2} />
       </label>
       <label className="form-span-2">
-        <span>Descricao do servico</span>
+        <span>Descrição do serviço</span>
         <input
           name="serviceDescription"
           type="text"
-          placeholder="Ex.: Operacao comercial e financeira para servicos recorrentes."
+          placeholder="Ex.: Operação comercial e financeira para serviços recorrentes."
         />
       </label>
       <button type="submit" className="primary-link form-submit" disabled={isPending}>

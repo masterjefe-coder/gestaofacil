@@ -11,7 +11,7 @@ export default async function CustomersPage() {
     <DashboardShell
       eyebrow="Clientes"
       title="O cliente precisa carregar contexto comercial, financeiro e fiscal."
-      description="Esta area mostra como o Gestao Facil deve tratar cada cliente como centro do historico de vendas e nao como cadastro morto."
+      description="Esta área mostra como o Gestão Fácil deve tratar cada cliente como centro do histórico de vendas e não como cadastro morto."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
@@ -26,7 +26,7 @@ export default async function CustomersPage() {
       <section id="novo-cliente" className="data-panel">
         <div className="card-header">
           <div>
-            <span className="section-label">Cadastro rapido</span>
+            <span className="section-label">Cadastro rápido</span>
             <h2>Adicionar cliente sem sair do fluxo</h2>
           </div>
         </div>
@@ -38,7 +38,7 @@ export default async function CustomersPage() {
           </label>
           <label>
             <span>Segmento</span>
-            <input name="segment" type="text" placeholder="Ex.: Assistencia tecnica" required />
+            <input name="segment" type="text" placeholder="Ex.: Assistência técnica" required />
           </label>
           <label>
             <span>Cidade</span>
@@ -53,7 +53,7 @@ export default async function CustomersPage() {
             </select>
           </label>
           <label className="form-span-2">
-            <span>Observacao</span>
+            <span>Observação</span>
             <input
               name="note"
               type="text"
@@ -78,10 +78,10 @@ export default async function CustomersPage() {
           <div className="data-table-head">
             <span>Cliente</span>
             <span>Segmento</span>
-            <span>Ultima venda</span>
+            <span>Última venda</span>
             <span>Em aberto</span>
             <span>Status</span>
-            <span>Acoes</span>
+            <span>Ações</span>
           </div>
           {customers.map((customer) => (
             <article key={customer.id} className="data-table-row">

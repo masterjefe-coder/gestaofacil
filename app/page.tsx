@@ -22,7 +22,7 @@ export default function HomePage() {
             Produto
           </a>
           <a href="#direcao" className="topbar-link">
-            Direcao
+            Direção
           </a>
           <Link href="/login" className="secondary-link">
             Entrar
@@ -33,11 +33,11 @@ export default function HomePage() {
       <section className="hero">
         <div className="hero-copy">
           <BrandLogo className="hero-wordmark" priority />
-          <span className="eyebrow">Gestao comercial para servicos</span>
+          <span className="eyebrow">Gestão comercial para serviços</span>
           <h1>Venda pelo WhatsApp, cobre por Pix e emita nota sem retrabalho.</h1>
           <p className="hero-text">
-            O Gestao Facil nasce para pequenos negocios de servico que precisam fechar vendas
-            mais rapido, receber melhor e parar de perder tempo com fluxo quebrado.
+            O Gestão Fácil nasce para pequenos negócios de serviço que precisam fechar vendas
+            mais rápido, receber melhor e parar de perder tempo com fluxo quebrado.
           </p>
           <div className="hero-actions">
             <Link href="/login" className="primary-link">
@@ -63,20 +63,20 @@ export default function HomePage() {
             <div className="panel-brand">
               <BrandLogo variant="mark" className="panel-brand-mark" />
               <div>
-                <strong>Gestao Facil Sistemas</strong>
-                <small>Operacao comercial enxuta, visual forte e foco em servicos.</small>
+                <strong>Gestão Fácil Sistemas</strong>
+                <small>Operação comercial enxuta, visual forte e foco em serviços.</small>
               </div>
             </div>
             <div className="panel-kicker">Fluxo vencedor</div>
             <ol className="flow-list">
               <li>Conversa vira oportunidade</li>
-              <li>Oportunidade vira orcamento</li>
-              <li>Orcamento vira pedido</li>
-              <li>Pedido gera cobranca</li>
+              <li>Oportunidade vira orçamento</li>
+              <li>Orçamento vira pedido</li>
+              <li>Pedido gera cobrança</li>
               <li>Pagamento prepara a nota</li>
             </ol>
             <div className="panel-footer">
-              <span>Foco no pequeno negocio real</span>
+              <span>Foco no pequeno negócio real</span>
               <span>Sem cara de ERP pesado</span>
             </div>
           </div>
@@ -86,7 +86,7 @@ export default function HomePage() {
       <section className="section-grid brand-strip">
         <div>
           <span className="section-label">Identidade do produto</span>
-          <h2>A marca precisa parecer tecnologia confiavel, nao software genérico.</h2>
+          <h2>A marca precisa parecer tecnologia confiável, não software genérico.</h2>
         </div>
         <div className="cards-grid">
           {brandPillars.map((item) => (
@@ -101,7 +101,7 @@ export default function HomePage() {
       <section id="produto" className="section-grid">
         <div>
           <span className="section-label">Por que isso vende</span>
-          <h2>O produto entra pela dor comercial e segura a recorrencia com operacao.</h2>
+          <h2>O produto entra pela dor comercial e segura a recorrência com operação.</h2>
         </div>
         <div className="cards-grid">
           {commercialHighlights.map((item) => (
@@ -117,7 +117,7 @@ export default function HomePage() {
       <section className="section-split">
         <div className="split-panel danger">
           <span className="section-label">O que quebrava antes</span>
-          <h2>O problema nao era vender software. Era vender suporte disfarçado de sistema.</h2>
+          <h2>O problema não era vender software. Era vender suporte disfarçado de sistema.</h2>
           <ul className="stack-list">
             {painPoints.map((point) => (
               <li key={point}>{point}</li>
@@ -127,7 +127,7 @@ export default function HomePage() {
 
         <div className="split-panel success">
           <span className="section-label">Nova tese</span>
-          <h2>Gestao Facil vira um sistema comercial com NFS-e no fluxo, nao um emissor puro.</h2>
+          <h2>Gestão Fácil vira um sistema comercial com NFS-e no fluxo, não um emissor puro.</h2>
           <ul className="stack-list">
             {growthLoops.map((loop) => (
               <li key={loop}>{loop}</li>
@@ -139,7 +139,7 @@ export default function HomePage() {
       <section className="section-grid">
         <div>
           <span className="section-label">Para quem ele encaixa melhor</span>
-          <h2>Segmentos em que rapidez, cobranca e simplicidade pesam mais do que um ERP completo.</h2>
+          <h2>Segmentos em que rapidez, cobrança e simplicidade pesam mais do que um ERP completo.</h2>
         </div>
         <div className="chips-wrap">
           {idealFor.map((item) => (
@@ -153,7 +153,7 @@ export default function HomePage() {
       <section className="section-grid tinted">
         <div>
           <span className="section-label">Primeiras entregas</span>
-          <h2>O MVP precisa ser enxuto, cobravel e claramente melhor do que o improviso atual.</h2>
+          <h2>O MVP precisa ser enxuto, cobrável e claramente melhor do que o improviso atual.</h2>
         </div>
         <div className="cards-grid">
           {launchPlan.map((item) => (
@@ -167,8 +167,8 @@ export default function HomePage() {
 
       <section id="direcao" className="cta-band">
         <div>
-          <span className="section-label">Direcao de construcao</span>
-          <h2>Primeiro vender e receber melhor. Depois expandir automacoes, recorrencia e fiscal.</h2>
+          <span className="section-label">Direção de construção</span>
+          <h2>Primeiro vender e receber melhor. Depois expandir automações, recorrência e fiscal.</h2>
         </div>
         <Link href="/dashboard" className="primary-link">
           Abrir dashboard conceitual
@@ -193,8 +193,8 @@ export default function HomePage() {
 
       <section className="section-split">
         <article className="split-panel success">
-          <span className="section-label">Sinais de confianca</span>
-          <h2>O site ja precisa comunicar a proposta completa com clareza.</h2>
+          <span className="section-label">Sinais de confiança</span>
+          <h2>O site já precisa comunicar a proposta completa com clareza.</h2>
           <ul className="stack-list">
             {trustSignals.map((signal) => (
               <li key={signal}>{signal}</li>
@@ -205,8 +205,8 @@ export default function HomePage() {
         <article className="split-panel brand-footer-panel">
           <BrandLogo className="footer-wordmark" />
           <p>
-            Gestao Facil Sistemas foi desenhado para transformar venda, cobranca e emissao
-            em um fluxo unico, elegante e usavel no dia real da empresa.
+            Gestão Fácil Sistemas foi desenhado para transformar venda, cobrança e emissão
+            em um fluxo único, elegante e usável no dia real da empresa.
           </p>
           <div className="hero-actions">
             <Link href="/onboarding" className="primary-link">

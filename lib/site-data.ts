@@ -1,28 +1,28 @@
 export const proofNumbers = [
-  { value: "1 fluxo", label: "do WhatsApp ate a nota" },
-  { value: "0 retrabalho", label: "na venda que ja foi aprovada" },
+  { value: "1 fluxo", label: "do WhatsApp até a nota" },
+  { value: "0 retrabalho", label: "na venda que já foi aprovada" },
   { value: "MVP lean", label: "para validar sem custo inchado" },
 ];
 
 export const brandPillars = [
   {
     title: "Visual profissional",
-    description: "A marca passa tecnologia e organizacao sem ficar fria ou distante do pequeno negocio.",
+    description: "A marca passa tecnologia e organização sem ficar fria ou distante do pequeno negócio.",
   },
   {
-    title: "Operacao no centro",
+    title: "Operação no centro",
     description: "Cada tela precisa ajudar a vender, cobrar, acompanhar e emitir melhor no mesmo dia.",
   },
   {
-    title: "Sistema que nao pesa",
-    description: "A experiencia continua leve mesmo quando o produto ganha mais profundidade comercial e fiscal.",
+    title: "Sistema que não pesa",
+    description: "A experiência continua leve mesmo quando o produto ganha mais profundidade comercial e fiscal.",
   },
 ];
 
 export const trustSignals = [
   "WhatsApp-first para pequenos negocios de servico",
   "Fluxo comercial, financeiro e fiscal no mesmo caminho",
-  "Workspace real com membros, papeis e auditoria minima",
+  "Workspace real com membros, papéis e auditoria mínima",
 ];
 
 export const commercialHighlights = [
@@ -30,35 +30,35 @@ export const commercialHighlights = [
     index: "01",
     title: "Entra pela venda, nao pela burocracia",
     description:
-      "O produto conversa com a dor diaria do pequeno negocio: responder cliente, fechar orcamento e receber no prazo.",
+      "O produto conversa com a dor diária do pequeno negócio: responder cliente, fechar orçamento e receber no prazo.",
   },
   {
     index: "02",
     title: "Retem pela operacao",
     description:
-      "Quando cobranca, historico e nota vivem no mesmo fluxo, o sistema deixa de ser opcional e vira rotina.",
+      "Quando cobrança, histórico e nota vivem no mesmo fluxo, o sistema deixa de ser opcional e vira rotina.",
   },
   {
     index: "03",
     title: "Cresce sem virar ERP inchado",
     description:
-      "A estrategia e ganhar profundidade no nicho de servicos, nao tentar servir qualquer empresa desde o primeiro dia.",
+      "A estratégia é ganhar profundidade no nicho de serviços, não tentar servir qualquer empresa desde o primeiro dia.",
   },
 ];
 
 export const painPoints = [
   "Venda presa no WhatsApp e sem historico confiavel",
-  "Orcamento em PDF ou texto solto",
-  "Cobranca acompanhada no improviso",
+  "Orçamento em PDF ou texto solto",
+  "Cobrança acompanhada no improviso",
   "Nota emitida com dados redigitados",
-  "Muito suporte porque o produto anterior era burocratico demais",
+  "Muito suporte porque o produto anterior era burocrático demais",
 ];
 
 export const growthLoops = [
-  "Conversa comercial gera oportunidade reaproveitavel",
-  "Oportunidade aprovada vira cobranca em segundos",
+  "Conversa comercial gera oportunidade reaproveitável",
+  "Oportunidade aprovada vira cobrança em segundos",
   "Pagamento confirma o que pode virar NFS-e",
-  "Historico de clientes alimenta follow-up e reativacao",
+  "Histórico de clientes alimenta follow-up e reativação",
   "IA economiza tempo sem virar enfeite caro",
 ];
 
@@ -76,19 +76,19 @@ export const idealFor = [
 export const launchPlan = [
   {
     title: "Base comercial",
-    description: "Clientes, servicos, oportunidades e orcamentos com aprovacao por link.",
+    description: "Clientes, serviços, oportunidades e orçamentos com aprovação por link.",
   },
   {
     title: "Recebimento simples",
-    description: "Pix e cobranca integrados ao status da venda para reduzir esquecimento.",
+    description: "Pix e cobrança integrados ao status da venda para reduzir esquecimento.",
   },
   {
     title: "Fiscal no fluxo",
-    description: "NFS-e emitida a partir da venda aprovada e concluida, sem redigitar tudo.",
+    description: "NFS-e emitida a partir da venda aprovada e concluída, sem redigitar tudo.",
   },
   {
-    title: "Painel acionavel",
-    description: "O dono entra e sabe quem cobrar, quem seguir e o que esta pronto para nota.",
+    title: "Painel acionável",
+    description: "O dono entra e sabe quem cobrar, quem seguir e o que está pronto para nota.",
   },
 ];
 
@@ -96,17 +96,17 @@ export const dashboardCards = [
   {
     kicker: "Pipeline",
     title: "Tudo gira em torno da venda que precisa andar",
-    description: "O foco visual principal e o funil, nao uma lista fria de menus administrativos.",
+    description: "O foco visual principal é o funil, não uma lista fria de menus administrativos.",
   },
   {
     kicker: "Financeiro leve",
-    title: "Receber no prazo precisa aparecer sem friccao",
-    description: "Cobrancas pendentes e pagamentos recebidos precisam ficar no centro do dia a dia.",
+    title: "Receber no prazo precisa aparecer sem fricção",
+    description: "Cobranças pendentes e pagamentos recebidos precisam ficar no centro do dia a dia.",
   },
   {
-    kicker: "Fiscal util",
+    kicker: "Fiscal útil",
     title: "Nota entra quando a venda pede nota",
-    description: "O usuario nao deve abrir outro mundo so para emitir um documento que ja nasceu da venda.",
+    description: "O usuário não deve abrir outro mundo só para emitir um documento que já nasceu da venda.",
   },
 ];
 

@@ -18,16 +18,16 @@ export default async function OnboardingPage() {
       <section className="auth-card">
         <BrandLogo className="auth-wordmark" priority />
         <span className="eyebrow">Primeiro workspace</span>
-        <h1>Criar conta real no Gestao Facil.</h1>
+        <h1>Criar conta real no Gestão Fácil.</h1>
         <p>
-          Este fluxo abre um usuario real, cria o workspace principal e deixa a empresa pronta
+          Este fluxo abre um usuário real, cria o workspace principal e deixa a empresa pronta
           para continuar no dashboard.
         </p>
 
         {isLocalDataMode() ? (
           <div className="auth-hint">
             <strong>Modo local ativo</strong>
-            <span>Defina `DATABASE_URL` para habilitar onboarding real com persistencia no banco.</span>
+            <span>Defina `DATABASE_URL` para habilitar onboarding real com persistência no banco.</span>
           </div>
         ) : (
           <OnboardingForm />
@@ -35,7 +35,7 @@ export default async function OnboardingPage() {
 
         <div className="hero-actions">
           <Link href="/login" className="secondary-link">
-            Ja tenho acesso
+            Já tenho acesso
           </Link>
           <Link href="/" className="secondary-link">
             Voltar para a landing

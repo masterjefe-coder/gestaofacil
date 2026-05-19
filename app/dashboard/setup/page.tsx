@@ -42,7 +42,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     <DashboardShell
       eyebrow="Setup"
       title="O sistema precisa conhecer a empresa para vender, cobrar e emitir melhor."
-      description="Aqui nasce a identidade do workspace, a configuracao da empresa e a base para futuras automacoes de cobranca e NFS-e."
+      description="Aqui nasce a identidade do workspace, a configuração da empresa e a base para futuras automações de cobrança e NFS-e."
       actions={
         <Link href="/dashboard" className="secondary-link">
           Voltar ao dashboard
@@ -53,7 +53,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Workspace e empresa</span>
-            <h2>Defina a identidade operacional do negocio</h2>
+            <h2>Defina a identidade operacional do negócio</h2>
           </div>
         </div>
 
@@ -72,7 +72,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <input name="niche" type="text" defaultValue={setup.niche} />
             </label>
             <label className="form-span-2">
-              <span>Razao social</span>
+              <span>Razão social</span>
               <input name="legalName" type="text" defaultValue={setup.legalName} />
             </label>
             <label className="form-span-2">
@@ -92,7 +92,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <input name="state" type="text" defaultValue={setup.state} />
             </label>
             <label className="form-span-2">
-              <span>Descricao padrao de servicos</span>
+              <span>Descrição padrão de serviços</span>
               <input
                 name="serviceDescription"
                 type="text"
@@ -100,11 +100,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               />
             </label>
             <label className="form-span-2">
-              <span>Chave Pix padrao</span>
+              <span>Chave Pix padrão</span>
               <input name="defaultPixKey" type="text" defaultValue={setup.defaultPixKey} />
             </label>
             <label className="form-span-2">
-              <span>Mensagem padrao de cobranca</span>
+              <span>Mensagem padrão de cobrança</span>
               <input
                 name="defaultPaymentMessage"
                 type="text"
@@ -112,13 +112,13 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               />
             </label>
             <button type="submit" className="primary-link form-submit">
-              Salvar configuracoes
+              Salvar configurações
             </button>
           </form>
         ) : (
           <div className="auth-hint">
             <strong>Acesso de leitura</strong>
-            <span>Somente owner ou admin podem alterar o setup e convidar novos usuarios.</span>
+            <span>Somente owner ou admin podem alterar o setup e convidar novos usuários.</span>
           </div>
         )}
       </section>
@@ -131,26 +131,26 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         </div>
 
-        {teamCreated ? <p className="auth-hint">Usuario adicionado ao workspace com sucesso.</p> : null}
-        {teamUpdated ? <p className="auth-hint">Papel do usuario atualizado com sucesso.</p> : null}
-        {teamRemoved ? <p className="auth-hint">Usuario removido do workspace com sucesso.</p> : null}
-        {teamPasswordReset ? <p className="auth-hint">Senha do usuario redefinida com sucesso.</p> : null}
+        {teamCreated ? <p className="auth-hint">Usuário adicionado ao workspace com sucesso.</p> : null}
+        {teamUpdated ? <p className="auth-hint">Papel do usuário atualizado com sucesso.</p> : null}
+        {teamRemoved ? <p className="auth-hint">Usuário removido do workspace com sucesso.</p> : null}
+        {teamPasswordReset ? <p className="auth-hint">Senha do usuário redefinida com sucesso.</p> : null}
         {teamError ? <p className="auth-error">{teamError}</p> : null}
 
         {isLocalDataMode() ? (
           <div className="auth-hint">
             <strong>Modo local ativo</strong>
-            <span>Com `DATABASE_URL`, esta area passa a criar usuarios reais no mesmo workspace.</span>
+            <span>Com `DATABASE_URL`, esta área passa a criar usuários reais no mesmo workspace.</span>
           </div>
         ) : !canManage ? (
           <div className="auth-hint">
-            <strong>Gestao restrita</strong>
-            <span>Seu papel atual permite consultar a equipe, mas nao adicionar novos usuarios.</span>
+            <strong>Gestão restrita</strong>
+            <span>Seu papel atual permite consultar a equipe, mas não adicionar novos usuários.</span>
           </div>
         ) : (
           <form action={createWorkspaceMemberAction} className="inline-form">
             <label>
-              <span>Nome do usuario</span>
+              <span>Nome do usuário</span>
               <input name="memberName" type="text" placeholder="Ex.: Julia Financeiro" required />
             </label>
             <label>
@@ -162,7 +162,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <input
                 name="memberPassword"
                 type="password"
-                placeholder="Minimo de 8 caracteres"
+                placeholder="Mínimo de 8 caracteres"
                 minLength={8}
                 required
               />
@@ -176,24 +176,24 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               </select>
             </label>
             <button type="submit" className="primary-link form-submit">
-              Adicionar usuario
+              Adicionar usuário
             </button>
           </form>
         )}
 
         <div className="data-table">
           <div className="data-table-head">
-            <span>Usuario</span>
+            <span>Usuário</span>
             <span>Email</span>
             <span>Papel</span>
             <span>Entrou em</span>
-            <span>Acoes</span>
+            <span>Ações</span>
           </div>
           {members.map((member) => (
             <article key={member.id} className="data-table-row">
               <div>
                 <strong>{member.name}</strong>
-                <small>{member.isCurrentUser ? "Voce" : member.role}</small>
+                <small>{member.isCurrentUser ? "Você" : member.role}</small>
               </div>
               <span>{member.email}</span>
               <span>{member.role}</span>
@@ -223,7 +223,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                         <input
                           name="memberPasswordReset"
                           type="password"
-                          placeholder="Minimo de 8 caracteres"
+                          placeholder="Mínimo de 8 caracteres"
                           minLength={8}
                           required
                         />
@@ -236,12 +236,12 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                     <form action={removeWorkspaceMemberAction} className="row-action">
                       <input type="hidden" name="membershipId" value={member.id} />
                       <button type="submit" className="ghost-button">
-                        Remover usuario
+                        Remover usuário
                       </button>
                     </form>
                   </div>
                 ) : (
-                  <small className="muted-text">Sem acoes disponiveis</small>
+                  <small className="muted-text">Sem ações disponíveis</small>
                 )}
               </div>
             </article>
@@ -254,17 +254,17 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <span className="section-label">Por que isso importa</span>
           <h2>Sem setup, o produto vira cadastro solto. Com setup, ele vira sistema.</h2>
           <p>
-            Esses dados vao alimentar cobranca, templates, onboarding e o futuro modulo de
-            emissao fiscal.
+            Esses dados vão alimentar cobrança, templates, onboarding e o futuro módulo de
+            emissão fiscal.
           </p>
         </article>
 
         <article className="split-panel">
-          <span className="section-label">Proximo uso</span>
-          <h2>Base para automacoes e identidade comercial</h2>
+          <span className="section-label">Próximo uso</span>
+          <h2>Base para automações e identidade comercial</h2>
           <p>
-            O nome da empresa, o Pix padrao e a descricao de servico devem aparecer nas telas
-            certas para reduzir digitacao e passar mais confianca.
+            O nome da empresa, o Pix padrão e a descrição de serviço devem aparecer nas telas
+            certas para reduzir digitação e passar mais confiança.
           </p>
         </article>
       </section>
@@ -273,14 +273,14 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Auditoria recente</span>
-            <h2>Equipe e configuracoes sensiveis ficam registradas no workspace</h2>
+            <h2>Equipe e configurações sensíveis ficam registradas no workspace</h2>
           </div>
         </div>
 
         <div className="data-table">
           <div className="data-table-head">
             <span>Quando</span>
-            <span>Responsavel</span>
+            <span>Responsável</span>
             <span>Evento</span>
             <span>Resumo</span>
           </div>

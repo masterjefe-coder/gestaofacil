@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { createChargeAction, deleteChargeAction } from "@/app/dashboard/billing/actions";
+import { buildChargeFollowUpActions, summarizeChargeFollowUp } from "@/lib/charge-follow-up";
 import { getChargeUrgency, getChargeUrgencyLabel, sortChargesByPriority } from "@/lib/charge-priority";
 import { billingMoments } from "@/lib/site-data";
 import { listCharges } from "@/lib/charge-repository";
@@ -10,22 +11,24 @@ export default async function BillingPage() {
   const quotes = await listQuotes();
   const charges = sortChargesByPriority(await listCharges());
   const approvedQuotes = quotes.filter((quote) => quote.status === "Aprovado");
-  const overdueCharges = charges.filter((charge) => getChargeUrgency(charge) === "overdue");
   const dueTodayCharges = charges.filter((charge) => getChargeUrgency(charge) === "today");
   const upcomingCharges = charges.filter((charge) => getChargeUrgency(charge) === "upcoming");
+  const followUpActions = buildChargeFollowUpActions(charges);
+  const followUpSummary = summarizeChargeFollowUp(followUpActions);
+  const highlightedFollowUps = followUpActions.slice(0, 4);
 
   return (
     <DashboardShell
-      eyebrow="Cobrancas"
-      title="Receber no prazo precisa ser tao simples quanto criar a venda."
-      description="A cobranca entra como parte do fluxo comercial para reduzir esquecimento, acelerar recebimento e preparar a emissao fiscal."
+      eyebrow="Cobranças"
+      title="Receber no prazo precisa ser tão simples quanto criar a venda."
+      description="A cobrança entra como parte do fluxo comercial para reduzir esquecimento, acelerar recebimento e preparar a emissão fiscal."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
             Voltar ao dashboard
           </Link>
           <a href="#nova-cobranca" className="primary-link">
-            Nova cobranca
+            Nova cobrança
           </a>
         </>
       }
@@ -33,16 +36,16 @@ export default async function BillingPage() {
       <section id="nova-cobranca" className="data-panel">
         <div className="card-header">
           <div>
-            <span className="section-label">Nova cobranca</span>
+            <span className="section-label">Nova cobrança</span>
             <h2>Cobrar a partir de uma venda aprovada ou criar manualmente</h2>
           </div>
         </div>
 
         <form action={createChargeAction} className="inline-form">
           <label className="form-span-2">
-            <span>Gerar de orcamento aprovado</span>
+            <span>Gerar de orçamento aprovado</span>
             <select name="quoteId" defaultValue="">
-              <option value="">Criar cobranca manual</option>
+              <option value="">Criar cobrança manual</option>
               {approvedQuotes.map((quote) => (
                 <option key={quote.id} value={quote.id}>
                   {quote.customer} - {quote.title} - {quote.amount}
@@ -68,7 +71,7 @@ export default async function BillingPage() {
           </label>
           <label>
             <span>Cliente manual</span>
-            <input name="customer" type="text" placeholder="Usar se nao vier de orcamento" />
+            <input name="customer" type="text" placeholder="Usar se não vier de orçamento" />
           </label>
           <label>
             <span>Valor manual</span>
@@ -84,10 +87,10 @@ export default async function BillingPage() {
           </label>
           <label className="form-span-2">
             <span>Origem manual</span>
-            <input name="source" type="text" placeholder="Ex.: cobranca criada apos visita tecnica" />
+            <input name="source" type="text" placeholder="Ex.: cobrança criada após visita técnica" />
           </label>
           <button type="submit" className="primary-link form-submit">
-            Salvar cobranca
+            Salvar cobrança
           </button>
         </form>
       </section>
@@ -97,7 +100,7 @@ export default async function BillingPage() {
           <div className="card-header">
             <div>
               <span className="section-label">Pronto para cobrar</span>
-              <h2>Orcamentos aprovados que podem virar recebimento</h2>
+              <h2>Orçamentos aprovados que podem virar recebimento</h2>
             </div>
           </div>
 
@@ -117,27 +120,56 @@ export default async function BillingPage() {
 
       <section className="stats-row">
         <article className="stat-card">
-          <span>Cobrancas atrasadas</span>
-          <strong>{overdueCharges.length}</strong>
-          <p>Essas cobrancas devem subir para o topo da fila operacional.</p>
+          <span>Fila urgente</span>
+          <strong>{followUpSummary.urgentCount}</strong>
+          <p>{followUpSummary.headline}</p>
         </article>
         <article className="stat-card">
           <span>Vencem hoje</span>
           <strong>{dueTodayCharges.length}</strong>
-          <p>Recebimentos do dia que pedem lembrete ou confirmacao rapida.</p>
+          <p>{followUpSummary.attentionCount > 0 ? "Recebimentos do dia que pedem lembrete ou confirmação rápida." : "Sem pressão de vencimento para hoje."}</p>
         </article>
         <article className="stat-card">
-          <span>Proximas com data</span>
+          <span>Próximas com data</span>
           <strong>{upcomingCharges.length}</strong>
-          <p>Base previsivel para caixa sem depender so de texto solto.</p>
+          <p>{followUpSummary.helper}</p>
         </article>
       </section>
 
       <section className="data-panel">
         <div className="card-header">
           <div>
+            <span className="section-label">Fila de follow-up</span>
+            <h2>Cobranças que pedem ação prática agora</h2>
+          </div>
+        </div>
+
+        {highlightedFollowUps.length > 0 ? (
+          <div className="cards-grid quote-grid">
+            {highlightedFollowUps.map((action) => (
+              <article key={action.id} className="dashboard-card">
+                <span className="dashboard-kicker">{action.urgencyLabel}</span>
+                <h3>{action.customer}</h3>
+                <strong className="quote-amount">{action.amount}</strong>
+                <p>{action.summary}</p>
+                <small className="muted-text">{action.recommendedAction}</small>
+                <small className="muted-text">{action.suggestedMessage}</small>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Fila limpa</strong>
+            <span>Nenhuma cobrança aberta exige follow-up financeiro imediato agora.</span>
+          </div>
+        )}
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
             <span className="section-label">Recebimentos</span>
-            <h2>Status de cobrancas do dia</h2>
+            <h2>Status de cobranças do dia</h2>
           </div>
         </div>
 
