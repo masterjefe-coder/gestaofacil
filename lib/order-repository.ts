@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { OrderStatus, type Customer as DbCustomer, type Order as DbOrder, type Quote as DbQuote } from "@prisma/client";
 import { getCurrentWorkspaceContext } from "@/lib/auth-session";
+import { recordAuditEvent } from "@/lib/audit-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { prisma } from "@/lib/prisma";
@@ -152,4 +153,86 @@ export async function ensureOrderFromQuote(quoteId: string): Promise<Order | nul
     sourceQuoteId: created.quoteId,
     note: created.internalNotes || "Pedido gerado a partir de orcamento aprovado.",
   };
+}
+
+export async function updateOrderStatus(
+  id: string,
+  input: { status: Order["status"]; note?: string },
+): Promise<Order | null> {
+  if (isLocalDataMode()) {
+    const data = await readDemoWorkspaceData();
+    const index = data.orders.findIndex((order) => order.id === id);
+
+    if (index === -1) {
+      return null;
+    }
+
+    const current = data.orders[index];
+    const updated: Order = {
+      ...current,
+      status: input.status,
+      note: input.note || current.note,
+    };
+
+    data.orders[index] = updated;
+    await writeDemoWorkspaceData(data);
+    return updated;
+  }
+
+  await ensureDemoCommerceSeeded();
+  const context = await getCurrentWorkspaceContext();
+  const existing = await prisma.order.findFirst({
+    where: {
+      id,
+      workspaceId: context.workspaceId,
+    },
+    include: {
+      customer: true,
+      quote: true,
+    },
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  const updated = await prisma.order.update({
+    where: { id: existing.id },
+    data: {
+      status: mapOrderStatus(input.status),
+      internalNotes: input.note || existing.internalNotes,
+      scheduledFor: input.status === "Agendado" ? (existing.scheduledFor || new Date()) : existing.scheduledFor,
+      completedAt: input.status === "Concluido" ? new Date() : null,
+    },
+    include: {
+      customer: true,
+      quote: true,
+    },
+  });
+
+  const view: Order = {
+    id: updated.id,
+    customer: updated.customer.name,
+    title: updated.quote.title,
+    amount: formatCurrency(Number(updated.quote.total)),
+    status: mapDbOrderStatus(updated.status),
+    sourceQuoteId: updated.quoteId,
+    note: updated.internalNotes || "Pedido sem observacoes.",
+  };
+
+  await recordAuditEvent({
+    action: "order.updated",
+    entityType: "order",
+    entityId: updated.id,
+    context,
+    payload: {
+      summary: `Pedido de ${view.customer} atualizado para ${view.status.toLowerCase()}.`,
+      metadata: {
+        customer: view.customer,
+        status: view.status,
+      },
+    },
+  });
+
+  return view;
 }

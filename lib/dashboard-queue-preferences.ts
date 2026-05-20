@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-export type DashboardQueueModule = "billing" | "customers" | "quotes" | "fiscal";
+export type DashboardQueueModule = "billing" | "customers" | "quotes" | "orders" | "fiscal";
 
 export type DashboardQueuePreference = {
   view?: string;

@@ -142,6 +142,12 @@ export const dashboardSections = [
     description: "Fluxo para criar, enviar, aprovar e converter orcamentos em pedidos ou servicos.",
   },
   {
+    href: "/dashboard/orders",
+    kicker: "Pedidos",
+    title: "Execução explícita entre venda e recebimento",
+    description: "Fila para acompanhar o que foi aprovado, agendado, executado e concluído.",
+  },
+  {
     href: "/dashboard/billing",
     kicker: "Cobrancas",
     title: "Pix e recebimento no centro da rotina",
