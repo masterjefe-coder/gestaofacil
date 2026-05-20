@@ -31,20 +31,63 @@ export default async function DashboardPage() {
   return (
     <DashboardShell
       currentPath="/dashboard"
-      eyebrow="Dashboard conceitual"
-      title="Um painel que fala de vendas, cobranças e próximos passos."
-      description="Esta primeira versão do dashboard organiza o produto em torno do fluxo comercial, não em torno de módulos isolados."
+      eyebrow="Operação do workspace"
+      title="O que precisa acontecer hoje aparece aqui primeiro."
+      description="O painel prioriza o próximo passo comercial, financeiro e fiscal sem te obrigar a caçar informação em módulos separados."
       actions={
         <>
           <Link href="/" className="secondary-link">
-            Voltar para landing
+            Ver site
           </Link>
-          <a href="mailto:contato@gestaofacil.local" className="primary-link">
-            Definir beta fechado
-          </a>
+          <Link href="/dashboard/setup" className="primary-link">Configurar workspace</Link>
         </>
       }
     >
+      <section className="dashboard-command-strip">
+        <article className="command-panel">
+          <div>
+            <span className="section-label">Situação do dia</span>
+            <h2>O painel começa pela leitura executiva da operação.</h2>
+            <p>
+              Se alguma parte do fluxo está travando conversão, recebimento ou emissão, ela precisa aparecer antes de qualquer navegação manual.
+            </p>
+          </div>
+          <div className="command-panel-grid">
+            <article className="command-chip">
+              <span>Foco imediato</span>
+              <strong>{recommendations[0]?.title || "Fluxo sem gargalo crítico agora"}</strong>
+            </article>
+            <article className="command-chip">
+              <span>Maior risco</span>
+              <strong>{cadenceRisks[0]?.title || "Nenhum risco operacional gritando agora"}</strong>
+            </article>
+            <article className="command-chip">
+              <span>Próxima disciplina</span>
+              <strong>{todayAgenda[0]?.title || "Sem agenda crítica no momento"}</strong>
+            </article>
+          </div>
+        </article>
+
+        <article className="agenda-card">
+          <div className="card-header">
+            <div>
+              <span className="section-label">Atalho de operação</span>
+              <h2>Entradas mais usadas</h2>
+            </div>
+          </div>
+          <div className="hero-actions">
+            <Link href="/dashboard/quotes" className="secondary-link">
+              Abrir orçamentos
+            </Link>
+            <Link href="/dashboard/billing" className="secondary-link">
+              Abrir cobranças
+            </Link>
+            <Link href="/dashboard/fiscal" className="secondary-link">
+              Abrir fiscal
+            </Link>
+          </div>
+        </article>
+      </section>
 
       <section className="stats-row">
         {dashboardStats.map((stat) => (

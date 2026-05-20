@@ -40,6 +40,10 @@
 - a frente operacional principal agora inclui leitura executiva e exportacao, nao apenas execucao transacional
 - relatorios entram como camada de leitura do proprio fluxo comercial, financeiro e fiscal, nao como modulo de BI separado
 - o proximo salto de produto, se formos alem desta frente, passa a ser analitica por periodo e tendencias
+- o produto passa a assumir trial de `14 dias gratis` sem cartao como padrao comercial
+- os planos consolidados para lancamento ficam em `Essencial`, `Profissional` e `Operacao`
+- a precificacao deve seguir valor fixo por plano, sem cobrar por faturamento no lancamento
+- o encaixe comercial inicial fica mais forte para servicos com NFS-e e rotina comercial/financeira, nao para software clinico profundo
 
 ### Escopo imediato
 

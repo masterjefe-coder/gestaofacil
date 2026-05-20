@@ -53,6 +53,26 @@ enum NfseStatus {
   CANCELED
 }
 
+enum SubscriptionPlan {
+  ESSENTIAL
+  PROFESSIONAL
+  OPERATION
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  PAUSED
+}
+
+enum SubscriptionBillingCycle {
+  MONTHLY
+  YEARLY
+}
+
 model User {
   id          String               @id @default(cuid())
   name        String?
@@ -80,6 +100,28 @@ model Workspace {
   charges       Charge[]
   nfseDocuments NfseDocument[]
   auditEvents   AuditEvent[]
+  subscription  WorkspaceSubscription?
+}
+
+model WorkspaceSubscription {
+  id                    String                   @id @default(cuid())
+  plan                  SubscriptionPlan         @default(PROFESSIONAL)
+  status                SubscriptionStatus       @default(TRIALING)
+  billingCycle          SubscriptionBillingCycle @default(MONTHLY)
+  trialStartedAt        DateTime?
+  trialEndsAt           DateTime?
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  canceledAt            DateTime?
+  asaasCustomerId       String?
+  asaasSubscriptionId   String?
+  asaasPaymentLink      String?
+  externalReference     String?
+  notes                 String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  workspaceId           String                   @unique
+  workspace             Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model WorkspaceMembership {

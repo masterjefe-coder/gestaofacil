@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { charges, customers, nfseDocuments, orders, quotes } from "@/lib/mock-data";
-import type { CompanyProfile, DemoWorkspaceData, WorkspaceProfile } from "@/lib/types";
+import type { CompanyProfile, DemoWorkspaceData, WorkspaceProfile, WorkspaceSubscriptionProfile } from "@/lib/types";
 
 const dataDir = path.join(process.cwd(), "data");
 const dataFile = path.join(dataDir, "demo-workspace.json");
@@ -30,9 +30,19 @@ const defaultCompany: CompanyProfile = {
   asaasSplitEnabled: false,
 };
 
+const defaultSubscription: WorkspaceSubscriptionProfile = {
+  plan: "PROFESSIONAL",
+  status: "TRIALING",
+  billingCycle: "MONTHLY",
+  trialStartedAt: "2026-05-20T12:00:00.000Z",
+  trialEndsAt: "2026-06-03T12:00:00.000Z",
+  notes: "Workspace demo criado em trial para demonstrar a jornada de assinatura.",
+};
+
 const defaultData: DemoWorkspaceData = {
   workspace: defaultWorkspace,
   company: defaultCompany,
+  subscription: defaultSubscription,
   customers,
   quotes,
   orders,
@@ -58,6 +68,7 @@ export async function readDemoWorkspaceData() {
   return {
     workspace: parsed.workspace ?? defaultWorkspace,
     company: parsed.company ?? defaultCompany,
+    subscription: parsed.subscription ?? defaultSubscription,
     customers: parsed.customers ?? customers,
     quotes: parsed.quotes ?? quotes,
     orders: parsed.orders ?? orders,

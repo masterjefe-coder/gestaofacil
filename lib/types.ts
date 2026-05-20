@@ -10,6 +10,26 @@ export type WorkspaceProfile = {
   niche: string;
 };
 
+export type SubscriptionPlanCode = "ESSENTIAL" | "PROFESSIONAL" | "OPERATION" | "ENTERPRISE";
+export type SubscriptionStatusCode = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "PAUSED";
+export type SubscriptionBillingCycleCode = "MONTHLY" | "YEARLY";
+
+export type WorkspaceSubscriptionProfile = {
+  plan: SubscriptionPlanCode;
+  status: SubscriptionStatusCode;
+  billingCycle: SubscriptionBillingCycleCode;
+  trialStartedAt?: string;
+  trialEndsAt?: string;
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+  canceledAt?: string;
+  asaasCustomerId?: string;
+  asaasSubscriptionId?: string;
+  asaasPaymentLink?: string;
+  externalReference?: string;
+  notes?: string;
+};
+
 export type CompanyProfile = {
   legalName: string;
   tradeName: string;
@@ -215,6 +235,7 @@ export type NfseDocument = {
 export type DemoWorkspaceData = {
   workspace: WorkspaceProfile;
   company: CompanyProfile;
+  subscription: WorkspaceSubscriptionProfile;
   customers: Customer[];
   quotes: Quote[];
   orders: Order[];

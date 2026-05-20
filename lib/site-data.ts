@@ -1,7 +1,7 @@
 export const proofNumbers = [
+  { value: "14 dias", label: "de teste grátis sem cartão" },
   { value: "1 fluxo", label: "do WhatsApp até a nota" },
-  { value: "0 retrabalho", label: "na venda que já foi aprovada" },
-  { value: "MVP lean", label: "para validar sem custo inchado" },
+  { value: "Preço fixo", label: "sem cobrar por faturamento" },
 ];
 
 export const brandPillars = [
@@ -20,7 +20,8 @@ export const brandPillars = [
 ];
 
 export const trustSignals = [
-  "WhatsApp-first para pequenos negocios de servico",
+  "Teste grátis por 14 dias sem cartão",
+  "WhatsApp-first para pequenos negócios de serviço",
   "Fluxo comercial, financeiro e fiscal no mesmo caminho",
   "Workspace real com membros, papéis e auditoria mínima",
 ];
@@ -28,13 +29,13 @@ export const trustSignals = [
 export const commercialHighlights = [
   {
     index: "01",
-    title: "Entra pela venda, nao pela burocracia",
+    title: "Entra pela venda, não pela burocracia",
     description:
       "O produto conversa com a dor diária do pequeno negócio: responder cliente, fechar orçamento e receber no prazo.",
   },
   {
     index: "02",
-    title: "Retem pela operacao",
+    title: "Retém pela operação",
     description:
       "Quando cobrança, histórico e nota vivem no mesmo fluxo, o sistema deixa de ser opcional e vira rotina.",
   },
@@ -47,7 +48,7 @@ export const commercialHighlights = [
 ];
 
 export const painPoints = [
-  "Venda presa no WhatsApp e sem historico confiavel",
+  "Venda presa no WhatsApp e sem histórico confiável",
   "Orçamento em PDF ou texto solto",
   "Cobrança acompanhada no improviso",
   "Nota emitida com dados redigitados",
@@ -63,14 +64,134 @@ export const growthLoops = [
 ];
 
 export const idealFor = [
-  "Instaladores",
-  "Assistencia tecnica",
-  "Agencias pequenas",
-  "Consultores",
-  "Clinicas pequenas",
-  "Manutencao",
-  "Servicos locais",
-  "Operacao comercial enxuta",
+  "Clínicas de estética",
+  "Psicólogos e terapeutas",
+  "Fisioterapia e nutrição",
+  "Mecânicas e auto centers",
+  "Eletricistas e instaladores",
+  "Assistência técnica",
+  "Consultorias e agências",
+  "Imobiliárias de locação",
+];
+
+export const pricingPlans = [
+  {
+    code: "ESSENTIAL",
+    name: "Essencial",
+    price: "R$ 129/mês",
+    annualPrice: "R$ 1.290/ano",
+    badge: "Entrada forte",
+    description: "Para o prestador de serviço ou operação pequena que precisa organizar venda, cobrança e nota sem complicação.",
+    cta: "Começar 14 dias grátis",
+    audience: "Autônomos, consultórios enxutos e operações pequenas",
+    limits: [
+      "1 usuário",
+      "1 workspace",
+      "1 conexão WhatsApp",
+      "até 100 cobranças por mês",
+      "até 50 NFS-e por mês",
+    ],
+    features: [
+      "Clientes ilimitados",
+      "Orçamentos e pedidos ilimitados",
+      "Cobrança por Pix ou link",
+      "Fila de follow-up financeiro",
+      "Relatórios básicos",
+    ],
+  },
+  {
+    code: "PROFESSIONAL",
+    name: "Profissional",
+    price: "R$ 219/mês",
+    annualPrice: "R$ 2.190/ano",
+    badge: "Melhor equilíbrio",
+    description: "Para equipes pequenas que já têm rotina comercial e financeira ativa e precisam ganhar previsibilidade.",
+    cta: "Testar plano profissional",
+    audience: "Clínicas de estética, mecânicas, serviços técnicos e pequenos times",
+    limits: [
+      "até 3 usuários",
+      "1 workspace",
+      "até 2 conexões WhatsApp",
+      "até 400 cobranças por mês",
+      "até 200 NFS-e por mês",
+    ],
+    features: [
+      "Tudo do Essencial",
+      "Relatórios completos",
+      "Fila fiscal mais forte",
+      "Leitura automática do retorno no WhatsApp",
+      "Prioridade de suporte",
+    ],
+  },
+  {
+    code: "OPERATION",
+    name: "Operação",
+    price: "R$ 349/mês",
+    annualPrice: "R$ 3.490/ano",
+    badge: "Para crescer",
+    description: "Para operações mais puxadas, com equipe, mais volume de cobrança e necessidade de leitura executiva melhor.",
+    cta: "Falar com a equipe",
+    audience: "Operações com mais volume, multiatendimento ou mais de uma unidade",
+    limits: [
+      "até 8 usuários",
+      "até 2 unidades ou operações",
+      "Múltiplas conexões WhatsApp",
+      "Cobranças ilimitadas na prática operacional",
+      "até 600 NFS-e por mês",
+    ],
+    features: [
+      "Tudo do Profissional",
+      "Comparação por período quando liberada",
+      "Onboarding assistido",
+      "Prioridade operacional",
+      "Base pronta para split futuro",
+    ],
+  },
+];
+
+export const pricingNotes = [
+  "Todos os planos com 14 dias grátis, sem cartão.",
+  "Sem cobrar percentual sobre faturamento do cliente.",
+  "Taxas de gateway de pagamento seguem o provedor conectado, como Asaas.",
+  "Split de plataforma fica desligado no lançamento e pronto para ser ativado no futuro.",
+];
+
+export const pricingFaqs = [
+  {
+    question: "O teste grátis pede cartão?",
+    answer: "Não. O trial de 14 dias pode ser iniciado sem cartão para reduzir atrito e deixar o cliente sentir o fluxo real antes de assinar.",
+  },
+  {
+    question: "O sistema cobra por faturamento ou por valor recebido?",
+    answer: "Não. A mensalidade do Gestão Fácil é fixa por plano. O que pode existir separado são as taxas do gateway conectado, como Pix, boleto ou cartão.",
+  },
+  {
+    question: "Clínicas médicas e odontológicas entram no público inicial?",
+    answer: "Entram quando o foco principal for comercial, cobrança e NFS-e. Para operação clínica profunda, com prontuário e módulos especializados, o posicionamento inicial ainda deve ser cuidadoso.",
+  },
+  {
+    question: "A emissão de NFS-e está incluída?",
+    answer: "Sim. A proposta central do produto inclui NFS-e no fluxo. O limite mensal sugerido varia por plano para manter o encaixe econômico do lançamento.",
+  },
+  {
+    question: "Como ficam as cobrancas pelo Asaas?",
+    answer: "Cada workspace deve operar com a própria conta ou subconta, para que o dinheiro caia direto na conta certa do cliente. O sistema já está preparado para esse modelo.",
+  },
+];
+
+export const pricingPositioning = [
+  {
+    title: "Não competir por ser o mais barato",
+    description: "O Gestão Fácil precisa parecer solução de operação séria, não ferramenta descartável de baixo ticket.",
+  },
+  {
+    title: "Não escalar o preço pelo faturamento",
+    description: "Para serviços, previsibilidade mensal pesa mais do que precificação por faixa de receita no começo da jornada.",
+  },
+  {
+    title: "Cobrar pelo fluxo completo",
+    description: "O valor vem da conexão entre WhatsApp, cobrança e NFS-e, não de um módulo isolado.",
+  },
 ];
 
 export const launchPlan = [

@@ -5,7 +5,11 @@ import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-export function AuthSignInForm() {
+type AuthSignInFormProps = {
+  callbackUrl?: string;
+};
+
+export function AuthSignInForm({ callbackUrl = "/dashboard" }: AuthSignInFormProps) {
   const searchParams = useSearchParams();
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -29,7 +33,7 @@ export function AuthSignInForm() {
       email,
       password,
       redirect: false,
-      callbackUrl: "/dashboard",
+      callbackUrl,
     });
 
     setIsPending(false);
@@ -77,7 +81,9 @@ export function AuthSignInForm() {
 
       <div className="auth-hint">
         <strong>Ainda não tem acesso?</strong>
-        <Link href="/onboarding">Criar conta e workspace real</Link>
+        <Link href={callbackUrl !== "/dashboard" ? `/onboarding?next=${encodeURIComponent(callbackUrl)}` : "/onboarding"}>
+          Criar conta e workspace real
+        </Link>
       </div>
     </>
   );

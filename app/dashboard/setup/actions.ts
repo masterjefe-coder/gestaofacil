@@ -11,6 +11,12 @@ import {
   updateWorkspaceSetup,
 } from "@/lib/workspace-settings-repository";
 import {
+  createWorkspaceSubscriptionCheckout,
+  isSubscriptionBillingCycleCode,
+  isSubscriptionPlanCode,
+  updateWorkspaceSubscriptionPlan,
+} from "@/lib/workspace-subscription-repository";
+import {
   createWorkspaceMember,
   removeWorkspaceMember,
   resetWorkspaceMemberPassword,
@@ -294,4 +300,47 @@ export async function createWorkspaceAsaasSubaccountAction(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
   redirect("/dashboard/setup?asaasConnected=1&asaasCreated=1");
+}
+
+export async function updateWorkspaceSubscriptionPlanAction(formData: FormData) {
+  const plan = getString(formData, "subscriptionPlan");
+  const billingCycle = getString(formData, "subscriptionBillingCycle");
+
+  if (!isSubscriptionPlanCode(plan) || !isSubscriptionBillingCycleCode(billingCycle)) {
+    redirect(`/dashboard/setup?subscriptionError=${encodeURIComponent("Escolha um plano e um ciclo válidos para o workspace.")}`);
+  }
+
+  try {
+    await updateWorkspaceSubscriptionPlan({
+      plan,
+      billingCycle,
+      note: "Plano preferido ajustado pelo setup do workspace.",
+    });
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Nao foi possivel atualizar o plano do workspace.";
+
+    redirect(`/dashboard/setup?subscriptionError=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirect("/dashboard/setup?subscriptionUpdated=1");
+}
+
+export async function createWorkspaceSubscriptionCheckoutAction() {
+  try {
+    await createWorkspaceSubscriptionCheckout();
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Nao foi possivel criar a assinatura do workspace no Asaas.";
+
+    redirect(`/dashboard/setup?subscriptionError=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirect("/dashboard/setup?subscriptionCheckoutCreated=1");
 }

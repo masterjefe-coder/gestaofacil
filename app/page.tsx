@@ -1,5 +1,9 @@
 import Link from "next/link";
+import Script from "next/script";
 import { BrandLogo } from "@/components/brand-logo";
+import { MarketingFooter } from "@/components/marketing-footer";
+import { MarketingTopbar } from "@/components/marketing-topbar";
+import { buildMarketingMetadata } from "@/lib/marketing-metadata";
 import {
   brandPillars,
   commercialHighlights,
@@ -8,45 +12,109 @@ import {
   idealFor,
   launchPlan,
   painPoints,
+  pricingFaqs,
+  pricingNotes,
+  pricingPlans,
+  pricingPositioning,
   proofNumbers,
   trustSignals,
 } from "@/lib/site-data";
 
+export const metadata = buildMarketingMetadata({
+  title: "Gestão Fácil Sistemas",
+  description:
+    "Venda pelo WhatsApp, cobre por Pix e emita NFS-e no mesmo fluxo com um sistema feito para empresas de serviço.",
+  path: "/",
+});
+
 export default function HomePage() {
+  const heroSignals = [
+    "WhatsApp no fluxo comercial",
+    "Cobrança por Pix e link",
+    "NFS-e no momento certo",
+  ];
+
+  const heroHighlights = [
+    {
+      label: "Entrada do dia",
+      value: "14 novos contatos",
+      helper: "Oportunidades puxadas direto do atendimento.",
+    },
+    {
+      label: "Próxima cobrança",
+      value: "Pix às 16h",
+      helper: "Financeiro já sabe quem precisa de follow-up.",
+    },
+    {
+      label: "Fiscal preparado",
+      value: "3 notas prontas",
+      helper: "Recebimentos pagos já entram no trilho fiscal.",
+    },
+  ];
+
+  const trustRail = [
+    "14 dias grátis sem cartão",
+    "Assinatura mensal fixa",
+    "Conta Asaas por workspace",
+    "NFS-e no mesmo fluxo da venda",
+  ];
+
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Gestão Fácil Sistemas",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    url: "https://www.gestaofacilsistemas.com.br",
+    description:
+      "Sistema comercial para empresas de serviço venderem, cobrarem e emitirem NFS-e sem retrabalho.",
+    offers: pricingPlans.map((plan) => ({
+      "@type": "Offer",
+      name: plan.name,
+      priceCurrency: "BRL",
+      price: plan.price.replace(/[^\d,]/g, "").replace(",", "."),
+      description: plan.description,
+      url: `https://www.gestaofacilsistemas.com.br/checkout?plan=${plan.code}`,
+    })),
+  };
+
   return (
     <main className="page-shell">
-      <section className="site-topbar">
-        <BrandLogo className="topbar-wordmark" priority />
-        <div className="topbar-actions">
-          <a href="#produto" className="topbar-link">
-            Produto
-          </a>
-          <a href="#direcao" className="topbar-link">
-            Direção
-          </a>
-          <Link href="/login" className="secondary-link">
-            Entrar
-          </Link>
-        </div>
-      </section>
+      <Script
+        id="gestao-facil-software-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
+
+      <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Iniciar trial" />
 
       <section className="hero">
         <div className="hero-copy">
           <BrandLogo className="hero-wordmark" priority />
-          <span className="eyebrow">Gestão comercial para serviços</span>
-          <h1>Venda pelo WhatsApp, cobre por Pix e emita nota sem retrabalho.</h1>
+          <span className="eyebrow">CRM e operação para serviços</span>
+          <h1>Venda, receba e emita em um fluxo só.</h1>
           <p className="hero-text">
-            O Gestão Fácil nasce para pequenos negócios de serviço que precisam fechar vendas
-            mais rápido, receber melhor e parar de perder tempo com fluxo quebrado.
+            O Gestão Fácil foi desenhado para empresas de serviço que já vendem pelo WhatsApp,
+            precisam receber com mais consistência e não querem perder o timing da cobrança e da nota.
           </p>
+          <div className="hero-signal-list" aria-label="Principais sinais do produto">
+            {heroSignals.map((item) => (
+              <span key={item} className="segment-chip hero-signal-chip">
+                {item}
+              </span>
+            ))}
+          </div>
           <div className="hero-actions">
-            <Link href="/login" className="primary-link">
-              Entrar no workspace
+            <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
+              Iniciar 14 dias grátis
             </Link>
-            <a href="#produto" className="secondary-link">
-              Explorar proposta
+            <a href="#como-funciona" className="secondary-link">
+              Ver como funciona
             </a>
           </div>
+          <p className="hero-caption">
+            Sem implantação longa, sem cara de ERP pesado e com foco no dia real da operação.
+          </p>
           <ul className="proof-strip">
             {proofNumbers.map((item) => (
               <li key={item.label}>
@@ -64,10 +132,23 @@ export default function HomePage() {
               <BrandLogo variant="mark" className="panel-brand-mark" />
               <div>
                 <strong>Gestão Fácil Sistemas</strong>
-                <small>Operação comercial enxuta, visual forte e foco em serviços.</small>
+                <small>Comercial, cobrança e fiscal no mesmo ritmo de operação.</small>
               </div>
             </div>
-            <div className="panel-kicker">Fluxo vencedor</div>
+            <div className="panel-kicker">Resumo operacional</div>
+            <p className="panel-copy">
+              O painel foi pensado para o dono ou operador bater o olho e saber o que vender, cobrar e emitir sem trocar de contexto.
+            </p>
+            <div className="hero-stat-grid">
+              {heroHighlights.map((item) => (
+                <article key={item.label} className="hero-stat-card">
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                  <small>{item.helper}</small>
+                </article>
+              ))}
+            </div>
+            <div className="panel-kicker">Fluxo principal</div>
             <ol className="flow-list">
               <li>Conversa vira oportunidade</li>
               <li>Oportunidade vira orçamento</li>
@@ -76,21 +157,28 @@ export default function HomePage() {
               <li>Pagamento prepara a nota</li>
             </ol>
             <div className="panel-footer">
-              <span>Foco no pequeno negócio real</span>
-              <span>Sem cara de ERP pesado</span>
+              <span>Decisão rápida para quem opera</span>
+              <span>Arquitetura pronta para crescer</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="section-grid brand-strip">
+      <section className="trust-rail">
+        {trustRail.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </section>
+
+      <section id="como-funciona" className="section-grid">
         <div>
-          <span className="section-label">Identidade do produto</span>
-          <h2>A marca precisa parecer tecnologia confiável, não software genérico.</h2>
+          <span className="section-label">Como funciona</span>
+          <h2>O produto entra onde a empresa mais sofre: vender, cobrar e não perder o tempo da emissão.</h2>
         </div>
         <div className="cards-grid">
-          {brandPillars.map((item) => (
+          {commercialHighlights.map((item) => (
             <article key={item.title} className="info-card">
+              <span className="card-index">{item.index}</span>
               <h3>{item.title}</h3>
               <p>{item.description}</p>
             </article>
@@ -98,15 +186,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="produto" className="section-grid">
+      <section id="produto" className="section-grid brand-strip">
         <div>
-          <span className="section-label">Por que isso vende</span>
-          <h2>O produto entra pela dor comercial e segura a recorrência com operação.</h2>
+          <span className="section-label">Por que isso segura recorrência</span>
+          <h2>Quando o comercial, o financeiro e o fiscal se conversam, o produto deixa de ser acessório.</h2>
         </div>
         <div className="cards-grid">
-          {commercialHighlights.map((item) => (
+          {brandPillars.map((item) => (
             <article key={item.title} className="info-card">
-              <span className="card-index">{item.index}</span>
               <h3>{item.title}</h3>
               <p>{item.description}</p>
             </article>
@@ -136,7 +223,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section-grid">
+      <section id="segmentos" className="section-grid">
         <div>
           <span className="section-label">Para quem ele encaixa melhor</span>
           <h2>Segmentos em que rapidez, cobrança e simplicidade pesam mais do que um ERP completo.</h2>
@@ -148,6 +235,91 @@ export default function HomePage() {
             </span>
           ))}
         </div>
+      </section>
+
+      <section className="section-split">
+        <article className="split-panel success">
+          <span className="section-label">Pronto para operação</span>
+          <h2>O produto já entra com clientes, orçamentos, pedidos, cobrança, relatórios e base de assinatura.</h2>
+          <ul className="stack-list">
+            <li>Comercial e financeiro no mesmo painel</li>
+            <li>Trial de 14 dias com plano por workspace</li>
+            <li>Asaas para cobrança operacional e recorrência SaaS</li>
+            <li>Setup preparado para conta própria e subconta</li>
+          </ul>
+        </article>
+
+        <article className="split-panel">
+          <span className="section-label">Credibilidade institucional</span>
+          <h2>Empresa, páginas essenciais e navegação pública completas para passar confiança desde o primeiro clique.</h2>
+          <ul className="stack-list">
+            <li><Link href="/sobre">Conheça a proposta da empresa</Link></li>
+            <li><Link href="/integracoes">Veja as integrações do produto</Link></li>
+            <li><Link href="/ajuda">Leia dúvidas e próximos passos</Link></li>
+            <li><Link href="/privacidade">Consulte privacidade e termos</Link></li>
+          </ul>
+        </article>
+      </section>
+
+      <section id="planos" className="section-grid tinted">
+        <div>
+          <span className="section-label">Planos</span>
+          <h2>Preço fixo, teste grátis de 14 dias e foco em empresas de serviço que precisam operar melhor.</h2>
+          <p>
+            A ideia não é disputar com ERP genérico barato nem com software clínico pesado.
+            O encaixe do Gestão Fácil é ficar no meio certo: forte no fluxo, simples na adoção e competitivo no ticket.
+          </p>
+        </div>
+        <div className="cards-grid pricing-grid">
+          {pricingPlans.map((plan) => (
+            <article key={plan.name} className="dashboard-card pricing-card">
+              <div className="pricing-card-top">
+                <span className="dashboard-kicker">{plan.badge}</span>
+                <h3>{plan.name}</h3>
+                <p>{plan.description}</p>
+              </div>
+              <div className="pricing-price-block">
+                <strong>{plan.price}</strong>
+                <small>{plan.annualPrice}</small>
+                <span>{plan.audience}</span>
+              </div>
+              <div className="pricing-list-block">
+                <strong>Estrutura</strong>
+                <ul className="stack-list pricing-stack-list">
+                  {plan.limits.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="pricing-list-block">
+                <strong>Inclui</strong>
+                <ul className="stack-list pricing-stack-list">
+                  {plan.features.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="hero-actions pricing-actions">
+                <Link href={`/checkout?plan=${plan.code}`} className="primary-link">
+                  {plan.cta}
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="cards-grid">
+          {pricingPositioning.map((item) => (
+            <article key={item.title} className="info-card compact">
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </article>
+          ))}
+        </div>
+        <ul className="stack-list pricing-note-list">
+          {pricingNotes.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
       </section>
 
       <section className="section-grid tinted">
@@ -171,7 +343,7 @@ export default function HomePage() {
           <h2>Primeiro vender e receber melhor. Depois expandir automações, recorrência e fiscal.</h2>
         </div>
         <Link href="/dashboard" className="primary-link">
-          Abrir dashboard conceitual
+          Ver painel operacional
         </Link>
       </section>
 
@@ -186,6 +358,21 @@ export default function HomePage() {
               <span className="dashboard-kicker">{card.kicker}</span>
               <h3>{card.title}</h3>
               <p>{card.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section-grid">
+        <div>
+          <span className="section-label">Perguntas comuns</span>
+          <h2>O comercial precisa responder trial, valor e encaixe de público com segurança desde o primeiro contato.</h2>
+        </div>
+        <div className="cards-grid faq-grid">
+          {pricingFaqs.map((item) => (
+            <article key={item.question} className="info-card faq-card">
+              <h3>{item.question}</h3>
+              <p>{item.answer}</p>
             </article>
           ))}
         </div>
@@ -210,14 +397,16 @@ export default function HomePage() {
           </p>
           <div className="hero-actions">
             <Link href="/onboarding" className="primary-link">
-              Criar primeiro workspace
+              Começar agora
             </Link>
             <Link href="/login" className="secondary-link">
-              Acessar plataforma
+              Entrar na plataforma
             </Link>
           </div>
         </article>
       </section>
+
+      <MarketingFooter />
     </main>
   );
 }

@@ -5,14 +5,35 @@ import {
   createWorkspaceOnboardingAction,
   type OnboardingActionState,
 } from "@/app/onboarding/actions";
+import { getSubscriptionPlanPresentation } from "@/lib/subscription";
+import type { SubscriptionPlanCode } from "@/lib/types";
 
 const initialState: OnboardingActionState = {};
 
-export function OnboardingForm() {
+type OnboardingFormProps = {
+  selectedPlan?: SubscriptionPlanCode;
+  nextUrl?: string;
+};
+
+export function OnboardingForm({ selectedPlan = "PROFESSIONAL", nextUrl = "/dashboard/setup?subscriptionIntent=1" }: OnboardingFormProps) {
   const [state, formAction, isPending] = useActionState(createWorkspaceOnboardingAction, initialState);
+  const selectedPlanMeta = getSubscriptionPlanPresentation(selectedPlan);
 
   return (
     <form action={formAction} className="auth-form">
+      <div className="auth-hint">
+        <strong>Trial de 14 dias liberado</strong>
+        <span>
+          Seu workspace começa no plano {selectedPlanMeta.name} com teste gratis de 14 dias,
+          sem cartao e com a base pronta para assinatura depois.
+        </span>
+        <small className="muted-text">
+          Referencia comercial atual: {selectedPlanMeta.price} no mensal.
+        </small>
+      </div>
+      <input type="hidden" name="subscriptionPlan" value={selectedPlan} />
+      <input type="hidden" name="subscriptionBillingCycle" value="MONTHLY" />
+      <input type="hidden" name="nextUrl" value={nextUrl} />
       <label>
         <span>Seu nome</span>
         <input name="name" type="text" placeholder="Ex.: Marina Teixeira" required />

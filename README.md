@@ -26,15 +26,23 @@ Frase secundaria:
 
 `O sistema comercial simples para pequenos negocios que vendem servicos.`
 
+## Trial e planos
+
+- trial de `14 dias gratis`
+- sem cartao no inicio do teste
+- modelo de preco fixo por plano, sem cobrar por faturamento
+- referencia comercial atual em [PRICING.md](./PRICING.md)
+
 ## Publico inicial
 
-- prestadores de servico
+- clinicas de estetica
+- psicologos, terapeutas e profissionais de saude sem operacao clinica complexa
+- fisioterapia e nutricao
+- mecanicas e auto centers
+- eletricistas e instaladores
 - assistencia tecnica
-- instaladores
-- pequenas agencias
-- consultores
-- clinicas pequenas
-- negocios locais com rotina comercial simples
+- consultorias e agencias
+- imobiliarias de locacao e administracao
 
 ## O que nao somos
 
@@ -50,6 +58,7 @@ Frase secundaria:
 - [PRD.md](./PRD.md): escopo do produto e requisitos
 - [MVP-BACKLOG.md](./MVP-BACKLOG.md): backlog inicial do MVP
 - [ROADMAP-90D.md](./ROADMAP-90D.md): plano de 30, 60 e 90 dias
+- [PRICING.md](./PRICING.md): trial, planos, segmentos e racional comercial
 - [ARCHITECTURE.md](./ARCHITECTURE.md): arquitetura sugerida
 - [STATUS.md](./STATUS.md): estado atual resumido do projeto
 - [HANDOFF-2026-05-20.md](./HANDOFF-2026-05-20.md): handoff operacional mais recente para continuar do ponto atual
@@ -70,6 +79,7 @@ Hoje o produto ja cobre o fluxo operacional principal:
 - cobrancas com fila automatica, lembretes e leitura de WhatsApp
 - fiscal com fila inicial de NFS-e, rascunho e emissao assistida ou automatica quando o municipio permitir
 - relatorios operacionais em tela, Excel e PDF
+- base de assinatura SaaS por workspace com trial de 14 dias, plano preferido e status inicial
 
 Se formos alem desta frente, o proximo passo de produto ja entra em camada analitica mais pesada:
 

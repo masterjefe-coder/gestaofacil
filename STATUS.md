@@ -9,6 +9,9 @@
 - documentacao central do produto criada
 - projeto Next.js inicializado na raiz
 - landing page alinhada ao novo posicionamento do Gestao Facil
+- landing page agora ja comunica trial de 14 dias, planos e segmentos com melhor encaixe
+- pagina publica de planos agora existe em `/planos`
+- onboarding agora ja nasce com trial de 14 dias e plano preferido por workspace
 - dashboard conceitual criado com shell reutilizavel
 - navegacao lateral inicial do workspace criada
 - modulos conceituais de clientes, orcamentos e cobrancas criados
@@ -77,6 +80,8 @@
 - API de pedidos agora existe em `/api/orders`
 - Asaas agora ja aceita conta por workspace, subconta guiada e fallback temporario da conta raiz
 - o setup agora ja guia a equipe entre criar conta de recebimento no Asaas ou conectar uma conta existente
+- o racional comercial de trial, segmentos e planos agora ja esta consolidado em documentacao e site
+- a base de assinatura SaaS agora ja existe por workspace, com plano, ciclo, status e referencia pronta para recorrencia futura
 - testes automatizados minimos agora ja existem para utilitarios criticos
 - endpoint `/api/health` criado
 - schema Prisma inicial criado em `prisma/schema.prisma`
@@ -88,6 +93,7 @@
 
 - `/`
 - `/login`
+- `/planos`
 - `/onboarding`
 - `/dashboard`
 - `/dashboard/customers`

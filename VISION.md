@@ -53,13 +53,14 @@ Enquanto outros sistemas se dividem entre CRM, financeiro e fiscal, o Gestao Fac
 
 ### Excelente encaixe
 
-- instaladores
-- manutencao
+- clinicas de estetica
+- psicologos e terapeutas
+- fisioterapia e nutricao
+- mecanicas e auto centers
+- eletricistas e instaladores
 - assistencia tecnica
-- consultores
-- pequenas agencias
-- servicos locais
-- pequenos times comerciais de servicos
+- consultorias e pequenas agencias
+- imobiliarias de locacao e administracao
 
 ### Evitar no inicio
 
@@ -69,6 +70,14 @@ Enquanto outros sistemas se dividem entre CRM, financeiro e fiscal, o Gestao Fac
 - contabilidade complexa
 - operacoes multi-filial exigentes
 - empresas que exigem NF-e como fluxo principal desde o primeiro dia
+- clinicas que esperam prontuario completo e operacao clinica profunda desde o primeiro contrato
+
+## Entrada comercial
+
+- trial de 14 dias gratis
+- sem cartao
+- preco fixo por plano
+- sem cobrar por faturamento no lancamento
 
 ## Resultado desejado para o cliente
 

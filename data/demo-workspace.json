@@ -16,6 +16,14 @@
     "defaultPixKey": "43300030000126",
     "defaultPaymentMessage": "Pagamento referente aos servicos contratados. Envie o comprovante por WhatsApp."
   },
+  "subscription": {
+    "plan": "PROFESSIONAL",
+    "status": "TRIALING",
+    "billingCycle": "MONTHLY",
+    "trialStartedAt": "2026-05-20T12:00:00.000Z",
+    "trialEndsAt": "2026-06-03T12:00:00.000Z",
+    "notes": "Workspace demo criado em trial para demonstrar a jornada de assinatura."
+  },
   "customers": [
     {
       "id": "cus_001",

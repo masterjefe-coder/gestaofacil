@@ -6,6 +6,8 @@ import { BrandLogo } from "@/components/brand-logo";
 import { LogoutButton } from "@/components/logout-button";
 import { authOptions } from "@/lib/auth-options";
 import { dashboardNav } from "@/lib/mock-data";
+import { getSubscriptionStatusLabel } from "@/lib/subscription";
+import { getWorkspaceSubscription } from "@/lib/workspace-subscription-repository";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 
 type DashboardShellProps = {
@@ -31,7 +33,16 @@ export async function DashboardShell({
     redirect("/login");
   }
 
-  const setup = await getWorkspaceSetup();
+  const [setup, subscription] = await Promise.all([
+    getWorkspaceSetup(),
+    getWorkspaceSubscription(),
+  ]);
+
+  const restrictedSubscription = subscription.status === "PAST_DUE" || subscription.status === "CANCELED";
+
+  if (restrictedSubscription && currentPath !== "/dashboard/setup") {
+    redirect("/dashboard/setup?subscriptionIntent=1");
+  }
 
   return (
     <main className="workspace-shell">
@@ -78,6 +89,15 @@ export async function DashboardShell({
 
           {actions ? <div className="dashboard-actions">{actions}</div> : null}
         </header>
+
+        {restrictedSubscription ? (
+          <div className="auth-hint fiscal-warning">
+            <strong>Assinatura com acesso restrito</strong>
+            <span>
+              Status atual: {getSubscriptionStatusLabel(subscription.status)}. Ajuste a assinatura no setup para voltar a operar normalmente.
+            </span>
+          </div>
+        ) : null}
 
         {children}
       </section>

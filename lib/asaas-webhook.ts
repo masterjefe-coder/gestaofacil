@@ -10,6 +10,7 @@ type AsaasWebhookPayload = {
   event?: string;
   payment?: {
     id?: string;
+    subscription?: string;
     customer?: string;
     value?: number;
     netValue?: number;
@@ -30,6 +31,10 @@ type ChargeReference =
   | { mode: "local"; chargeId: string }
   | { mode: "database"; workspaceId: string; chargeId: string };
 
+type SubscriptionReference =
+  | { mode: "local"; workspaceKey: string }
+  | { mode: "database"; workspaceId: string };
+
 function getString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -47,6 +52,22 @@ function parseChargeReference(externalReference: string): ChargeReference | null
 
   return parts[1] && parts[2]
     ? { mode: "database", workspaceId: parts[1], chargeId: parts[2] }
+    : null;
+}
+
+function parseSubscriptionReference(externalReference: string): SubscriptionReference | null {
+  const parts = externalReference.split(":");
+
+  if (parts.length !== 3 || parts[0] !== "gf_subscription") {
+    return null;
+  }
+
+  if (parts[1] === "local") {
+    return parts[2] ? { mode: "local", workspaceKey: parts[2] } : null;
+  }
+
+  return parts[1]
+    ? { mode: "database", workspaceId: parts[1] }
     : null;
 }
 
@@ -194,6 +215,36 @@ async function applyLocalWebhook(reference: Extract<ChargeReference, { mode: "lo
   };
 }
 
+async function applyLocalSubscriptionWebhook(reference: Extract<SubscriptionReference, { mode: "local" }>, payload: NonNullable<AsaasWebhookPayload["payment"]>, event: string) {
+  const data = await readDemoWorkspaceData();
+
+  if (reference.workspaceKey !== data.workspace.slug) {
+    return { stored: false, reason: "subscription_not_found", mode: "local" as const };
+  }
+
+  const current = data.subscription;
+
+  data.subscription = {
+    ...current,
+    asaasSubscriptionId: getString(payload.subscription) || current.asaasSubscriptionId,
+    asaasPaymentLink: getString(payload.invoiceUrl) || getString(payload.bankSlipUrl) || current.asaasPaymentLink,
+    status: isReceivedEvent(event)
+      ? "ACTIVE"
+      : event === "PAYMENT_OVERDUE"
+        ? "PAST_DUE"
+        : current.status,
+  };
+
+  await writeDemoWorkspaceData(data);
+
+  return {
+    stored: true,
+    mode: "local" as const,
+    workspaceId: null,
+    event,
+  };
+}
+
 async function applyDatabaseWebhook(reference: Extract<ChargeReference, { mode: "database" }>, eventId: string, payload: NonNullable<AsaasWebhookPayload["payment"]>, event: string) {
   if (await hasProcessedWebhookEvent(reference.workspaceId, eventId)) {
     return {
@@ -312,13 +363,80 @@ async function applyDatabaseWebhook(reference: Extract<ChargeReference, { mode: 
   };
 }
 
+async function applyDatabaseSubscriptionWebhook(reference: Extract<SubscriptionReference, { mode: "database" }>, eventId: string, payload: NonNullable<AsaasWebhookPayload["payment"]>, event: string) {
+  if (await hasProcessedWebhookEvent(reference.workspaceId, eventId)) {
+    return {
+      stored: true,
+      duplicate: true,
+      mode: "database" as const,
+      workspaceId: reference.workspaceId,
+      event,
+    };
+  }
+
+  const subscription = await prisma.workspaceSubscription.findUnique({
+    where: { workspaceId: reference.workspaceId },
+  });
+
+  if (!subscription) {
+    return { stored: false, reason: "subscription_not_found", mode: "database" as const, workspaceId: reference.workspaceId };
+  }
+
+  const nextStatus =
+    isReceivedEvent(event)
+      ? "ACTIVE"
+      : event === "PAYMENT_OVERDUE"
+        ? "PAST_DUE"
+        : subscription.status;
+
+  await prisma.workspaceSubscription.update({
+    where: { workspaceId: reference.workspaceId },
+    data: {
+      status: nextStatus,
+      asaasSubscriptionId: getString(payload.subscription) || subscription.asaasSubscriptionId,
+      asaasPaymentLink: getString(payload.invoiceUrl) || getString(payload.bankSlipUrl) || subscription.asaasPaymentLink,
+      currentPeriodStart: isReceivedEvent(event) ? new Date() : subscription.currentPeriodStart,
+      notes: isReceivedEvent(event)
+        ? "Pagamento confirmado pelo webhook do Asaas."
+        : event === "PAYMENT_OVERDUE"
+          ? "Assinatura com pagamento pendente segundo o webhook do Asaas."
+          : subscription.notes,
+    },
+  });
+
+  await recordAuditEvent({
+    action: `subscription.asaas.${event.toLowerCase()}`,
+    entityType: "workspace_subscription",
+    entityId: subscription.id,
+    workspaceId: reference.workspaceId,
+    actorId: null,
+    payload: {
+      summary: `Asaas enviou ${event} para a assinatura do workspace.`,
+      metadata: {
+        subscriptionId: getString(payload.subscription) || null,
+        paymentId: getString(payload.id) || null,
+        dueDate: getString(payload.dueDate) || null,
+        paymentDate: getString(payload.paymentDate) || getString(payload.clientPaymentDate) || null,
+      },
+    },
+  });
+
+  return {
+    stored: true,
+    duplicate: false,
+    mode: "database" as const,
+    workspaceId: reference.workspaceId,
+    event,
+  };
+}
+
 export async function handleAsaasWebhook(payload: AsaasWebhookPayload) {
   const eventId = getString(payload.id);
   const event = getString(payload.event);
   const payment = payload.payment || null;
   const externalReference = getString(payment?.externalReference);
 
-  if (!eventId || !event || !payment || !externalReference) {
+  if (!eventId || !event || !payment) {
     return {
       stored: false,
       reason: "invalid_payload",
@@ -326,20 +444,48 @@ export async function handleAsaasWebhook(payload: AsaasWebhookPayload) {
     };
   }
 
-  const reference = parseChargeReference(externalReference);
+  const chargeReference = externalReference ? parseChargeReference(externalReference) : null;
+  const subscriptionReference = externalReference ? parseSubscriptionReference(externalReference) : null;
 
-  if (!reference) {
+  if (chargeReference) {
+    if (chargeReference.mode === "local" || isLocalDataMode()) {
+      return applyLocalWebhook(chargeReference.mode === "local" ? chargeReference : { mode: "local", chargeId: chargeReference.chargeId }, payment, event);
+    }
+
+    return applyDatabaseWebhook(chargeReference, eventId, payment, event);
+  }
+
+  if (subscriptionReference || getString(payment.subscription)) {
+    if (isLocalDataMode()) {
+      const localReference = subscriptionReference?.mode === "local"
+        ? subscriptionReference
+        : { mode: "local" as const, workspaceKey: (await readDemoWorkspaceData()).workspace.slug };
+      return applyLocalSubscriptionWebhook(localReference, payment, event);
+    }
+
+    const dbReference = subscriptionReference?.mode === "database"
+      ? subscriptionReference
+      : await prisma.workspaceSubscription.findFirst({
+          where: { asaasSubscriptionId: getString(payment.subscription) },
+          select: { workspaceId: true },
+        });
+
+    if (dbReference && "workspaceId" in dbReference) {
+      return applyDatabaseSubscriptionWebhook({ mode: "database", workspaceId: dbReference.workspaceId }, eventId, payment, event);
+    }
+
     return {
       stored: false,
-      reason: "external_reference_not_supported",
+      reason: "subscription_not_found",
       event,
-      externalReference,
+      externalReference: externalReference || null,
     };
   }
 
-  if (reference.mode === "local" || isLocalDataMode()) {
-    return applyLocalWebhook(reference.mode === "local" ? reference : { mode: "local", chargeId: reference.chargeId }, payment, event);
-  }
-
-  return applyDatabaseWebhook(reference, eventId, payment, event);
+  return {
+    stored: false,
+    reason: "external_reference_not_supported",
+    event,
+    externalReference: externalReference || null,
+  };
 }

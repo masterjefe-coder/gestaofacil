@@ -2,12 +2,27 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { BrandLogo } from "@/components/brand-logo";
+import { MarketingFooter } from "@/components/marketing-footer";
+import { MarketingTopbar } from "@/components/marketing-topbar";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { authOptions } from "@/lib/auth-options";
 import { isLocalDataMode } from "@/lib/data-mode";
+import { isSubscriptionPlanCode } from "@/lib/workspace-subscription-repository";
 
-export default async function OnboardingPage() {
+type OnboardingPageProps = {
+  searchParams?: Promise<{
+    plan?: string;
+    next?: string;
+  }>;
+};
+
+export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
   const session = await getServerSession(authOptions);
+  const params = await searchParams;
+  const selectedPlan = params?.plan && isSubscriptionPlanCode(params.plan)
+    ? params.plan
+    : "PROFESSIONAL";
+  const nextUrl = params?.next || "/dashboard/setup?subscriptionIntent=1";
 
   if (session) {
     redirect("/dashboard");
@@ -15,6 +30,9 @@ export default async function OnboardingPage() {
 
   return (
     <main className="auth-shell">
+      <div className="page-shell auth-page-shell">
+        <MarketingTopbar ctaHref={`/checkout?plan=${selectedPlan}`} ctaLabel="Plano escolhido" />
+      </div>
       <section className="auth-card">
         <BrandLogo className="auth-wordmark" priority />
         <span className="eyebrow">Primeiro workspace</span>
@@ -30,7 +48,7 @@ export default async function OnboardingPage() {
             <span>Defina `DATABASE_URL` para habilitar onboarding real com persistência no banco.</span>
           </div>
         ) : (
-          <OnboardingForm />
+          <OnboardingForm selectedPlan={selectedPlan} nextUrl={nextUrl} />
         )}
 
         <div className="hero-actions">
@@ -42,6 +60,9 @@ export default async function OnboardingPage() {
           </Link>
         </div>
       </section>
+      <div className="page-shell auth-page-shell">
+        <MarketingFooter />
+      </div>
     </main>
   );
 }

@@ -3,6 +3,8 @@ import { isLocalDataMode } from "@/lib/data-mode";
 import { hashPassword } from "@/lib/password-auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { buildOnboardingSubscriptionData } from "@/lib/workspace-subscription-repository";
+import type { SubscriptionBillingCycleCode, SubscriptionPlanCode } from "@/lib/types";
 
 export type OnboardingInput = {
   name: string;
@@ -16,6 +18,8 @@ export type OnboardingInput = {
   city?: string;
   state?: string;
   serviceDescription?: string;
+  subscriptionPlan?: SubscriptionPlanCode;
+  subscriptionBillingCycle?: SubscriptionBillingCycleCode;
 };
 
 export class OnboardingError extends Error {}
@@ -50,6 +54,8 @@ export async function createWorkspaceOnboarding(input: OnboardingInput) {
   const tradeName = input.tradeName.trim();
   const legalName = input.legalName.trim();
   const document = input.document.trim();
+  const subscriptionPlan = input.subscriptionPlan || "PROFESSIONAL";
+  const subscriptionBillingCycle = input.subscriptionBillingCycle || "MONTHLY";
 
   if (!email || !name || !password || !workspaceName || !tradeName || !legalName || !document) {
     throw new OnboardingError("Preencha nome, email, senha, workspace e dados principais da empresa.");
@@ -104,6 +110,14 @@ export async function createWorkspaceOnboarding(input: OnboardingInput) {
         state: input.state?.trim() || null,
         serviceDescription: input.serviceDescription?.trim() || null,
       },
+    });
+
+    await tx.workspaceSubscription.create({
+      data: buildOnboardingSubscriptionData({
+        workspaceId: workspace.id,
+        plan: subscriptionPlan,
+        billingCycle: subscriptionBillingCycle,
+      }),
     });
 
     return {

@@ -10,6 +10,10 @@
 
 O produto ja tem um core operacional forte entre clientes, orcamentos, pedidos, cobrancas, fiscal e relatorios, com leitura executiva e exportacao encaixadas no fluxo.
 
+O posicionamento comercial tambem ja esta mais claro, com trial de 14 dias, segmentos prioritarios e planos definidos para lancamento.
+
+A base de assinatura por workspace tambem ja existe, faltando ligar a recorrencia real no Asaas e as regras finas de acesso por status.
+
 ## Proximo passo recomendado
 
 O principal restante agora ja nao e base de produto, e sim validacao real das integracoes criticas em producao.
@@ -28,6 +32,7 @@ Observacao:
 - a exportacao em Excel ja existe em [app/api/reports/export/route.ts](./app/api/reports/export/route.ts)
 - a versao de impressao em PDF ja existe em [app/dashboard/reports/print/page.tsx](./app/dashboard/reports/print/page.tsx)
 - o modulo de pedidos ja existe em [app/dashboard/orders/page.tsx](./app/dashboard/orders/page.tsx)
+- a base comercial de precos, trial e segmentos agora esta em [PRICING.md](./PRICING.md)
 - os filtros por modulo ja ficam persistidos para `customers`, `quotes`, `orders`, `billing` e `fiscal`
 - testes minimos ja existem e podem rodar com `npm test`
 

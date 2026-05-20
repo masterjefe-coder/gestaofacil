@@ -28,6 +28,8 @@ export async function createWorkspaceOnboardingAction(
       city: getString(formData, "city"),
       state: getString(formData, "state"),
       serviceDescription: getString(formData, "serviceDescription"),
+      subscriptionPlan: (getString(formData, "subscriptionPlan") || "PROFESSIONAL") as "ESSENTIAL" | "PROFESSIONAL" | "OPERATION" | "ENTERPRISE",
+      subscriptionBillingCycle: (getString(formData, "subscriptionBillingCycle") || "MONTHLY") as "MONTHLY" | "YEARLY",
     });
   } catch (error) {
     if (error instanceof OnboardingError) {
@@ -38,5 +40,6 @@ export async function createWorkspaceOnboardingAction(
   }
 
   const email = encodeURIComponent(getString(formData, "email"));
-  redirect(`/login?created=1&email=${email}`);
+  const nextUrl = getString(formData, "nextUrl") || "/dashboard/setup?subscriptionIntent=1";
+  redirect(`/login?created=1&email=${email}&callbackUrl=${encodeURIComponent(nextUrl)}`);
 }

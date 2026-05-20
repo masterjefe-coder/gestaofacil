@@ -43,8 +43,15 @@ type AsaasCreateSubaccountResponse = {
 
 type AsaasPayment = {
   id: string;
+  subscription?: string | null;
   invoiceUrl?: string | null;
   bankSlipUrl?: string | null;
+};
+
+type AsaasSubscriptionCycle = "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUALLY" | "YEARLY";
+
+type AsaasSubscription = {
+  id: string;
 };
 
 type AsaasPixQrCode = {
@@ -375,6 +382,7 @@ async function ensureAsaasCustomer(input: {
   apiKey: string;
   externalReference: string;
   name: string;
+  email?: string;
   document?: string;
   phone?: string;
 }): Promise<AsaasCustomer> {
@@ -396,6 +404,7 @@ async function ensureAsaasCustomer(input: {
     body: JSON.stringify({
       name: truncate(input.name, 100),
       cpfCnpj: documentDigits,
+      email: input.email || undefined,
       mobilePhone: mobilePhone || undefined,
       externalReference: input.externalReference,
       notificationDisabled: false,
@@ -433,6 +442,38 @@ async function createAsaasPayment(input: {
 
 async function getPixQrCode(paymentId: string, apiKey?: string): Promise<AsaasPixQrCode> {
   return asaasFetchWithApiKey<AsaasPixQrCode>(apiKey || process.env.ASAAS_API_KEY?.trim() || "", `/payments/${paymentId}/pixQrCode`, {
+    method: "GET",
+  });
+}
+
+async function createAsaasSubscription(input: {
+  apiKey?: string;
+  customerId: string;
+  billingType: "PIX" | "BOLETO" | "UNDEFINED" | "CREDIT_CARD";
+  value: number;
+  nextDueDate: string;
+  cycle: AsaasSubscriptionCycle;
+  description: string;
+  endDate?: string;
+  externalReference?: string;
+}): Promise<AsaasSubscription> {
+  return asaasFetchWithApiKey<AsaasSubscription>(input.apiKey || process.env.ASAAS_API_KEY?.trim() || "", "/subscriptions", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: input.customerId,
+      billingType: input.billingType,
+      value: input.value,
+      nextDueDate: input.nextDueDate,
+      cycle: input.cycle,
+      description: truncate(input.description, 500),
+      endDate: input.endDate || undefined,
+      externalReference: input.externalReference || undefined,
+    }),
+  });
+}
+
+async function listAsaasSubscriptionPayments(subscriptionId: string, apiKey?: string) {
+  return asaasFetchWithApiKey<AsaasListResponse<AsaasPayment>>(apiKey || process.env.ASAAS_API_KEY?.trim() || "", `/subscriptions/${subscriptionId}/payments?limit=10&offset=0`, {
     method: "GET",
   });
 }
@@ -500,5 +541,53 @@ export async function createAsaasCharge(input: {
       pixQrCodeBase64: pixQrCode?.encodedImage,
       pixExpirationDate: pixQrCode?.expirationDate,
     },
+  };
+}
+
+export async function createAsaasWorkspaceSubscription(input: {
+  customerReference: string;
+  customerName: string;
+  customerEmail?: string;
+  customerDocument?: string;
+  customerPhone?: string;
+  value: number;
+  nextDueDate: string;
+  cycle: "MONTHLY" | "YEARLY";
+  description: string;
+  externalReference: string;
+}) {
+  const config = getAsaasConfig();
+
+  if (!config.enabled || !config.apiKey) {
+    throw new AsaasApiError("Asaas da plataforma ainda nao esta configurado para criar assinaturas.");
+  }
+
+  const customer = await ensureAsaasCustomer({
+    apiKey: config.apiKey,
+    externalReference: input.customerReference,
+    name: input.customerName,
+    email: input.customerEmail,
+    document: input.customerDocument,
+    phone: input.customerPhone,
+  });
+
+  const subscription = await createAsaasSubscription({
+    apiKey: config.apiKey,
+    customerId: customer.id,
+    billingType: "PIX",
+    value: input.value,
+    nextDueDate: input.nextDueDate,
+    cycle: input.cycle,
+    description: input.description,
+    externalReference: input.externalReference,
+  });
+
+  const payments = await listAsaasSubscriptionPayments(subscription.id, config.apiKey).catch(() => ({ data: [] as AsaasPayment[] }));
+  const firstPayment = payments.data?.[0];
+
+  return {
+    customerId: customer.id,
+    subscriptionId: subscription.id,
+    paymentLink: firstPayment?.invoiceUrl || firstPayment?.bankSlipUrl || undefined,
   };
 }

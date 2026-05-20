@@ -26,6 +26,17 @@ Secundario:
 - financeiro enxuto
 - socio operacional
 
+Segmentos com melhor encaixe inicial:
+
+- clinicas de estetica
+- psicologos e terapeutas
+- fisioterapia e nutricao
+- mecanicas e auto centers
+- eletricistas e instaladores
+- assistencia tecnica
+- consultorias e agencias
+- imobiliarias de locacao e administracao
+
 ## Problem statement
 
 Pequenos negocios de servico operam vendas de forma fragmentada:
@@ -151,6 +162,7 @@ No MVP, IA deve ser utilitaria:
 - onboarding curto
 - baixo custo operacional
 - arquitetura SaaS multi-tenant desde o inicio
+- trial de 14 dias sem cartao no fluxo comercial inicial
 
 ## Integrations
 

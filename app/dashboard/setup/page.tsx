@@ -7,10 +7,12 @@ import {
   createWorkspaceAsaasSubaccountAction,
   createEvolutionInstanceAction,
   createWorkspaceMemberAction,
+  createWorkspaceSubscriptionCheckoutAction,
   disconnectWorkspaceAsaasAccountAction,
   removeWorkspaceMemberAction,
   resetWorkspaceMemberPasswordAction,
   updateWorkspaceMemberRoleAction,
+  updateWorkspaceSubscriptionPlanAction,
   updateWorkspaceSetupAction,
 } from "@/app/dashboard/setup/actions";
 import { listAuditEntries } from "@/lib/audit-repository";
@@ -30,6 +32,9 @@ import { getWorkspaceAsaasConnection, getWorkspaceAsaasOnboardingSnapshot } from
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getFiscalSetupReadiness } from "@/lib/nfse-repository";
 import { getNfseEmissionModeSummary, getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
+import { formatSubscriptionDate, getBillingCycleLabel, getSubscriptionPlanPresentation, getSubscriptionStatusLabel, getTrialRemainingDays } from "@/lib/subscription";
+import { getWorkspaceSubscription } from "@/lib/workspace-subscription-repository";
+import { pricingPlans } from "@/lib/site-data";
 
 type SetupPageProps = {
   searchParams?: Promise<{
@@ -41,6 +46,10 @@ type SetupPageProps = {
     asaasCreated?: string;
     asaasDisconnected?: string;
     asaasError?: string;
+    subscriptionUpdated?: string;
+    subscriptionCheckoutCreated?: string;
+    subscriptionError?: string;
+    subscriptionIntent?: string;
     teamCreated?: string;
     teamUpdated?: string;
     teamRemoved?: string;
@@ -63,7 +72,7 @@ function getEvolutionStateLabel(value: string | undefined) {
 }
 
 export default async function SetupPage({ searchParams }: SetupPageProps) {
-  const [setup, members, auditEntries, evolutionAuditEntries, context, params, fiscalReadiness, evolutionProbe, evolutionInstances, workspaceAsaas, workspaceAsaasOnboarding] = await Promise.all([
+  const [setup, members, auditEntries, evolutionAuditEntries, context, params, fiscalReadiness, evolutionProbe, evolutionInstances, workspaceAsaas, workspaceAsaasOnboarding, subscription] = await Promise.all([
     getWorkspaceSetup(),
     listWorkspaceMembers(),
     listAuditEntries(8),
@@ -75,6 +84,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     fetchEvolutionInstances().catch(() => []),
     getWorkspaceAsaasConnection(),
     getWorkspaceAsaasOnboardingSnapshot(),
+    getWorkspaceSubscription(),
   ]);
   const teamCreated = params?.teamCreated === "1";
   const teamUpdated = params?.teamUpdated === "1";
@@ -89,6 +99,10 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const asaasCreated = params?.asaasCreated === "1";
   const asaasDisconnected = params?.asaasDisconnected === "1";
   const asaasError = params?.asaasError;
+  const subscriptionUpdated = params?.subscriptionUpdated === "1";
+  const subscriptionCheckoutCreated = params?.subscriptionCheckoutCreated === "1";
+  const subscriptionError = params?.subscriptionError;
+  const subscriptionIntent = params?.subscriptionIntent === "1";
   const canManage = isLocalDataMode() || canManageWorkspace(context.workspaceRole);
   const emissionModes = getNfseEmissionModeSummary();
   const nfseIntegration = getNfseNationalIntegrationStatus();
@@ -99,6 +113,8 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const selectedEvolutionInstanceState = selectedEvolutionInstanceName
     ? await getEvolutionConnectionState(selectedEvolutionInstanceName).catch(() => null)
     : null;
+  const subscriptionPlan = getSubscriptionPlanPresentation(subscription.plan);
+  const trialRemainingDays = getTrialRemainingDays(subscription);
 
   return (
     <DashboardShell
@@ -221,6 +237,15 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       </section>
 
       <section className="section-split">
+        <article className={subscription.status === "TRIALING" ? "split-panel success" : "split-panel"}>
+          <span className="section-label">Assinatura do workspace</span>
+          <h2>{subscriptionPlan.name} em {getBillingCycleLabel(subscription.billingCycle).toLowerCase()}</h2>
+          <p>
+            Status atual: {getSubscriptionStatusLabel(subscription.status)}.
+            {trialRemainingDays !== null ? ` Restam ${trialRemainingDays} dia(s) no trial.` : ""}
+          </p>
+        </article>
+
         <article className={evolutionIntegration.enabled ? "split-panel success" : "split-panel"}>
           <span className="section-label">WhatsApp server-side</span>
           <h2>Evolution API como base das automações comerciais</h2>
@@ -250,6 +275,113 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               : "Defina token e URL publica para receber eventos do Asaas com seguranca."}
           </p>
         </article>
+      </section>
+
+      <section id="subscription-section" className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Plano e trial</span>
+            <h2>Assinatura SaaS do workspace</h2>
+          </div>
+        </div>
+
+        <div className={subscription.status === "TRIALING" ? "auth-hint" : "auth-hint fiscal-warning"}>
+          <strong>{getSubscriptionStatusLabel(subscription.status)}</strong>
+          <span>
+            Plano atual: {subscriptionPlan.name} ({subscriptionPlan.price}).
+            {subscription.trialEndsAt ? ` Trial até ${formatSubscriptionDate(subscription.trialEndsAt)}.` : ""}
+          </span>
+          <small className="muted-text">
+            Ciclo escolhido: {getBillingCycleLabel(subscription.billingCycle)}.
+            {subscription.notes ? ` ${subscription.notes}` : ""}
+          </small>
+        </div>
+
+        {subscriptionIntent ? (
+          <div className="auth-hint">
+            <strong>Próximo passo recomendado</strong>
+            <span>Seu workspace já nasceu com trial. Agora, se quiser deixar a assinatura recorrente pronta desde já, crie o vínculo no Asaas abaixo.</span>
+          </div>
+        ) : null}
+
+        {subscriptionUpdated ? (
+          <div className="auth-hint">
+            <strong>Plano atualizado</strong>
+            <span>O plano preferido do workspace foi ajustado com sucesso.</span>
+          </div>
+        ) : null}
+        {subscriptionCheckoutCreated ? (
+          <div className="auth-hint">
+            <strong>Assinatura criada no Asaas</strong>
+            <span>O vínculo recorrente do workspace foi preparado com sucesso na conta da plataforma.</span>
+          </div>
+        ) : null}
+        {subscriptionError ? (
+          <div className="auth-hint fiscal-warning">
+            <strong>Falha na assinatura</strong>
+            <span>{subscriptionError}</span>
+          </div>
+        ) : null}
+
+        <div className="cards-grid pricing-grid">
+          {pricingPlans.map((plan) => (
+            <article key={plan.code} className="dashboard-card pricing-card">
+              <div className="pricing-card-top">
+                <span className="dashboard-kicker">{plan.badge}</span>
+                <h3>{plan.name}</h3>
+                <p>{plan.description}</p>
+              </div>
+              <div className="pricing-price-block">
+                <strong>{plan.price}</strong>
+                <small>{plan.annualPrice}</small>
+                <span>{plan.audience}</span>
+              </div>
+              <form action={updateWorkspaceSubscriptionPlanAction} className="inline-form">
+                <input type="hidden" name="subscriptionPlan" value={plan.code} />
+                <label>
+                  <span>Ciclo</span>
+                  <select name="subscriptionBillingCycle" defaultValue={subscription.billingCycle}>
+                    <option value="MONTHLY">Mensal</option>
+                    <option value="YEARLY">Anual</option>
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  className={plan.code === subscription.plan ? "primary-link form-submit" : "secondary-link form-submit"}
+                >
+                  {plan.code === subscription.plan ? "Plano atual" : "Escolher este plano"}
+                </button>
+              </form>
+            </article>
+          ))}
+        </div>
+
+        <div className="auth-hint">
+          <strong>O que já fica pronto agora</strong>
+          <span>
+            Trial de 14 dias, plano por workspace, referência externa da futura assinatura e base para recorrência no Asaas.
+          </span>
+          <small className="muted-text">
+            A cobrança recorrente automática ainda será ligada na próxima etapa, mas a modelagem já nasce alinhada.
+          </small>
+        </div>
+
+        {canManage ? (
+          <div className="hero-actions">
+            {!subscription.asaasSubscriptionId ? (
+              <form action={createWorkspaceSubscriptionCheckoutAction}>
+                <button type="submit" className="primary-link">
+                  Criar assinatura no Asaas
+                </button>
+              </form>
+            ) : null}
+            {subscription.asaasPaymentLink ? (
+              <Link href={subscription.asaasPaymentLink} target="_blank" rel="noreferrer" className="secondary-link">
+                Abrir primeira cobrança da assinatura
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       <section className="data-panel">
@@ -454,131 +586,145 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
 
         {canManage ? (
           <>
-            <div className="section-split">
-              <article className="split-panel success">
-                <span className="section-label">Melhor experiência</span>
-                <h2>Criar conta de recebimento aqui dentro</h2>
-                <p>Ideal para esconder a parte técnica do Asaas e deixar o workspace pronto com webhook e conta própria desde o início.</p>
-              </article>
+            <div className="guided-flow-stack">
+              <details className="guided-flow-card" open={workspaceAsaas.mode !== "workspace"}>
+                <summary>
+                  <div>
+                    <span className="section-label">Recomendado</span>
+                    <h3>Criar conta de recebimento aqui dentro</h3>
+                    <p>Fluxo assistido para esconder a parte técnica do Asaas e sair com webhook e conta própria conectados desde o início.</p>
+                  </div>
+                  <span className="guided-flow-badge">Fluxo guiado</span>
+                </summary>
 
-              <article className="split-panel">
-                <span className="section-label">Plano B</span>
-                <h2>Conectar uma conta já existente</h2>
-                <p>Use este caminho quando o cliente já tiver conta Asaas ativa e puder informar a API key da própria conta ou subconta.</p>
-              </article>
-            </div>
+                <div className="guided-flow-body">
+                  <div className="auth-hint">
+                    <strong>Guia rápido para criar a conta agora</strong>
+                    <span>Separe email operacional, CPF ou CNPJ, celular, CEP, endereço e uma estimativa simples de faturamento mensal. O resto o sistema já encaixa no fluxo.</span>
+                    <small className="muted-text">Se o documento for CPF, pode ser que o Asaas peça data de nascimento do titular. Se for CNPJ, normalmente o foco recai no cadastro da empresa e nas próximas etapas documentais.</small>
+                  </div>
 
-            <div className="auth-hint">
-              <strong>Guia rápido para criar a conta agora</strong>
-              <span>Separe email operacional, CPF ou CNPJ, celular, CEP, endereço e uma estimativa simples de faturamento mensal. O resto o sistema já encaixa no fluxo.</span>
-              <small className="muted-text">Se o documento for CPF, pode ser que o Asaas peça data de nascimento do titular. Se for CNPJ, normalmente o foco recai no cadastro da empresa e nas próximas etapas documentais.</small>
-            </div>
-
-            <form action={createWorkspaceAsaasSubaccountAction} className="inline-form">
-              <label className="form-span-2">
-                <span>Nome da empresa ou responsável</span>
-                <input name="subaccountName" type="text" defaultValue={setup.tradeName || setup.legalName} required />
-              </label>
-              <label>
-                <span>Email operacional</span>
-                <input name="subaccountEmail" type="email" placeholder="financeiro@empresa.com.br" required />
-              </label>
-              <label>
-                <span>CPF ou CNPJ</span>
-                <input name="subaccountCpfCnpj" type="text" defaultValue={setup.document} required />
-              </label>
-              <label>
-                <span>Celular</span>
-                <input name="subaccountMobilePhone" type="text" placeholder="5511999998888" required />
-              </label>
-              <label>
-                <span>Faturamento mensal aproximado</span>
-                <input name="subaccountIncomeValue" type="number" min="1" step="0.01" placeholder="5000" required />
-              </label>
-              <label>
-                <span>Tipo de empresa</span>
-                <select name="subaccountCompanyType" defaultValue="">
-                  <option value="">Deixar Asaas inferir pelo documento</option>
-                  <option value="MEI">MEI</option>
-                  <option value="LIMITED">LTDA</option>
-                  <option value="INDIVIDUAL">Empresário individual</option>
-                  <option value="ASSOCIATION">Associação</option>
-                </select>
-              </label>
-              <label>
-                <span>Data de nascimento do titular</span>
-                <input name="subaccountBirthDate" type="date" />
-              </label>
-              <label className="form-span-2">
-                <span>Endereço</span>
-                <input name="subaccountAddress" type="text" placeholder="Rua, avenida ou alameda" required />
-              </label>
-              <label>
-                <span>Número</span>
-                <input name="subaccountAddressNumber" type="text" required />
-              </label>
-              <label>
-                <span>Complemento</span>
-                <input name="subaccountComplement" type="text" />
-              </label>
-              <label>
-                <span>Bairro</span>
-                <input name="subaccountProvince" type="text" required />
-              </label>
-              <label>
-                <span>CEP</span>
-                <input name="subaccountPostalCode" type="text" required />
-              </label>
-              <button type="submit" className="primary-link form-submit">
-                Criar conta de recebimento
-              </button>
-            </form>
-
-            <div className="auth-hint">
-              <strong>Guia rápido para conta já existente</strong>
-              <span>Peça ao cliente apenas a API key da conta Asaas dele. O ideal é usar a chave da própria conta ou subconta que vai receber os valores.</span>
-              <small className="muted-text">Se ele não souber o que é walletId ou split, tudo bem. O sistema detecta o walletId e o split pode continuar desligado por enquanto.</small>
-            </div>
-
-            <form action={connectWorkspaceAsaasAccountAction} className="inline-form">
-              <label className="form-span-2">
-                <span>API key da conta ou subconta do workspace</span>
-                <input
-                  name="asaasApiKey"
-                  type="password"
-                  placeholder={workspaceAsaas.mode === "workspace" ? "Preencha apenas para trocar a chave atual" : "Cole a API key da conta do cliente"}
-                  required={workspaceAsaas.mode !== "workspace"}
-                />
-              </label>
-              <label>
-                <span>ID da conta Asaas</span>
-                <input
-                  name="asaasAccountId"
-                  type="text"
-                  defaultValue={setup.asaasAccountId || ""}
-                  placeholder="Opcional por enquanto"
-                />
-              </label>
-              <label>
-                <span>WalletId detectado</span>
-                <input value={setup.asaasWalletId || workspaceAsaas.walletId || ""} type="text" readOnly />
-              </label>
-              <label className="form-span-2">
-                <span>Split de plataforma</span>
-                <div className="checkbox-row">
-                  <input
-                    id="asaas-split-enabled"
-                    name="asaasSplitEnabled"
-                    type="checkbox"
-                    defaultChecked={Boolean(setup.asaasSplitEnabled)}
-                  />
-                  <span>Deixar a estrutura pronta para split futuro. Por enquanto, mantenha desligado se não houver taxa.</span>
+                  <form action={createWorkspaceAsaasSubaccountAction} className="inline-form">
+                    <label className="form-span-2">
+                      <span>Nome da empresa ou responsável</span>
+                      <input name="subaccountName" type="text" defaultValue={setup.tradeName || setup.legalName} required />
+                    </label>
+                    <label>
+                      <span>Email operacional</span>
+                      <input name="subaccountEmail" type="email" placeholder="financeiro@empresa.com.br" required />
+                    </label>
+                    <label>
+                      <span>CPF ou CNPJ</span>
+                      <input name="subaccountCpfCnpj" type="text" defaultValue={setup.document} required />
+                    </label>
+                    <label>
+                      <span>Celular</span>
+                      <input name="subaccountMobilePhone" type="text" placeholder="5511999998888" required />
+                    </label>
+                    <label>
+                      <span>Faturamento mensal aproximado</span>
+                      <input name="subaccountIncomeValue" type="number" min="1" step="0.01" placeholder="5000" required />
+                    </label>
+                    <label>
+                      <span>Tipo de empresa</span>
+                      <select name="subaccountCompanyType" defaultValue="">
+                        <option value="">Deixar Asaas inferir pelo documento</option>
+                        <option value="MEI">MEI</option>
+                        <option value="LIMITED">LTDA</option>
+                        <option value="INDIVIDUAL">Empresário individual</option>
+                        <option value="ASSOCIATION">Associação</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Data de nascimento do titular</span>
+                      <input name="subaccountBirthDate" type="date" />
+                    </label>
+                    <label className="form-span-2">
+                      <span>Endereço</span>
+                      <input name="subaccountAddress" type="text" placeholder="Rua, avenida ou alameda" required />
+                    </label>
+                    <label>
+                      <span>Número</span>
+                      <input name="subaccountAddressNumber" type="text" required />
+                    </label>
+                    <label>
+                      <span>Complemento</span>
+                      <input name="subaccountComplement" type="text" />
+                    </label>
+                    <label>
+                      <span>Bairro</span>
+                      <input name="subaccountProvince" type="text" required />
+                    </label>
+                    <label>
+                      <span>CEP</span>
+                      <input name="subaccountPostalCode" type="text" required />
+                    </label>
+                    <button type="submit" className="primary-link form-submit">
+                      Criar conta de recebimento
+                    </button>
+                  </form>
                 </div>
-              </label>
-              <button type="submit" className="secondary-link form-submit">
-                Conectar conta existente
-              </button>
-            </form>
+              </details>
+
+              <details className="guided-flow-card" open={workspaceAsaas.mode === "workspace"}>
+                <summary>
+                  <div>
+                    <span className="section-label">Conta existente</span>
+                    <h3>Conectar uma conta já existente</h3>
+                    <p>Use este caminho quando o cliente já tiver conta Asaas ativa e puder informar apenas a API key da própria conta ou subconta.</p>
+                  </div>
+                  <span className="guided-flow-badge">Plano B</span>
+                </summary>
+
+                <div className="guided-flow-body">
+                  <div className="auth-hint">
+                    <strong>Guia rápido para conta já existente</strong>
+                    <span>Peça ao cliente apenas a API key da conta Asaas dele. O ideal é usar a chave da própria conta ou subconta que vai receber os valores.</span>
+                    <small className="muted-text">Se ele não souber o que é walletId ou split, tudo bem. O sistema detecta o walletId e o split pode continuar desligado por enquanto.</small>
+                  </div>
+
+                  <form action={connectWorkspaceAsaasAccountAction} className="inline-form">
+                    <label className="form-span-2">
+                      <span>API key da conta ou subconta do workspace</span>
+                      <input
+                        name="asaasApiKey"
+                        type="password"
+                        placeholder={workspaceAsaas.mode === "workspace" ? "Preencha apenas para trocar a chave atual" : "Cole a API key da conta do cliente"}
+                        required={workspaceAsaas.mode !== "workspace"}
+                      />
+                    </label>
+                    <label>
+                      <span>ID da conta Asaas</span>
+                      <input
+                        name="asaasAccountId"
+                        type="text"
+                        defaultValue={setup.asaasAccountId || ""}
+                        placeholder="Opcional por enquanto"
+                      />
+                    </label>
+                    <label>
+                      <span>WalletId detectado</span>
+                      <input value={setup.asaasWalletId || workspaceAsaas.walletId || ""} type="text" readOnly />
+                    </label>
+                    <label className="form-span-2">
+                      <span>Split de plataforma</span>
+                      <div className="checkbox-row">
+                        <input
+                          id="asaas-split-enabled"
+                          name="asaasSplitEnabled"
+                          type="checkbox"
+                          defaultChecked={Boolean(setup.asaasSplitEnabled)}
+                        />
+                        <span>Deixar a estrutura pronta para split futuro. Por enquanto, mantenha desligado se não houver taxa.</span>
+                      </div>
+                    </label>
+                    <button type="submit" className="secondary-link form-submit">
+                      Conectar conta existente
+                    </button>
+                  </form>
+                </div>
+              </details>
+            </div>
           </>
         ) : null}
 
