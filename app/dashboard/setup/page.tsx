@@ -4,6 +4,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import {
   connectWorkspaceAsaasAccountAction,
   connectEvolutionInstanceAction,
+  createWorkspaceAsaasSubaccountAction,
   createEvolutionInstanceAction,
   createWorkspaceMemberAction,
   disconnectWorkspaceAsaasAccountAction,
@@ -25,7 +26,7 @@ import {
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { getAsaasIntegrationStatus } from "@/lib/asaas";
-import { getWorkspaceAsaasConnection } from "@/lib/asaas-workspace";
+import { getWorkspaceAsaasConnection, getWorkspaceAsaasOnboardingSnapshot } from "@/lib/asaas-workspace";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getFiscalSetupReadiness } from "@/lib/nfse-repository";
 import { getNfseEmissionModeSummary, getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
@@ -37,6 +38,7 @@ type SetupPageProps = {
     evolutionPairingCode?: string;
     evolutionQrCode?: string;
     asaasConnected?: string;
+    asaasCreated?: string;
     asaasDisconnected?: string;
     asaasError?: string;
     teamCreated?: string;
@@ -61,7 +63,7 @@ function getEvolutionStateLabel(value: string | undefined) {
 }
 
 export default async function SetupPage({ searchParams }: SetupPageProps) {
-  const [setup, members, auditEntries, evolutionAuditEntries, context, params, fiscalReadiness, evolutionProbe, evolutionInstances, workspaceAsaas] = await Promise.all([
+  const [setup, members, auditEntries, evolutionAuditEntries, context, params, fiscalReadiness, evolutionProbe, evolutionInstances, workspaceAsaas, workspaceAsaasOnboarding] = await Promise.all([
     getWorkspaceSetup(),
     listWorkspaceMembers(),
     listAuditEntries(8),
@@ -72,6 +74,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     probeEvolutionApi(),
     fetchEvolutionInstances().catch(() => []),
     getWorkspaceAsaasConnection(),
+    getWorkspaceAsaasOnboardingSnapshot(),
   ]);
   const teamCreated = params?.teamCreated === "1";
   const teamUpdated = params?.teamUpdated === "1";
@@ -83,6 +86,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const evolutionPairingCode = params?.evolutionPairingCode;
   const evolutionQrCode = params?.evolutionQrCode;
   const asaasConnected = params?.asaasConnected === "1";
+  const asaasCreated = params?.asaasCreated === "1";
   const asaasDisconnected = params?.asaasDisconnected === "1";
   const asaasError = params?.asaasError;
   const canManage = isLocalDataMode() || canManageWorkspace(context.workspaceRole);
@@ -402,10 +406,37 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </small>
         </div>
 
+        <div className="cards-grid quote-grid">
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Melhor caminho</span>
+            <h3>Criar a conta de recebimento aqui dentro</h3>
+            <p>O sistema cria a conta ou subconta, guarda a credencial do workspace e já nasce pronto para cobrança e webhook.</p>
+            <small className="muted-text">Ideal para quem ainda não tem conta Asaas ou quer evitar parte técnica.</small>
+          </article>
+
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Plano B</span>
+            <h3>Conectar uma conta que já existe</h3>
+            <p>Use quando o cliente já tem Asaas ativo e só precisa informar a API key da própria conta ou subconta.</p>
+            <small className="muted-text">A parte mais técnica fica reduzida a colar a chave certa uma vez.</small>
+          </article>
+
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">O sistema faz sozinho</span>
+            <h3>Webhook, vínculo e baixa automática</h3>
+            <p>Depois da conexão, o Gestão Fácil cria as cobranças na conta certa e recebe os eventos de pagamento automaticamente.</p>
+            <small className="muted-text">Quando vocês quiserem cobrar taxa, a base de split já fica preparada.</small>
+          </article>
+        </div>
+
         {asaasConnected ? (
           <div className="auth-hint">
             <strong>Conta Asaas conectada</strong>
-            <span>O workspace passa a emitir cobranças pela própria conta ou subconta configurada.</span>
+            <span>
+              {asaasCreated
+                ? "A conta de recebimento foi criada e vinculada ao workspace. Agora finalize o onboarding documental no próprio Asaas, se houver pendências."
+                : "O workspace passa a emitir cobranças pela própria conta ou subconta configurada."}
+            </span>
           </div>
         ) : null}
         {asaasDisconnected ? (
@@ -422,45 +453,133 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         ) : null}
 
         {canManage ? (
-          <form action={connectWorkspaceAsaasAccountAction} className="inline-form">
-            <label className="form-span-2">
-              <span>API key da conta ou subconta do workspace</span>
-              <input
-                name="asaasApiKey"
-                type="password"
-                placeholder={workspaceAsaas.mode === "workspace" ? "Preencha apenas para trocar a chave atual" : "Cole a API key da conta do cliente"}
-                required={workspaceAsaas.mode !== "workspace"}
-              />
-            </label>
-            <label>
-              <span>ID da conta Asaas</span>
-              <input
-                name="asaasAccountId"
-                type="text"
-                defaultValue={setup.asaasAccountId || ""}
-                placeholder="Opcional por enquanto"
-              />
-            </label>
-            <label>
-              <span>WalletId detectado</span>
-              <input value={setup.asaasWalletId || workspaceAsaas.walletId || ""} type="text" readOnly />
-            </label>
-            <label className="form-span-2">
-              <span>Split de plataforma</span>
-              <div className="checkbox-row">
+          <>
+            <div className="section-split">
+              <article className="split-panel success">
+                <span className="section-label">Melhor experiência</span>
+                <h2>Criar conta de recebimento aqui dentro</h2>
+                <p>Ideal para esconder a parte técnica do Asaas e deixar o workspace pronto com webhook e conta própria desde o início.</p>
+              </article>
+
+              <article className="split-panel">
+                <span className="section-label">Plano B</span>
+                <h2>Conectar uma conta já existente</h2>
+                <p>Use este caminho quando o cliente já tiver conta Asaas ativa e puder informar a API key da própria conta ou subconta.</p>
+              </article>
+            </div>
+
+            <div className="auth-hint">
+              <strong>Guia rápido para criar a conta agora</strong>
+              <span>Separe email operacional, CPF ou CNPJ, celular, CEP, endereço e uma estimativa simples de faturamento mensal. O resto o sistema já encaixa no fluxo.</span>
+              <small className="muted-text">Se o documento for CPF, pode ser que o Asaas peça data de nascimento do titular. Se for CNPJ, normalmente o foco recai no cadastro da empresa e nas próximas etapas documentais.</small>
+            </div>
+
+            <form action={createWorkspaceAsaasSubaccountAction} className="inline-form">
+              <label className="form-span-2">
+                <span>Nome da empresa ou responsável</span>
+                <input name="subaccountName" type="text" defaultValue={setup.tradeName || setup.legalName} required />
+              </label>
+              <label>
+                <span>Email operacional</span>
+                <input name="subaccountEmail" type="email" placeholder="financeiro@empresa.com.br" required />
+              </label>
+              <label>
+                <span>CPF ou CNPJ</span>
+                <input name="subaccountCpfCnpj" type="text" defaultValue={setup.document} required />
+              </label>
+              <label>
+                <span>Celular</span>
+                <input name="subaccountMobilePhone" type="text" placeholder="5511999998888" required />
+              </label>
+              <label>
+                <span>Faturamento mensal aproximado</span>
+                <input name="subaccountIncomeValue" type="number" min="1" step="0.01" placeholder="5000" required />
+              </label>
+              <label>
+                <span>Tipo de empresa</span>
+                <select name="subaccountCompanyType" defaultValue="">
+                  <option value="">Deixar Asaas inferir pelo documento</option>
+                  <option value="MEI">MEI</option>
+                  <option value="LIMITED">LTDA</option>
+                  <option value="INDIVIDUAL">Empresário individual</option>
+                  <option value="ASSOCIATION">Associação</option>
+                </select>
+              </label>
+              <label>
+                <span>Data de nascimento do titular</span>
+                <input name="subaccountBirthDate" type="date" />
+              </label>
+              <label className="form-span-2">
+                <span>Endereço</span>
+                <input name="subaccountAddress" type="text" placeholder="Rua, avenida ou alameda" required />
+              </label>
+              <label>
+                <span>Número</span>
+                <input name="subaccountAddressNumber" type="text" required />
+              </label>
+              <label>
+                <span>Complemento</span>
+                <input name="subaccountComplement" type="text" />
+              </label>
+              <label>
+                <span>Bairro</span>
+                <input name="subaccountProvince" type="text" required />
+              </label>
+              <label>
+                <span>CEP</span>
+                <input name="subaccountPostalCode" type="text" required />
+              </label>
+              <button type="submit" className="primary-link form-submit">
+                Criar conta de recebimento
+              </button>
+            </form>
+
+            <div className="auth-hint">
+              <strong>Guia rápido para conta já existente</strong>
+              <span>Peça ao cliente apenas a API key da conta Asaas dele. O ideal é usar a chave da própria conta ou subconta que vai receber os valores.</span>
+              <small className="muted-text">Se ele não souber o que é walletId ou split, tudo bem. O sistema detecta o walletId e o split pode continuar desligado por enquanto.</small>
+            </div>
+
+            <form action={connectWorkspaceAsaasAccountAction} className="inline-form">
+              <label className="form-span-2">
+                <span>API key da conta ou subconta do workspace</span>
                 <input
-                  id="asaas-split-enabled"
-                  name="asaasSplitEnabled"
-                  type="checkbox"
-                  defaultChecked={Boolean(setup.asaasSplitEnabled)}
+                  name="asaasApiKey"
+                  type="password"
+                  placeholder={workspaceAsaas.mode === "workspace" ? "Preencha apenas para trocar a chave atual" : "Cole a API key da conta do cliente"}
+                  required={workspaceAsaas.mode !== "workspace"}
                 />
-                <span>Deixar a estrutura pronta para split futuro. Por enquanto, mantenha desligado se não houver taxa.</span>
-              </div>
-            </label>
-            <button type="submit" className="primary-link form-submit">
-              Conectar conta própria
-            </button>
-          </form>
+              </label>
+              <label>
+                <span>ID da conta Asaas</span>
+                <input
+                  name="asaasAccountId"
+                  type="text"
+                  defaultValue={setup.asaasAccountId || ""}
+                  placeholder="Opcional por enquanto"
+                />
+              </label>
+              <label>
+                <span>WalletId detectado</span>
+                <input value={setup.asaasWalletId || workspaceAsaas.walletId || ""} type="text" readOnly />
+              </label>
+              <label className="form-span-2">
+                <span>Split de plataforma</span>
+                <div className="checkbox-row">
+                  <input
+                    id="asaas-split-enabled"
+                    name="asaasSplitEnabled"
+                    type="checkbox"
+                    defaultChecked={Boolean(setup.asaasSplitEnabled)}
+                  />
+                  <span>Deixar a estrutura pronta para split futuro. Por enquanto, mantenha desligado se não houver taxa.</span>
+                </div>
+              </label>
+              <button type="submit" className="secondary-link form-submit">
+                Conectar conta existente
+              </button>
+            </form>
+          </>
         ) : null}
 
         {canManage && workspaceAsaas.mode === "workspace" ? (
@@ -477,6 +596,56 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             O melhor modelo é cada workspace cobrar pela própria conta ou subconta Asaas. O fallback da conta raiz só deve ser usado enquanto a configuração individual ainda não existir.
           </span>
         </div>
+
+        {workspaceAsaasOnboarding ? (
+          <>
+            <div className="auth-hint">
+              <strong>Status da conta conectada</strong>
+              <span>
+                Aprovação geral: {workspaceAsaasOnboarding.generalApproval || "aguardando"}.
+                {` Comercial: ${workspaceAsaasOnboarding.commercialStatus || "n/d"}.`}
+                {` Documentação: ${workspaceAsaasOnboarding.documentationStatus || "n/d"}.`}
+                {` Conta bancária: ${workspaceAsaasOnboarding.bankAccountStatus || "n/d"}.`}
+              </span>
+              <small className="muted-text">
+                AccountId: {workspaceAsaasOnboarding.accountId || setup.asaasAccountId || "não informado"}.
+                {` WalletId: ${workspaceAsaasOnboarding.walletId || setup.asaasWalletId || "não informado"}.`}
+              </small>
+            </div>
+
+            {workspaceAsaasOnboarding.pendingDocuments.length > 0 ? (
+              <div className="report-table">
+                <div className="report-table-head report-table-head-2">
+                  <span>Etapa de onboarding</span>
+                  <span>Ação</span>
+                </div>
+                {workspaceAsaasOnboarding.pendingDocuments.map((item, index) => (
+                  <article key={`${item.type}-${index}`} className="report-table-row report-table-row-2">
+                    <div>
+                      <strong>{item.type}</strong>
+                      <span>{item.status || (item.pending ? "Pendente" : "Em análise")}</span>
+                    </div>
+                    <div>
+                      <span>{item.action || "Acompanhar no Asaas"}</span>
+                      {item.url ? (
+                        <Link href={item.url} target="_blank" rel="noreferrer" className="secondary-link">
+                          Abrir etapa
+                        </Link>
+                      ) : (
+                        <small className="muted-text">Sem link retornado agora</small>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="auth-hint">
+                <strong>Sem etapas pendentes visíveis agora</strong>
+                <span>Se a conta acabou de ser criada, o Asaas pode levar alguns segundos para expor as próximas ações documentais.</span>
+              </div>
+            )}
+          </>
+        ) : null}
       </section>
 
       {municipalityStatus ? (

@@ -1,4 +1,5 @@
 import { getCurrentWorkspaceContext } from "@/lib/auth-session";
+import { getAsaasAccountStatus, listAsaasPendingDocuments } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { readDemoWorkspaceData, writeDemoWorkspaceData } from "@/lib/demo-store";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +12,23 @@ export type WorkspaceAsaasConnection = {
   walletId?: string;
   apiKeyConfigured: boolean;
   splitEnabled: boolean;
+};
+
+export type WorkspaceAsaasOnboardingSnapshot = {
+  accountId?: string;
+  walletId?: string;
+  generalApproval?: string;
+  commercialStatus?: string;
+  documentationStatus?: string;
+  bankAccountStatus?: string;
+  pendingDocuments: Array<{
+    type: string;
+    status?: string;
+    action?: string;
+    sent: boolean;
+    pending: boolean;
+    url?: string;
+  }>;
 };
 
 function resolveEnvironment() {
@@ -171,4 +189,35 @@ export async function disconnectWorkspaceAsaasConnection() {
       asaasSplitEnabled: false,
     },
   });
+}
+
+export async function getWorkspaceAsaasOnboardingSnapshot(): Promise<WorkspaceAsaasOnboardingSnapshot | null> {
+  const connection = await getWorkspaceAsaasConnection();
+
+  if (connection.mode !== "workspace" || !connection.apiKeyConfigured || !connection.apiKey) {
+    return null;
+  }
+
+  try {
+    const [status, documents] = await Promise.all([
+      getAsaasAccountStatus(connection.apiKey),
+      listAsaasPendingDocuments(connection.apiKey).catch(() => []),
+    ]);
+
+    return {
+      accountId: status.accountId || connection.accountId,
+      walletId: connection.walletId,
+      generalApproval: status.generalApproval,
+      commercialStatus: status.commercialStatus,
+      documentationStatus: status.documentationStatus,
+      bankAccountStatus: status.bankAccountStatus,
+      pendingDocuments: documents,
+    };
+  } catch {
+    return {
+      accountId: connection.accountId,
+      walletId: connection.walletId,
+      pendingDocuments: [],
+    };
+  }
 }

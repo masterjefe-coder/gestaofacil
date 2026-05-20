@@ -12,6 +12,35 @@ type AsaasWallet = {
   id: string;
 };
 
+type AsaasSubaccountDocument = {
+  status?: string;
+  type?: string;
+  sent?: boolean;
+  pending?: boolean;
+  action?: string;
+  url?: string;
+};
+
+type AsaasMyAccountStatus = {
+  id?: string;
+  commercialInfo?: {
+    status?: string;
+  };
+  documentation?: {
+    status?: string;
+  };
+  bankAccountInfo?: {
+    status?: string;
+  };
+  generalApproval?: string;
+};
+
+type AsaasCreateSubaccountResponse = {
+  id?: string;
+  apiKey?: string;
+  walletId?: string;
+};
+
 type AsaasPayment = {
   id: string;
   invoiceUrl?: string | null;
@@ -96,11 +125,15 @@ function resolveAppBaseUrl() {
   return null;
 }
 
+function resolveAsaasWebhookUrl() {
+  const baseUrl = resolveAppBaseUrl();
+  return baseUrl ? `${baseUrl}/api/asaas/webhook` : null;
+}
+
 export function getAsaasIntegrationStatus() {
   const config = getAsaasConfig();
   const webhookToken = process.env.ASAAS_WEBHOOK_AUTH_TOKEN?.trim();
-  const appBaseUrl = resolveAppBaseUrl();
-  const webhookUrl = appBaseUrl ? `${appBaseUrl}/api/asaas/webhook` : null;
+  const webhookUrl = resolveAsaasWebhookUrl();
 
   return {
     enabled: config.enabled,
@@ -116,6 +149,34 @@ export function getAsaasIntegrationStatus() {
 
 function normalizeDigits(value: string | undefined) {
   return (value || "").replace(/\D/g, "");
+}
+
+function buildAsaasWebhookConfig() {
+  const webhookUrl = resolveAsaasWebhookUrl();
+  const accessToken = process.env.ASAAS_WEBHOOK_AUTH_TOKEN?.trim();
+
+  if (!webhookUrl || !accessToken) {
+    return null;
+  }
+
+  return {
+    name: "Gestao Facil",
+    url: webhookUrl,
+    email: "",
+    interrupted: false,
+    enabled: true,
+    apiVersion: 3,
+    authToken: accessToken,
+    sendType: "SEQUENTIALLY",
+    events: [
+      "PAYMENT_CREATED",
+      "PAYMENT_UPDATED",
+      "PAYMENT_OVERDUE",
+      "PAYMENT_RECEIVED",
+      "PAYMENT_CONFIRMED",
+      "PAYMENT_DELETED",
+    ],
+  };
 }
 
 function truncate(value: string, max: number) {
@@ -207,6 +268,86 @@ export async function inspectAsaasAccount(apiKey: string) {
 
   return {
     walletId: firstWallet?.id,
+  };
+}
+
+export async function getAsaasAccountStatus(apiKey: string) {
+  const status = await asaasFetchWithApiKey<AsaasMyAccountStatus>(apiKey, "/myAccount/status", {
+    method: "GET",
+  });
+
+  return {
+    accountId: status.id,
+    generalApproval: status.generalApproval || undefined,
+    commercialStatus: status.commercialInfo?.status || undefined,
+    documentationStatus: status.documentation?.status || undefined,
+    bankAccountStatus: status.bankAccountInfo?.status || undefined,
+  };
+}
+
+export async function listAsaasPendingDocuments(apiKey: string) {
+  const documents = await asaasFetchWithApiKey<AsaasSubaccountDocument[]>(apiKey, "/myAccount/documents", {
+    method: "GET",
+  });
+
+  return Array.isArray(documents)
+    ? documents.map((item) => ({
+      type: item.type || "Documento",
+      status: item.status || undefined,
+      action: item.action || undefined,
+      sent: Boolean(item.sent),
+      pending: Boolean(item.pending),
+      url: item.url || undefined,
+    }))
+    : [];
+}
+
+export async function createAsaasSubaccount(input: {
+  name: string;
+  email: string;
+  cpfCnpj: string;
+  mobilePhone: string;
+  companyType?: string;
+  birthDate?: string;
+  incomeValue: number;
+  address: string;
+  addressNumber: string;
+  complement?: string;
+  province: string;
+  postalCode: string;
+}) {
+  const rootApiKey = process.env.ASAAS_API_KEY?.trim();
+
+  if (!rootApiKey) {
+    throw new AsaasApiError("ASAAS_API_KEY da conta principal nao configurada para criar subcontas.");
+  }
+
+  const webhook = buildAsaasWebhookConfig();
+  const payload = {
+    name: truncate(input.name, 100),
+    email: input.email,
+    cpfCnpj: normalizeDigits(input.cpfCnpj),
+    mobilePhone: normalizeDigits(input.mobilePhone),
+    companyType: input.companyType || undefined,
+    birthDate: input.birthDate || undefined,
+    incomeValue: input.incomeValue,
+    address: truncate(input.address, 100),
+    addressNumber: truncate(input.addressNumber, 20),
+    complement: input.complement ? truncate(input.complement, 50) : undefined,
+    province: truncate(input.province, 60),
+    postalCode: normalizeDigits(input.postalCode),
+    webhook,
+  };
+
+  const response = await asaasFetchWithApiKey<AsaasCreateSubaccountResponse>(rootApiKey, "/accounts", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  return {
+    accountId: response.id || "",
+    apiKey: response.apiKey || "",
+    walletId: response.walletId || "",
   };
 }
 

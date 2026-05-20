@@ -1,6 +1,6 @@
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { recordAuditEvent } from "@/lib/audit-repository";
-import { inspectAsaasAccount } from "@/lib/asaas";
+import { createAsaasSubaccount, inspectAsaasAccount } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { resolveIbgeMunicipalityCode } from "@/lib/ibge";
@@ -319,4 +319,82 @@ export async function disconnectWorkspaceAsaasAccount() {
   data.company.asaasUseOwnAccount = false;
   data.company.asaasSplitEnabled = false;
   await writeDemoWorkspaceData(data);
+}
+
+export async function createWorkspaceAsaasSubaccount(input: {
+  name: string;
+  email: string;
+  cpfCnpj: string;
+  mobilePhone: string;
+  companyType?: string;
+  birthDate?: string;
+  incomeValue: number;
+  address: string;
+  addressNumber: string;
+  complement?: string;
+  province: string;
+  postalCode: string;
+}) {
+  const created = await createAsaasSubaccount(input);
+
+  if (!created.apiKey || !created.walletId) {
+    throw new Error("A subconta foi criada, mas o Asaas nao retornou apiKey e walletId suficientes para operar o workspace.");
+  }
+
+  if (!isLocalDataMode()) {
+    await ensureDemoCommerceSeeded();
+    const context = await getCurrentWorkspaceContext();
+
+    if (!canManageWorkspace(context.workspaceRole)) {
+      throw new Error("Apenas owner ou admin podem criar a conta Asaas do workspace.");
+    }
+
+    await prisma.company.upsert({
+      where: { workspaceId: context.workspaceId },
+      update: {
+        asaasApiKey: created.apiKey,
+        asaasAccountId: created.accountId || null,
+        asaasWalletId: created.walletId,
+        asaasUseOwnAccount: true,
+        asaasSplitEnabled: false,
+      },
+      create: {
+        workspaceId: context.workspaceId,
+        legalName: input.name,
+        tradeName: input.name,
+        document: input.cpfCnpj,
+        asaasApiKey: created.apiKey,
+        asaasAccountId: created.accountId || null,
+        asaasWalletId: created.walletId,
+        asaasUseOwnAccount: true,
+        asaasSplitEnabled: false,
+      },
+    });
+
+    await recordAuditEvent({
+      action: "workspace.asaas.subaccount_created",
+      entityType: "workspace",
+      entityId: context.workspaceId,
+      context,
+      payload: {
+        summary: "Subconta Asaas criada e vinculada ao workspace.",
+        metadata: {
+          accountId: created.accountId || null,
+          walletId: created.walletId,
+          email: input.email,
+        },
+      },
+    });
+
+    return created;
+  }
+
+  const data = await readDemoWorkspaceData();
+  data.company.asaasApiKey = created.apiKey;
+  data.company.asaasAccountId = created.accountId || "";
+  data.company.asaasWalletId = created.walletId;
+  data.company.asaasUseOwnAccount = true;
+  data.company.asaasSplitEnabled = false;
+  await writeDemoWorkspaceData(data);
+  return created;
 }

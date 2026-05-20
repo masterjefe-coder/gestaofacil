@@ -6,6 +6,7 @@ import { WorkspaceRole } from "@prisma/client";
 import { connectEvolutionInstance, createEvolutionInstance, EvolutionApiError } from "@/lib/evolution-api";
 import {
   connectWorkspaceAsaasAccount,
+  createWorkspaceAsaasSubaccount,
   disconnectWorkspaceAsaasAccount,
   updateWorkspaceSetup,
 } from "@/lib/workspace-settings-repository";
@@ -247,4 +248,50 @@ export async function disconnectWorkspaceAsaasAccountAction() {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
   redirect("/dashboard/setup?asaasDisconnected=1");
+}
+
+export async function createWorkspaceAsaasSubaccountAction(formData: FormData) {
+  const name = getString(formData, "subaccountName");
+  const email = getString(formData, "subaccountEmail");
+  const cpfCnpj = getString(formData, "subaccountCpfCnpj");
+  const mobilePhone = getString(formData, "subaccountMobilePhone");
+  const incomeValue = Number(getString(formData, "subaccountIncomeValue").replace(",", "."));
+  const address = getString(formData, "subaccountAddress");
+  const addressNumber = getString(formData, "subaccountAddressNumber");
+  const complement = getString(formData, "subaccountComplement");
+  const province = getString(formData, "subaccountProvince");
+  const postalCode = getString(formData, "subaccountPostalCode");
+  const companyType = getString(formData, "subaccountCompanyType");
+  const birthDate = getString(formData, "subaccountBirthDate");
+
+  if (!name || !email || !cpfCnpj || !mobilePhone || !incomeValue || !address || !addressNumber || !province || !postalCode) {
+    redirect(`/dashboard/setup?asaasError=${encodeURIComponent("Preencha os dados essenciais para criar a conta de recebimento no Asaas.")}`);
+  }
+
+  try {
+    await createWorkspaceAsaasSubaccount({
+      name,
+      email,
+      cpfCnpj,
+      mobilePhone,
+      companyType: companyType || undefined,
+      birthDate: birthDate || undefined,
+      incomeValue,
+      address,
+      addressNumber,
+      complement: complement || undefined,
+      province,
+      postalCode,
+    });
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Nao foi possivel criar a conta de recebimento no Asaas.";
+
+    redirect(`/dashboard/setup?asaasError=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirect("/dashboard/setup?asaasConnected=1&asaasCreated=1");
 }
