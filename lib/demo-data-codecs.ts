@@ -1,4 +1,4 @@
-import type { Charge, ChargeFollowUpEntry, Customer, Quote } from "@/lib/types";
+import type { Charge, ChargeFollowUpEntry, Customer, EntityCadenceState, ExternalChargeBilling, Quote } from "@/lib/types";
 
 const CUSTOMER_META_PREFIX = "GF_CUSTOMER_META::";
 const QUOTE_META_PREFIX = "GF_QUOTE_META::";
@@ -14,13 +14,38 @@ type QuoteMeta = {
   dueLabel: string;
   summary: string;
   uiStatus: Quote["status"];
+  cadence?: EntityCadenceState;
 };
 
 type ChargeMeta = {
   dueLabel: string;
   source: string;
   followUps: ChargeFollowUpEntry[];
+  cadence?: EntityCadenceState;
+  externalBilling?: ExternalChargeBilling;
 };
+
+function sanitizeCadence(value: Partial<EntityCadenceState> | undefined): EntityCadenceState | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const cadenceLabel = value.cadenceLabel?.trim();
+  const executionLabel = value.executionLabel?.trim();
+  const completedStepLabel = value.completedStepLabel?.trim();
+  const nextStepLabel = value.nextStepLabel?.trim();
+
+  if (!cadenceLabel || !executionLabel || !completedStepLabel || !nextStepLabel) {
+    return undefined;
+  }
+
+  return {
+    cadenceLabel,
+    executionLabel,
+    completedStepLabel,
+    nextStepLabel,
+  };
+}
 
 function parsePrefixedJson<T>(value: string | null, prefix: string): Partial<T> | null {
   if (!value || !value.startsWith(prefix)) {
@@ -116,6 +141,7 @@ export function encodeQuoteSummary(input: QuoteInputLike) {
     dueLabel: input.dueLabel || "Acompanhar este orcamento",
     summary: input.summary || "Orcamento criado no dashboard.",
     uiStatus: input.status,
+    cadence: input.cadence,
   } satisfies QuoteMeta)}`;
 }
 
@@ -127,6 +153,7 @@ export function decodeQuoteSummary(value: string | null, fallbackStatus: "Enviad
       dueLabel: parsed.dueLabel?.trim() || "Acompanhar este orcamento",
       summary: parsed.summary?.trim() || "Orcamento sem resumo.",
       status: parsed.uiStatus || fallbackStatus,
+      cadence: sanitizeCadence(parsed.cadence),
     };
   }
 
@@ -135,6 +162,7 @@ export function decodeQuoteSummary(value: string | null, fallbackStatus: "Enviad
       dueLabel: "Acompanhar este orcamento",
       summary: "Orcamento sem resumo.",
       status: fallbackStatus,
+      cadence: undefined,
     };
   }
 
@@ -144,6 +172,7 @@ export function decodeQuoteSummary(value: string | null, fallbackStatus: "Enviad
     dueLabel: dueLabel || "Acompanhar este orcamento",
     summary: summary || "Orcamento sem resumo.",
     status: fallbackStatus,
+    cadence: undefined,
   };
 }
 
@@ -174,12 +203,20 @@ export function encodeChargeMeta(input: ChargeInputLike) {
     dueLabel: input.dueLabel || "acompanhar cobranca",
     source: input.source,
     followUps: input.followUps || [],
+    cadence: input.cadence,
+    externalBilling: input.externalBilling,
   } satisfies ChargeMeta)}`;
 }
 
 export function decodeChargeMeta(
   value: string | null,
-  fallback: { dueLabel: string; source: string; followUps?: ChargeFollowUpEntry[] },
+  fallback: {
+    dueLabel: string;
+    source: string;
+    followUps?: ChargeFollowUpEntry[];
+    cadence?: EntityCadenceState;
+    externalBilling?: ExternalChargeBilling;
+  },
 ) {
   const parsed = parsePrefixedJson<ChargeMeta>(value, CHARGE_META_PREFIX);
 
@@ -188,6 +225,8 @@ export function decodeChargeMeta(
       dueLabel: parsed.dueLabel?.trim() || fallback.dueLabel,
       source: parsed.source?.trim() || fallback.source,
       followUps: Array.isArray(parsed.followUps) ? parsed.followUps.filter(isFollowUpEntry) : (fallback.followUps || []),
+      cadence: sanitizeCadence(parsed.cadence) || fallback.cadence,
+      externalBilling: isExternalBilling(parsed.externalBilling) ? parsed.externalBilling : fallback.externalBilling,
     };
   }
 
@@ -195,6 +234,8 @@ export function decodeChargeMeta(
     dueLabel: fallback.dueLabel,
     source: fallback.source,
     followUps: fallback.followUps || [],
+    cadence: fallback.cadence,
+    externalBilling: fallback.externalBilling,
   };
 }
 
@@ -212,6 +253,17 @@ function isFollowUpEntry(value: unknown): value is ChargeFollowUpEntry {
     typeof candidate.outcome === "string" &&
     typeof candidate.note === "string"
   );
+}
+
+function isExternalBilling(value: unknown): value is ExternalChargeBilling {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  return candidate.provider === "Asaas"
+    && (candidate.environment === "sandbox" || candidate.environment === "production");
 }
 
 export function inferPaymentMethod(source: string) {
@@ -316,5 +368,5 @@ export function inferDueDateFromLabel(label: string | undefined, now = new Date(
 }
 
 type CustomerInputLike = Pick<Customer, "segment" | "status" | "note">;
-type QuoteInputLike = Pick<Quote, "dueLabel" | "summary" | "status">;
-type ChargeInputLike = Pick<Charge, "dueLabel" | "source"> & { followUps?: ChargeFollowUpEntry[] };
+type QuoteInputLike = Pick<Quote, "dueLabel" | "summary" | "status" | "cadence">;
+type ChargeInputLike = Pick<Charge, "dueLabel" | "source" | "cadence" | "externalBilling"> & { followUps?: ChargeFollowUpEntry[] };

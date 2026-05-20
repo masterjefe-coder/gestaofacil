@@ -18,6 +18,7 @@
 - criar dashboard inicial
 - estruturar emissao de NFS-e
 - criar trilha de auditoria basica
+- criar central operacional de relatorios
 
 ## P1
 
@@ -26,7 +27,8 @@
 - IA para resumo de atendimento
 - IA para descricao de servico
 - tags e filtros no pipeline
-- relatorio simples de vendas e recebimentos
+- relatorios por periodo com comparacao semanal e mensal
+- tendencias de conversao, recebimento e fiscal
 - onboarding guiado
 
 ## P2
@@ -60,3 +62,7 @@ A primeira versao precisa permitir:
 6. emitir NFS-e
 
 Se isso funcionar muito bem, o produto ja tem valor.
+
+## Nota de progresso
+
+A base operacional de relatorios ja entrou no produto com snapshot em tela, exportacao Excel e PDF. O backlog acima passa a refletir a proxima camada analitica, nao mais a existencia de um relatorio minimo.

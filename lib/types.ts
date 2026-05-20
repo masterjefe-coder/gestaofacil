@@ -97,6 +97,13 @@ export type CustomerWhatsappActivity = {
   eventCount: number;
 };
 
+export type EntityCadenceState = {
+  cadenceLabel: string;
+  executionLabel: string;
+  completedStepLabel: string;
+  nextStepLabel: string;
+};
+
 export type Quote = {
   id: string;
   customer: string;
@@ -105,6 +112,7 @@ export type Quote = {
   status: "Enviado" | "Aprovado" | "Follow-up";
   dueLabel: string;
   summary: string;
+  cadence?: EntityCadenceState;
 };
 
 export type QuoteInput = {
@@ -114,6 +122,7 @@ export type QuoteInput = {
   status: Quote["status"];
   dueLabel: string;
   summary: string;
+  cadence?: EntityCadenceState;
 };
 
 export type Order = {
@@ -143,6 +152,21 @@ export type ChargeFollowUpEntry = {
   note: string;
 };
 
+export type ExternalChargeProvider = "Asaas";
+
+export type ExternalChargeBilling = {
+  provider: ExternalChargeProvider;
+  environment: "sandbox" | "production";
+  customerId?: string;
+  paymentId?: string;
+  billingType?: "PIX" | "UNDEFINED" | "BOLETO";
+  invoiceUrl?: string;
+  bankSlipUrl?: string;
+  pixCopyPaste?: string;
+  pixQrCodeBase64?: string;
+  pixExpirationDate?: string;
+};
+
 export type Charge = {
   id: string;
   customer: string;
@@ -151,7 +175,10 @@ export type Charge = {
   dueDate?: string;
   status: "Pendente" | "Hoje" | "Pago";
   source: string;
+  paymentLink?: string;
   followUps: ChargeFollowUpEntry[];
+  cadence?: EntityCadenceState;
+  externalBilling?: ExternalChargeBilling;
 };
 
 export type ChargeInput = {
@@ -161,6 +188,9 @@ export type ChargeInput = {
   dueDate?: string;
   status: Charge["status"];
   source: string;
+  paymentLink?: string;
+  cadence?: EntityCadenceState;
+  externalBilling?: ExternalChargeBilling;
 };
 
 export type NfseDocument = {

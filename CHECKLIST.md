@@ -10,7 +10,10 @@
 - [x] modulo de orcamentos
 - [x] modulo de cobrancas
 - [x] modulo minimo de pedidos na camada de dados
-- [ ] fluxo de NFS-e
+- [x] fluxo inicial de NFS-e com fila fiscal e rascunho
+- [x] relatorios operacionais em tela, Excel e PDF
+- [ ] emissao automatica de NFS-e validada ponta a ponta em municipio piloto
+- [ ] analitica por periodo com comparacao e tendencia
 
 ## Auth
 
@@ -44,6 +47,8 @@
 - [x] gestao basica de membros no setup
 - [x] priorizacao operacional de cobrancas por `dueDate`
 - [x] auditoria minima de setup e equipe
+- [x] preferencia persistida de fila por modulo
+- [x] snapshot consolidado da operacao para relatorios
 
 ## APIs
 
@@ -53,6 +58,7 @@
 - [x] `/api/quotes`
 - [x] `/api/charges`
 - [x] `/api/health`
+- [x] `/api/reports/export`
 
 ## Validacao
 

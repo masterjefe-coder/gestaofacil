@@ -52,12 +52,29 @@ Frase secundaria:
 - [ROADMAP-90D.md](./ROADMAP-90D.md): plano de 30, 60 e 90 dias
 - [ARCHITECTURE.md](./ARCHITECTURE.md): arquitetura sugerida
 - [STATUS.md](./STATUS.md): estado atual resumido do projeto
-- [HANDOFF-2026-05-18.md](./HANDOFF-2026-05-18.md): handoff operacional completo para retomada
+- [HANDOFF-2026-05-20.md](./HANDOFF-2026-05-20.md): handoff operacional mais recente para continuar do ponto atual
+- [HANDOFF-2026-05-18.md](./HANDOFF-2026-05-18.md): handoff historico da primeira virada do projeto
 - [AWS-VM-ACCESS.md](./AWS-VM-ACCESS.md): copia local do acesso da VM AWS compartilhada com o `Bot-Trader`
 - [deploy/evolution/README.md](./deploy/evolution/README.md): stack reproduzivel da Evolution API para a Lightsail
 - [NEXT-STEPS.md](./NEXT-STEPS.md): ponto de entrada rapido para continuar
 - [CHECKLIST.md](./CHECKLIST.md): checklist objetiva do que ja esta pronto e do que falta
 - [DECISIONS.md](./DECISIONS.md): decisoes tecnicas e de produto tomadas
+
+## Estado atual do MVP
+
+Hoje o produto ja cobre o fluxo operacional principal:
+
+- clientes com leitura comercial e sinais de relacionamento
+- orcamentos com follow-up e conversao
+- cobrancas com fila automatica, lembretes e leitura de WhatsApp
+- fiscal com fila inicial de NFS-e, rascunho e emissao assistida ou automatica quando o municipio permitir
+- relatorios operacionais em tela, Excel e PDF
+
+Se formos alem desta frente, o proximo passo de produto ja entra em camada analitica mais pesada:
+
+- historico por periodo
+- comparacao semanal e mensal
+- tendencias de conversao, recebimento e fiscal
 
 ## Prioridade inicial
 

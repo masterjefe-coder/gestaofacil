@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createCustomer, deleteCustomer } from "@/lib/customer-repository";
+import { recordAuditEvent } from "@/lib/audit-repository";
+import { buildCustomerReactivationTemplate } from "@/lib/customer-outreach";
+import { createCustomer, deleteCustomer, listCustomers, updateCustomerStatus } from "@/lib/customer-repository";
+import { EvolutionApiError, sendEvolutionTextMessage } from "@/lib/evolution-api";
 import type { CustomerInput } from "@/lib/types";
 
 function getString(formData: FormData, key: string) {
@@ -35,5 +38,63 @@ export async function deleteCustomerAction(formData: FormData) {
   }
 
   await deleteCustomer(id);
+  revalidatePath("/dashboard/customers");
+}
+
+export async function sendCustomerReactivationWhatsappAction(formData: FormData) {
+  const id = getString(formData, "id");
+
+  if (!id) {
+    return;
+  }
+
+  const customers = await listCustomers();
+  const customer = customers.find((item) => item.id === id);
+
+  if (!customer?.phone) {
+    return;
+  }
+
+  const template = buildCustomerReactivationTemplate(customer);
+
+  try {
+    await sendEvolutionTextMessage({
+      number: customer.phone,
+      text: template.message,
+    });
+
+    await updateCustomerStatus(id, "Aguardando retorno", "Cliente entrou em reativação assistida via WhatsApp.");
+    await recordAuditEvent({
+      action: "customer.whatsapp.sent",
+      entityType: "customer",
+      entityId: id,
+      payload: {
+        summary: `Mensagem de reativação enviada para ${customer.name}.`,
+        metadata: {
+          customer: customer.name,
+          phone: customer.phone,
+          message: template.message,
+        },
+      },
+    });
+  } catch (error) {
+    const detail = error instanceof EvolutionApiError ? error.message : "Falha desconhecida na reativação pelo WhatsApp.";
+
+    await recordAuditEvent({
+      action: "customer.whatsapp.failed",
+      entityType: "customer",
+      entityId: id,
+      payload: {
+        summary: `Falha ao enviar mensagem de reativação para ${customer.name}.`,
+        metadata: {
+          customer: customer.name,
+          phone: customer.phone,
+          detail,
+        },
+      },
+    });
+  }
+
+  revalidatePath("/dashboard");
   revalidatePath("/dashboard/customers");
 }

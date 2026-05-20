@@ -22,6 +22,7 @@ import {
 } from "@/lib/evolution-api";
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
+import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getFiscalSetupReadiness } from "@/lib/nfse-repository";
 import { getNfseEmissionModeSummary, getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
@@ -78,6 +79,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const emissionModes = getNfseEmissionModeSummary();
   const nfseIntegration = getNfseNationalIntegrationStatus();
   const evolutionIntegration = getEvolutionIntegrationStatus();
+  const asaasIntegration = getAsaasIntegrationStatus();
   const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
   const selectedEvolutionInstanceName = evolutionIntegration.instance || evolutionInstances[0]?.instanceName || "";
   const selectedEvolutionInstanceState = selectedEvolutionInstanceName
@@ -86,6 +88,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
 
   return (
     <DashboardShell
+      currentPath="/dashboard/setup"
       eyebrow="Setup"
       title="O sistema precisa conhecer a empresa para vender, cobrar e emitir melhor."
       description="Aqui nasce a identidade do workspace, a configuração da empresa e a base para futuras automações de cobrança e NFS-e."
@@ -210,10 +213,28 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <p>{evolutionIntegration.helper}</p>
         </article>
 
+        <article className={asaasIntegration.enabled ? "split-panel success" : "split-panel"}>
+          <span className="section-label">Cobranca externa</span>
+          <h2>Asaas como provedor de Pix e link de pagamento</h2>
+          <p>{asaasIntegration.helper}</p>
+        </article>
+      </section>
+
+      <section className="section-split">
         <article className={evolutionProbe.reachable ? "split-panel success" : "split-panel"}>
           <span className="section-label">Saúde da integração</span>
           <h2>Status do endpoint configurado</h2>
           <p>{evolutionProbe.summary}</p>
+        </article>
+
+        <article className={asaasIntegration.webhookConfigured ? "split-panel success" : "split-panel"}>
+          <span className="section-label">Webhook Asaas</span>
+          <h2>Baixa automatica por evento de pagamento</h2>
+          <p>
+            {asaasIntegration.webhookConfigured
+              ? "Webhook pronto para receber PAYMENT_RECEIVED e PAYMENT_CONFIRMED."
+              : "Defina token e URL publica para receber eventos do Asaas com seguranca."}
+          </p>
         </article>
       </section>
 
@@ -327,6 +348,41 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <span>-</span>
             </article>
           )}
+        </div>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Gateway de cobrança</span>
+            <h2>Asaas no fluxo de recebimento e baixa automática</h2>
+          </div>
+        </div>
+
+        <div className={asaasIntegration.enabled ? "auth-hint" : "auth-hint fiscal-warning"}>
+          <strong>{asaasIntegration.enabled ? "Asaas configurado" : "Asaas ainda incompleto"}</strong>
+          <span>{asaasIntegration.helper}</span>
+          <small className="muted-text">
+            Ambiente: {asaasIntegration.environment === "production" ? "produção" : "sandbox"}.
+          </small>
+        </div>
+
+        <div className={asaasIntegration.webhookConfigured ? "auth-hint" : "auth-hint fiscal-warning"}>
+          <strong>{asaasIntegration.webhookConfigured ? "Webhook pronto para configurar no Asaas" : "Webhook ainda incompleto"}</strong>
+          <span>
+            {asaasIntegration.webhookUrl
+              ? `URL esperada: ${asaasIntegration.webhookUrl}`
+              : "Defina APP_BASE_URL ou mantenha uma URL pública derivável para expor o endpoint do webhook."}
+          </span>
+          <small className="muted-text">
+            Header validado: `asaas-access-token`.
+            {asaasIntegration.webhookTokenConfigured
+              ? " Token já configurado localmente."
+              : " Falta definir ASAAS_WEBHOOK_AUTH_TOKEN no ambiente."}
+          </small>
+          <small className="muted-text">
+            Eventos recomendados: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_OVERDUE`, `PAYMENT_UPDATED` e `PAYMENT_DELETED`.
+          </small>
         </div>
       </section>
 

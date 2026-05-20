@@ -18,6 +18,10 @@ export type QuoteInsight = {
   whatsappLastEventSummary?: string;
   priority: QuotePriority;
   priorityLabel: string;
+  cadenceLabel: string;
+  executionLabel: string;
+  completedStepLabel: string;
+  nextStepLabel: string;
   helper: string;
 };
 
@@ -55,6 +59,78 @@ function getPriority(quote: Quote, hasWhatsappSignal: boolean): QuotePriority {
   }
 
   return "waiting";
+}
+
+function getCadenceLabel(priority: QuotePriority, quote: Quote) {
+  if (quote.cadence?.cadenceLabel) {
+    return quote.cadence.cadenceLabel;
+  }
+
+  switch (priority) {
+    case "hot":
+      return "Cliente respondeu e a proposta pede retomada imediata";
+    case "followup":
+      return "Proposta já entrou em follow-up ativo";
+    case "approved":
+      return "Aprovação pronta para conversão operacional";
+    case "waiting":
+      return "Aguardando leitura ou resposta do cliente";
+  }
+}
+
+function getExecutionLabel(priority: QuotePriority, quote: Quote) {
+  if (quote.cadence?.executionLabel) {
+    return quote.cadence.executionLabel;
+  }
+
+  switch (priority) {
+    case "hot":
+      return "Responder agora";
+    case "followup":
+      return "Enviar nova tentativa";
+    case "approved":
+      return "Gerar cobrança ou pedido";
+    case "waiting":
+      return "Monitorar e puxar próxima cadência";
+  }
+}
+
+function getCompletedStepLabel(priority: QuotePriority, quote: Quote) {
+  if (quote.cadence?.completedStepLabel) {
+    return quote.cadence.completedStepLabel;
+  }
+
+  if (quote.status === "Aprovado") {
+    return "Proposta aprovada pelo cliente";
+  }
+
+  switch (priority) {
+    case "hot":
+      return "Cliente voltou a interagir no canal";
+    case "followup":
+      return "Primeiro envio já aconteceu";
+    case "approved":
+      return "Proposta validada comercialmente";
+    case "waiting":
+      return "Proposta enviada e aguardando reação";
+  }
+}
+
+function getNextStepLabel(priority: QuotePriority, quote: Quote) {
+  if (quote.cadence?.nextStepLabel) {
+    return quote.cadence.nextStepLabel;
+  }
+
+  switch (priority) {
+    case "hot":
+      return "Responder e buscar decisão";
+    case "followup":
+      return "Executar nova tentativa com CTA claro";
+    case "approved":
+      return "Converter em cobrança ou pedido";
+    case "waiting":
+      return "Programar próximo contato";
+  }
 }
 
 function getHelper(input: {
@@ -112,6 +188,10 @@ export function buildQuoteInsights(
       whatsappLastEventSummary: activity?.lastEventSummary,
       priority,
       priorityLabel: getPriorityLabel(priority),
+      cadenceLabel: getCadenceLabel(priority, quote),
+      executionLabel: getExecutionLabel(priority, quote),
+      completedStepLabel: getCompletedStepLabel(priority, quote),
+      nextStepLabel: getNextStepLabel(priority, quote),
       helper: getHelper({
         quote,
         hasWhatsappSignal,

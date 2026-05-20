@@ -6,6 +6,7 @@ export const dashboardNav: NavItem[] = [
   { href: "/dashboard/quotes", label: "Orcamentos", helper: "Propostas e follow-up" },
   { href: "/dashboard/billing", label: "Cobrancas", helper: "Pix e recebimentos" },
   { href: "/dashboard/fiscal", label: "Fiscal", helper: "Fila de NFS-e" },
+  { href: "/dashboard/reports", label: "Relatorios", helper: "Tela, PDF e Excel" },
   { href: "/dashboard/setup", label: "Setup", helper: "Workspace e empresa" },
 ];
 

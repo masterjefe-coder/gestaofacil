@@ -1,0 +1,132 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createChargeFromQuote, updateCharge } from "@/lib/charge-repository";
+import { updateCustomerStatus } from "@/lib/customer-repository";
+import { writeDashboardQueuePreference, type DashboardQueueModule } from "@/lib/dashboard-queue-preferences";
+import { updateQuote } from "@/lib/quote-repository";
+import type { Customer } from "@/lib/types";
+
+function getString(formData: FormData, key: string) {
+  return String(formData.get(key) || "").trim();
+}
+
+function buildRedirectUrl(path: string, view?: string, focus?: string) {
+  const params = new URLSearchParams();
+
+  if (view) {
+    params.set("view", view);
+  }
+
+  if (focus) {
+    params.set("focus", focus);
+  }
+
+  return params.size > 0 ? `${path}?${params.toString()}` : path;
+}
+
+function todayIsoDate() {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function revalidateDashboardOperationViews() {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/billing");
+  revalidatePath("/dashboard/customers");
+  revalidatePath("/dashboard/quotes");
+}
+
+export async function persistDashboardQueuePreferenceAction(formData: FormData) {
+  const moduleKey = getString(formData, "module") as DashboardQueueModule;
+  const path = getString(formData, "path") || "/dashboard";
+  const view = getString(formData, "view");
+  const focus = getString(formData, "focus");
+
+  if (!moduleKey) {
+    redirect(path);
+  }
+
+  await writeDashboardQueuePreference(moduleKey, {
+    view,
+    focus,
+  });
+
+  redirect(buildRedirectUrl(path, view, focus));
+}
+
+export async function markDashboardQuoteFollowUpAction(formData: FormData) {
+  const id = getString(formData, "id");
+  const dueLabel = getString(formData, "dueLabel") || "Follow-up hoje";
+
+  if (!id) {
+    return;
+  }
+
+  await updateQuote(id, {
+    status: "Follow-up",
+    dueLabel,
+  });
+  revalidateDashboardOperationViews();
+}
+
+export async function generateDashboardChargeFromQuoteAction(formData: FormData) {
+  const id = getString(formData, "id");
+
+  if (!id) {
+    return;
+  }
+
+  await createChargeFromQuote(id, "Pix", "cobrar hoje", todayIsoDate(), "Hoje");
+  revalidateDashboardOperationViews();
+  revalidatePath("/dashboard/fiscal");
+}
+
+export async function markDashboardCustomerStatusAction(formData: FormData) {
+  const id = getString(formData, "id");
+  const status = getString(formData, "status") as Customer["status"];
+  const note = getString(formData, "note") || undefined;
+
+  if (!id || !status) {
+    return;
+  }
+
+  await updateCustomerStatus(id, status, note);
+  revalidateDashboardOperationViews();
+}
+
+export async function markDashboardChargeTodayAction(formData: FormData) {
+  const id = getString(formData, "id");
+
+  if (!id) {
+    return;
+  }
+
+  await updateCharge(id, {
+    status: "Hoje",
+    dueDate: todayIsoDate(),
+    dueLabel: "vence hoje",
+  });
+  revalidateDashboardOperationViews();
+}
+
+export async function markDashboardQuoteApprovedAction(formData: FormData) {
+  const id = getString(formData, "id");
+
+  if (!id) {
+    return;
+  }
+
+  await updateQuote(id, {
+    status: "Aprovado",
+    dueLabel: "Aprovado e pronto para operação",
+  });
+  revalidateDashboardOperationViews();
+}

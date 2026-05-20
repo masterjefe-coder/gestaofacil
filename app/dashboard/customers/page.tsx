@@ -1,22 +1,81 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { createCustomerAction, deleteCustomerAction } from "@/app/dashboard/customers/actions";
+import { ModuleQueueFilters } from "@/components/module-queue-filters";
+import {
+  generateDashboardChargeFromQuoteAction,
+  markDashboardChargeTodayAction,
+  markDashboardCustomerStatusAction,
+} from "@/app/dashboard/actions";
+import { createCustomerAction, deleteCustomerAction, sendCustomerReactivationWhatsappAction } from "@/app/dashboard/customers/actions";
+import { sendQuoteWhatsappAction } from "@/app/dashboard/quotes/actions";
+import { buildChargeFollowUpActions } from "@/lib/charge-follow-up";
+import { buildCustomerReactivationTemplate } from "@/lib/customer-outreach";
 import { buildCustomerEngagementInsights } from "@/lib/customer-engagement-insights";
+import { readDashboardQueuePreference } from "@/lib/dashboard-queue-preferences";
 import { listCustomerWhatsappActivity } from "@/lib/customer-whatsapp-activity";
+import { listCustomerUnifiedTimeline, type CustomerTimelineEntry } from "@/lib/customer-unified-timeline";
+import { listCharges } from "@/lib/charge-repository";
 import { listCustomers } from "@/lib/customer-repository";
+import { buildQuoteInsights } from "@/lib/quote-insights";
+import { listQuotes } from "@/lib/quote-repository";
 import { customerMoments } from "@/lib/site-data";
 
-export default async function CustomersPage() {
-  const [customers, whatsappActivity] = await Promise.all([
+type CustomersPageProps = {
+  searchParams?: Promise<{
+    focus?: string;
+    view?: string;
+  }>;
+};
+
+type CustomersQueueView = "all" | "hot" | "followup" | "reactivation" | "stable";
+
+export default async function CustomersPage({ searchParams }: CustomersPageProps) {
+  const [customers, whatsappActivity, quotes, charges] = await Promise.all([
     listCustomers(),
     listCustomerWhatsappActivity().catch(() => []),
+    listQuotes(),
+    listCharges(),
   ]);
+  const unifiedTimeline = await listCustomerUnifiedTimeline().catch(() => new Map());
   const whatsappActivityByCustomerId = new Map(whatsappActivity.map((entry) => [entry.customerId, entry]));
   const customersWithWhatsappHistory = whatsappActivity.filter((entry) => entry.eventCount > 0).length;
   const engagement = buildCustomerEngagementInsights(customers, whatsappActivity);
+  const quoteInsights = buildQuoteInsights(quotes, customers, whatsappActivity);
+  const chargeFollowUpActions = buildChargeFollowUpActions(charges);
+  const quoteByCustomerName = new Map<string, (typeof quoteInsights.items)[number]>();
+  const chargeByCustomerName = new Map<string, (typeof chargeFollowUpActions)[number]>();
+
+  for (const quote of quoteInsights.items) {
+    if (!quoteByCustomerName.has(quote.customer)) {
+      quoteByCustomerName.set(quote.customer, quote);
+    }
+  }
+
+  for (const action of chargeFollowUpActions) {
+    if (!chargeByCustomerName.has(action.customer)) {
+      chargeByCustomerName.set(action.customer, action);
+    }
+  }
+
+  const params = await searchParams;
+  const savedPreference = await readDashboardQueuePreference("customers");
+  const focus = params?.focus || savedPreference.focus || "";
+  const requestedView = params?.view || savedPreference.view || "";
+  const viewFromFocus: Partial<Record<string, CustomersQueueView>> = {
+    hot: "hot",
+    reactivation: "reactivation",
+  };
+  const queueView = (requestedView || viewFromFocus[focus] || "all") as CustomersQueueView;
+  const filteredEngagementItems = engagement.items.filter((item) => queueView === "all" || item.priority === queueView);
+  const focusMessage = focus === "hot"
+    ? "O dashboard te trouxe para responder clientes quentes enquanto o canal ainda está favorável."
+    : focus === "reactivation"
+      ? "O dashboard destacou clientes bons para reativação, com espaço claro para retomar a conversa."
+      : "";
 
   return (
     <DashboardShell
+      currentPath="/dashboard/customers"
       eyebrow="Clientes"
       title="O cliente precisa carregar contexto comercial, financeiro e fiscal."
       description="Esta área mostra como o Gestão Fácil deve tratar cada cliente como centro do histórico de vendas e não como cadastro morto."
@@ -31,6 +90,26 @@ export default async function CustomersPage() {
         </>
       }
     >
+      {focusMessage ? (
+        <div className="auth-hint">
+          <strong>Foco comercial</strong>
+          <span>{focusMessage}</span>
+        </div>
+      ) : null}
+      <ModuleQueueFilters
+        module="customers"
+        path="/dashboard/customers"
+        currentView={queueView}
+        title="Salvar o recorte operacional da base"
+        helper="Clientes, timeline e reativação passam a abrir já no foco do módulo."
+        options={[
+          { value: "all", label: "Tudo", count: engagement.items.length },
+          { value: "hot", label: "Quentes", count: engagement.summary.hotCount },
+          { value: "followup", label: "Follow-up", count: engagement.summary.followUpCount },
+          { value: "reactivation", label: "Reativação", count: engagement.summary.reactivationCount },
+          { value: "stable", label: "Estáveis", count: engagement.summary.stableCount },
+        ]}
+      />
       <section id="novo-cliente" className="data-panel">
         <div className="card-header">
           <div>
@@ -176,9 +255,9 @@ export default async function CustomersPage() {
           </div>
         </div>
 
-        {engagement.items.length > 0 ? (
+        {filteredEngagementItems.length > 0 ? (
           <div className="cards-grid quote-grid">
-            {engagement.items.slice(0, 4).map((item) => (
+            {filteredEngagementItems.slice(0, 4).map((item) => (
               <article key={item.customerId} className="dashboard-card">
                 <span className="dashboard-kicker">{item.priority === "hot" ? "Quente" : item.priority === "followup" ? "Follow-up" : item.priority === "reactivation" ? "Reativação" : "Estável"}</span>
                 <h3>{item.customerName}</h3>
@@ -193,6 +272,173 @@ export default async function CustomersPage() {
           <div className="auth-hint">
             <strong>Base ainda sem leitura operacional</strong>
             <span>Assim que clientes ganharem histórico e sinais no canal, esta área passa a ordenar follow-up, calor e reativação.</span>
+          </div>
+        )}
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Reativação assistida</span>
+            <h2>Mensagens prontas para retomar clientes da base</h2>
+          </div>
+        </div>
+
+        {filteredEngagementItems.some((item) => item.priority === "reactivation" && item.phone) ? (
+          <div className="cards-grid quote-grid">
+            {filteredEngagementItems
+              .filter((item) => item.priority === "reactivation" && item.phone)
+              .slice(0, 4)
+              .map((item) => {
+                const template = buildCustomerReactivationTemplate({
+                  id: item.customerId,
+                  name: item.customerName,
+                  phone: item.phone,
+                  document: undefined,
+                  segment: "",
+                  city: item.city,
+                  status: item.status,
+                  lastSale: item.lastSale,
+                  openAmount: item.openAmount,
+                  note: item.helper,
+                });
+
+                return (
+                  <article key={`reactivation-${item.customerId}`} className="dashboard-card">
+                    <span className="dashboard-kicker">Reativação</span>
+                    <h3>{item.customerName}</h3>
+                    <p>{template.title}</p>
+                    <small className="muted-text">{template.message}</small>
+                    <div className="dashboard-actions">
+                      <a
+                        href={`https://wa.me/${item.phone?.replace(/\D/g, "")}?text=${encodeURIComponent(template.message)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="secondary-link"
+                      >
+                        Abrir WhatsApp
+                      </a>
+                      <form action={sendCustomerReactivationWhatsappAction} className="card-action">
+                        <input type="hidden" name="id" value={item.customerId} />
+                        <button type="submit" className="primary-link">
+                          Enviar via API
+                        </button>
+                      </form>
+                    </div>
+                  </article>
+                );
+              })}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Sem reativação pronta</strong>
+            <span>Quando houver clientes da base com pouco sinal recente e número cadastrado, a mensagem de retomada aparece aqui pronta para disparo.</span>
+          </div>
+        )}
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Timeline unificada</span>
+            <h2>Comercial, cobrança, WhatsApp e fiscal no mesmo contexto por cliente</h2>
+          </div>
+        </div>
+
+        {filteredEngagementItems.length > 0 ? (
+          <div className="cards-grid quote-grid">
+            {filteredEngagementItems.slice(0, 4).map((item) => {
+              const timeline = unifiedTimeline.get(item.customerId) || [];
+              const suggestedQuote = quoteByCustomerName.get(item.customerName);
+              const financialAction = chargeByCustomerName.get(item.customerName);
+
+              return (
+                <article key={item.customerId} className="dashboard-card">
+                  <span className="dashboard-kicker">{item.customerName}</span>
+                  <h3>{item.headline}</h3>
+                  <p>{item.helper}</p>
+                  <small className="muted-text">Status: {item.status} · Em aberto: {item.openAmount}</small>
+                  {suggestedQuote ? (
+                    <div className="follow-up-entry">
+                      <strong>Próximo passo comercial</strong>
+                      <small>{suggestedQuote.cadenceLabel}</small>
+                      <small>{suggestedQuote.executionLabel}</small>
+                    </div>
+                  ) : null}
+                  {financialAction ? (
+                    <div className="follow-up-entry">
+                      <strong>Próximo passo financeiro</strong>
+                      <small>{financialAction.cadenceLabel}</small>
+                      <small>{financialAction.executionLabel}</small>
+                    </div>
+                  ) : null}
+                  {timeline.length > 0 ? (
+                    <div className="follow-up-list">
+                      {timeline.slice(0, 5).map((entry: CustomerTimelineEntry) => (
+                        <article key={entry.id} className="follow-up-entry">
+                          <strong>{entry.createdAt} · {entry.title}</strong>
+                          <small>{entry.detail}</small>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="auth-hint">
+                      <strong>Sem histórico consolidado</strong>
+                      <span>Esse cliente ainda não acumulou eventos suficientes para formar uma timeline operacional.</span>
+                    </div>
+                  )}
+                  <div className="dashboard-actions">
+                    {item.priority === "reactivation" && item.phone ? (
+                      <form action={sendCustomerReactivationWhatsappAction} className="card-action">
+                        <input type="hidden" name="id" value={item.customerId} />
+                        <button type="submit" className="primary-link">
+                          Reativar via API
+                        </button>
+                      </form>
+                    ) : null}
+                    {suggestedQuote?.customerPhone && suggestedQuote.status !== "Aprovado" ? (
+                      <form action={sendQuoteWhatsappAction} className="card-action">
+                        <input type="hidden" name="id" value={suggestedQuote.quoteId} />
+                        <button type="submit" className="secondary-link">
+                          Enviar follow-up
+                        </button>
+                      </form>
+                    ) : null}
+                    {suggestedQuote?.status === "Aprovado" ? (
+                      <form action={generateDashboardChargeFromQuoteAction} className="card-action">
+                        <input type="hidden" name="id" value={suggestedQuote.quoteId} />
+                        <button type="submit" className="secondary-link">
+                          Gerar cobrança
+                        </button>
+                      </form>
+                    ) : null}
+                    {financialAction && financialAction.urgency !== "today" ? (
+                      <form action={markDashboardChargeTodayAction} className="card-action">
+                        <input type="hidden" name="id" value={financialAction.id} />
+                        <button type="submit" className="secondary-link">
+                          Puxar cobrança
+                        </button>
+                      </form>
+                    ) : null}
+                    {item.status !== "Aguardando retorno" ? (
+                      <form action={markDashboardCustomerStatusAction} className="card-action">
+                        <input type="hidden" name="id" value={item.customerId} />
+                        <input type="hidden" name="status" value="Aguardando retorno" />
+                        <input type="hidden" name="note" value="Cliente colocado em acompanhamento 360 pela timeline." />
+                        <button type="submit" className="ghost-button">
+                          Marcar acompanhamento
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Timeline ainda vazia</strong>
+            <span>Quando clientes acumularem propostas, cobranças, mensagens e fiscal, a visão 360 começa a aparecer aqui.</span>
           </div>
         )}
       </section>

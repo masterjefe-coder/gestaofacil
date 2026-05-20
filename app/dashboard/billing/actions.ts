@@ -22,6 +22,72 @@ import {
 } from "@/lib/whatsapp-message-metadata";
 import type { ChargeFollowUpChannel, ChargeFollowUpOutcome, ChargeInput } from "@/lib/types";
 
+function buildChargeCadenceState(input: {
+  outcome?: ChargeFollowUpOutcome;
+  status?: ChargeInput["status"];
+}) {
+  if (input.outcome === "Contestou") {
+    return {
+      cadenceLabel: "Cobrança em tratamento de objeção",
+      executionLabel: "Tratar objeção antes de insistir",
+      completedStepLabel: "Cliente contestou a cobrança",
+      nextStepLabel: "Resolver objeção e redefinir abordagem",
+    };
+  }
+
+  if (input.outcome === "Reagendado") {
+    return {
+      cadenceLabel: "Cobrança em prazo renegociado",
+      executionLabel: "Ajustar data e reprogramar",
+      completedStepLabel: "Cliente pediu novo prazo",
+      nextStepLabel: "Atualizar vencimento e reagendar cobrança",
+    };
+  }
+
+  if (input.outcome === "Prometeu pagar") {
+    return {
+      cadenceLabel: "Cobrança aguardando confirmação do cliente",
+      executionLabel: "Acompanhar promessa pontualmente",
+      completedStepLabel: "Cliente prometeu regularizar",
+      nextStepLabel: "Confirmar pagamento no prazo prometido",
+    };
+  }
+
+  if (input.outcome === "Pago em analise") {
+    return {
+      cadenceLabel: "Cobrança aguardando confirmação do cliente",
+      executionLabel: "Conferir comprovante ou conciliação",
+      completedStepLabel: "Comprovante ou pagamento informado",
+      nextStepLabel: "Conferir baixa ou comprovante",
+    };
+  }
+
+  if (input.status === "Hoje") {
+    return {
+      cadenceLabel: "Cobrança com toque programado para hoje",
+      executionLabel: "Executar hoje",
+      completedStepLabel: "Cobrança entrou na agenda de hoje",
+      nextStepLabel: "Executar contato ainda hoje",
+    };
+  }
+
+  if (input.status === "Pago") {
+    return {
+      cadenceLabel: "Cobrança sem cadência ativa",
+      executionLabel: "Sem ação",
+      completedStepLabel: "Pagamento já foi registrado",
+      nextStepLabel: "Encaminhar para fiscal se aplicável",
+    };
+  }
+
+  return {
+    cadenceLabel: "Cobrança em monitoramento preventivo",
+    executionLabel: "Manter no radar",
+    completedStepLabel: "Cobrança já está no radar",
+    nextStepLabel: "Preparar próximo lembrete",
+  };
+}
+
 function getString(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
 }
@@ -64,6 +130,7 @@ export async function createChargeAction(formData: FormData) {
     dueDate,
     status,
     source: getString(formData, "source") || paymentMethod,
+    cadence: buildChargeCadenceState({ status }),
   };
 
   if (!input.customer || !input.amount) {
@@ -84,6 +151,7 @@ export async function markChargeAsPaidAction(formData: FormData) {
   await updateCharge(id, {
     status: "Pago",
     dueLabel: "recebido",
+    cadence: buildChargeCadenceState({ status: "Pago" }),
   });
   revalidateBillingViews();
 }
@@ -100,6 +168,7 @@ export async function markChargeAsDueTodayAction(formData: FormData) {
     status: "Hoje",
     dueDate,
     dueLabel: "vence hoje",
+    cadence: buildChargeCadenceState({ status: "Hoje" }),
   });
   revalidateBillingViews();
 }
@@ -115,6 +184,7 @@ export async function postponeChargeAction(formData: FormData) {
   await updateCharge(id, {
     status: "Pendente",
     dueDate,
+    cadence: buildChargeCadenceState({ status: "Pendente" }),
   });
   revalidateBillingViews();
 }
@@ -133,6 +203,9 @@ export async function addChargeFollowUpAction(formData: FormData) {
     channel,
     outcome,
     note,
+  });
+  await updateCharge(id, {
+    cadence: buildChargeCadenceState({ outcome }),
   });
   revalidateBillingViews();
 }
@@ -154,6 +227,9 @@ export async function runChargeReminderAction(formData: FormData) {
     channel,
     outcome,
     note: note || "Lembrete operacional registrado na fila automática.",
+  });
+  await updateCharge(id, {
+    cadence: buildChargeCadenceState({ outcome }),
   });
   revalidateBillingViews();
 }
@@ -191,6 +267,9 @@ export async function sendChargeReminderWhatsappAction(formData: FormData) {
       channel,
       outcome: reminder?.suggestedOutcome || "Sem resposta",
       note: `Mensagem enviada via Evolution API para ${customer?.phone || customerPhone}. ${message}`,
+    });
+    await updateCharge(id, {
+      cadence: buildChargeCadenceState({ outcome: reminder?.suggestedOutcome || "Sem resposta" }),
     });
     await recordAuditEvent({
       action: "charge.whatsapp.sent",
@@ -253,6 +332,9 @@ export async function applyWhatsappSignalFollowUpAction(formData: FormData) {
     outcome,
     note,
   });
+  await updateCharge(id, {
+    cadence: buildChargeCadenceState({ outcome }),
+  });
   await recordAuditEvent({
     action: "charge.whatsapp.signal_applied",
     entityType: "charge",
@@ -277,5 +359,63 @@ export async function deleteChargeAction(formData: FormData) {
   }
 
   await deleteCharge(id);
+  revalidateBillingViews();
+}
+
+export async function advanceChargeCadenceAction(formData: FormData) {
+  const id = getString(formData, "id");
+  const outcome = getString(formData, "outcome") as ChargeFollowUpOutcome;
+  const note = getString(formData, "note");
+  const dueDate = getString(formData, "dueDate") || undefined;
+  const dueLabel = getString(formData, "dueLabel");
+
+  if (!id || !outcome) {
+    return;
+  }
+
+  await addChargeFollowUp(id, {
+    channel: "WhatsApp",
+    outcome,
+    note: note || "Etapa da cadência financeira registrada rapidamente no painel.",
+  });
+
+  if (outcome === "Reagendado" && dueDate) {
+    await updateCharge(id, {
+      status: "Pendente",
+      dueDate,
+      dueLabel: dueLabel || undefined,
+      cadence: buildChargeCadenceState({ outcome }),
+    });
+  }
+
+  if (outcome === "Prometeu pagar" && dueDate) {
+    await updateCharge(id, {
+      status: "Pendente",
+      dueDate,
+      dueLabel: dueLabel || undefined,
+      cadence: buildChargeCadenceState({ outcome }),
+    });
+  }
+
+  if (!dueDate || (outcome !== "Reagendado" && outcome !== "Prometeu pagar")) {
+    await updateCharge(id, {
+      cadence: buildChargeCadenceState({ outcome }),
+    });
+  }
+
+  await recordAuditEvent({
+    action: "charge.cadence.advanced",
+    entityType: "charge",
+    entityId: id,
+    payload: {
+      summary: `Cadência financeira avançada para ${outcome.toLowerCase()}.`,
+      metadata: {
+        outcome,
+        dueDate: dueDate || null,
+        dueLabel: dueLabel || null,
+      },
+    },
+  });
+
   revalidateBillingViews();
 }

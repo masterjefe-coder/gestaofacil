@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ChargeStatus, type Charge as DbCharge } from "@prisma/client";
 import { getCurrentWorkspaceContext } from "@/lib/auth-session";
+import { recordAuditEvent } from "@/lib/audit-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { decodeCustomerNotes, encodeCustomerNotes, formatCurrency } from "@/lib/demo-data-codecs";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
@@ -107,6 +108,20 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
     },
   });
 
+  await recordAuditEvent({
+    action: "customer.created",
+    entityType: "customer",
+    entityId: customer.id,
+    payload: {
+      summary: `Cliente ${customer.name} criado na base.`,
+      metadata: {
+        customer: customer.name,
+        status: input.status,
+        city: customer.city || "",
+      },
+    },
+  });
+
   return {
     id: customer.id,
     name: customer.name,
@@ -119,6 +134,92 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
     openAmount: "R$ 0",
     note: input.note || "Novo cliente criado no dashboard.",
   } satisfies Customer;
+}
+
+export async function updateCustomerStatus(
+  id: string,
+  status: Customer["status"],
+  note?: string,
+): Promise<Customer | null> {
+  if (isLocalDataMode()) {
+    const data = await readDemoWorkspaceData();
+    const index = data.customers.findIndex((customer) => customer.id === id);
+
+    if (index === -1) {
+      return null;
+    }
+
+    const current = data.customers[index];
+    const updated: Customer = {
+      ...current,
+      status,
+      note: note || current.note,
+    };
+
+    data.customers[index] = updated;
+    await writeDemoWorkspaceData(data);
+    return updated;
+  }
+
+  await ensureDemoCommerceSeeded();
+  const { workspaceId } = await getCurrentWorkspaceContext();
+  const existing = await prisma.customer.findFirst({
+    where: {
+      id,
+      workspaceId,
+    },
+    include: {
+      charges: true,
+    },
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  const currentMeta = decodeCustomerNotes(existing.notes);
+  const nextMeta = {
+    segment: currentMeta.segment,
+    status,
+    note: note || currentMeta.note,
+  };
+
+  const updated = await prisma.customer.update({
+    where: { id: existing.id },
+    data: {
+      notes: encodeCustomerNotes(nextMeta),
+    },
+    include: {
+      charges: true,
+    },
+  });
+
+  await recordAuditEvent({
+    action: "customer.updated",
+    entityType: "customer",
+    entityId: updated.id,
+    payload: {
+      summary: `Cliente ${updated.name} atualizado para ${status.toLowerCase()}.`,
+      metadata: {
+        customer: updated.name,
+        status,
+        note: nextMeta.note,
+      },
+    },
+  });
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    phone: updated.phone || undefined,
+    document: updated.document || undefined,
+    segment: currentMeta.segment,
+    city: updated.city || "Sem cidade",
+    status,
+    lastSale: formatLastSale(updated.charges),
+    openAmount: formatOpenAmount(updated.charges),
+    note: nextMeta.note,
+  };
 }
 
 function normalizeLookup(value: string) {

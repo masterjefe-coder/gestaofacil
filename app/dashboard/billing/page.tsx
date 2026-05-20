@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { ModuleQueueFilters } from "@/components/module-queue-filters";
 import {
   addChargeFollowUpAction,
+  advanceChargeCadenceAction,
   applyWhatsappSignalFollowUpAction,
   createChargeAction,
   deleteChargeAction,
@@ -23,9 +25,19 @@ import { billingMoments } from "@/lib/site-data";
 import { listCharges } from "@/lib/charge-repository";
 import { listCustomers } from "@/lib/customer-repository";
 import { getEvolutionIntegrationStatus } from "@/lib/evolution-api";
+import { readDashboardQueuePreference } from "@/lib/dashboard-queue-preferences";
 import { listQuotes } from "@/lib/quote-repository";
 import type { ChargeWhatsappSignal } from "@/lib/charge-whatsapp-signals";
 import type { Charge } from "@/lib/types";
+
+type BillingPageProps = {
+  searchParams?: Promise<{
+    focus?: string;
+    view?: string;
+  }>;
+};
+
+type BillingQueueView = "all" | "overdue" | "today" | "waiting" | "unscheduled" | "triage";
 
 function formatFollowUpDate(value: string) {
   const parsed = new Date(value);
@@ -59,7 +71,7 @@ function getHumanTriageLabel(signal: { suggestedOutcome?: string; inboundReplyDe
   }
 }
 
-export default async function BillingPage() {
+export default async function BillingPage({ searchParams }: BillingPageProps) {
   const [quotes, loadedCharges, nfseDocuments, customers, customerWhatsappActivity, chargeWhatsappSignals] = await Promise.all([
     listQuotes(),
     listCharges(),
@@ -78,7 +90,6 @@ export default async function BillingPage() {
   const followUpActions = buildChargeFollowUpActions(charges);
   const reminderQueue = buildChargeReminderQueue(charges);
   const followUpSummary = summarizeChargeFollowUp(followUpActions);
-  const highlightedFollowUps = followUpActions.slice(0, 4);
   const unscheduledCount = followUpActions.filter((action) => action.bucket === "unmapped").length;
   const whatsappReplyCount = chargeWhatsappSignals.filter((entry) => entry.inboundReplyDetected).length;
   const whatsappSuggestedCount = chargeWhatsappSignals.filter((entry) => entry.suggestedOutcome).length;
@@ -92,9 +103,47 @@ export default async function BillingPage() {
   const nfseByCustomerAndAmount = new Map(
     nfseDocuments.map((document) => [`${document.customer}:::${document.serviceAmount}`, document]),
   );
+  const params = await searchParams;
+  const savedPreference = await readDashboardQueuePreference("billing");
+  const focus = params?.focus || savedPreference.focus || "";
+  const requestedView = params?.view || savedPreference.view || "";
+  const triageChargeIds = new Set(chargesNeedingHumanTriage.map((item) => item.id));
+  const viewFromFocus: Partial<Record<string, BillingQueueView>> = {
+    contestations: "triage",
+    triage: "triage",
+    promises: "waiting",
+  };
+  const queueView = (requestedView || viewFromFocus[focus] || "all") as BillingQueueView;
+  const filteredFollowUpActions = followUpActions.filter((action) => {
+    switch (queueView) {
+      case "overdue":
+        return action.slaStatus === "overdue";
+      case "today":
+        return action.slaStatus === "today";
+      case "waiting":
+        return action.slaStatus === "waiting";
+      case "unscheduled":
+        return action.bucket === "unmapped";
+      case "triage":
+        return triageChargeIds.has(action.id);
+      case "all":
+        return true;
+    }
+  });
+  const highlightedFollowUps = filteredFollowUpActions.slice(0, 4);
+  const filteredFollowUpActionsById = new Map(filteredFollowUpActions.map((action) => [action.id, action]));
+  const filteredReminderQueue = reminderQueue.filter((task) => filteredFollowUpActions.some((action) => action.id === task.chargeId));
+  const focusMessage = focus === "contestations"
+    ? "O dashboard te trouxe para tratar contestações e respostas financeiras antes de insistir em nova cobrança."
+    : focus === "promises"
+      ? "O dashboard destacou promessas de pagamento para você acompanhar o recebimento com menos atrito."
+      : focus === "triage"
+        ? "O dashboard identificou respostas no canal que ainda pedem leitura humana na cobrança."
+        : "";
 
   return (
     <DashboardShell
+      currentPath="/dashboard/billing"
       eyebrow="Cobranças"
       title="Receber no prazo precisa ser tão simples quanto criar a venda."
       description="A cobrança entra como parte do fluxo comercial para reduzir esquecimento, acelerar recebimento e preparar a emissão fiscal."
@@ -109,6 +158,27 @@ export default async function BillingPage() {
         </>
       }
     >
+      {focusMessage ? (
+        <div className="auth-hint">
+          <strong>Foco operacional</strong>
+          <span>{focusMessage}</span>
+        </div>
+      ) : null}
+      <ModuleQueueFilters
+        module="billing"
+        path="/dashboard/billing"
+        currentView={queueView}
+        title="Manter a fila financeira no recorte certo"
+        helper="A visão escolhida fica salva para este módulo e volta no próximo acesso."
+        options={[
+          { value: "all", label: "Tudo", count: followUpActions.length },
+          { value: "overdue", label: "SLA vencido", count: followUpSummary.slaOverdueCount },
+          { value: "today", label: "Hoje", count: followUpSummary.slaTodayCount },
+          { value: "waiting", label: "Aguardando", count: followUpSummary.waitingCount },
+          { value: "unscheduled", label: "Sem data", count: unscheduledCount },
+          { value: "triage", label: "Triagem", count: chargesNeedingHumanTriage.length },
+        ]}
+      />
       <section id="nova-cobranca" className="data-panel">
         <div className="card-header">
           <div>
@@ -242,6 +312,38 @@ export default async function BillingPage() {
       <section className="data-panel">
         <div className="card-header">
           <div>
+            <span className="section-label">Cadência financeira</span>
+            <h2>Estados explícitos de execução da cobrança</h2>
+          </div>
+        </div>
+
+        <div className="cards-grid quote-grid">
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Cobrar agora</span>
+            <h3>{followUpActions.filter((action) => action.slaStatus === "overdue").length} cobrança(s)</h3>
+            <p>Entraram em atraso e já pedem ação operacional imediata.</p>
+          </article>
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Executar hoje</span>
+            <h3>{followUpActions.filter((action) => action.slaStatus === "today").length} cobrança(s)</h3>
+            <p>Estão no toque do dia e não deveriam escorregar para amanhã.</p>
+          </article>
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Aguardar confirmação</span>
+            <h3>{followUpActions.filter((action) => action.slaStatus === "waiting").length} cobrança(s)</h3>
+            <p>Receberam resposta do cliente e agora pedem leitura ou conferência, não insistência cega.</p>
+          </article>
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Organizar base</span>
+            <h3>{followUpActions.filter((action) => action.bucket === "unmapped").length} cobrança(s)</h3>
+            <p>Ainda não têm vencimento real e enfraquecem a previsibilidade do caixa.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
             <span className="section-label">Leituras do canal</span>
             <h2>O que o WhatsApp já está dizendo sobre a fila de recebimentos</h2>
           </div>
@@ -368,12 +470,13 @@ export default async function BillingPage() {
           </div>
         </div>
 
-        {reminderQueue.length > 0 ? (
+        {filteredReminderQueue.length > 0 ? (
           <div className="cards-grid quote-grid">
-            {reminderQueue.map((task) => (
+            {filteredReminderQueue.map((task) => (
               (() => {
                 const customer = customersByName.get(task.customer);
                 const whatsappActivity = whatsappActivityByCustomerName.get(task.customer);
+                const queueAction = filteredFollowUpActionsById.get(task.chargeId);
                 const canSendViaEvolution = evolution.enabled
                   && Boolean(customer?.phone)
                   && (task.channel === "WhatsApp" || task.channel === "Pix reenviado");
@@ -386,6 +489,8 @@ export default async function BillingPage() {
                     <p>{task.reason}</p>
                     <small className="muted-text">{task.slaLabel}</small>
                     <small className="muted-text">{task.nextFollowUpLabel}</small>
+                    {queueAction ? <small className="muted-text">{queueAction.cadenceLabel}</small> : null}
+                    <small className="muted-text">Execução: {queueAction?.executionLabel || "Registrar contato"}</small>
                     <div className="follow-up-entry">
                       <strong>Mensagem pronta</strong>
                       <small>{task.message}</small>
@@ -450,6 +555,10 @@ export default async function BillingPage() {
             <span className="section-label">Fila de follow-up</span>
             <h2>Cobranças que pedem ação prática agora</h2>
           </div>
+          <div className="queue-filter-summary">
+            <strong>{highlightedFollowUps.length}</strong>
+            <small>item(ns) no recorte atual</small>
+          </div>
         </div>
 
         {highlightedFollowUps.length > 0 ? (
@@ -468,6 +577,10 @@ export default async function BillingPage() {
                     <p>{action.summary}</p>
                     <small className="muted-text">{action.slaLabel}</small>
                     <small className="muted-text">{action.nextFollowUpLabel}</small>
+                    <small className="muted-text">{action.cadenceLabel}</small>
+                    <small className="muted-text">Execução: {action.executionLabel}</small>
+                    <small className="muted-text">Etapa concluída: {action.completedStepLabel}</small>
+                    <small className="muted-text">Próxima etapa: {action.nextStepLabel}</small>
                     <small className="muted-text">{action.recommendedAction}</small>
                     <small className="muted-text">{action.suggestedMessage}</small>
                     {latestFollowUp ? (
@@ -506,6 +619,23 @@ export default async function BillingPage() {
                         <input type="hidden" name="id" value={action.id} />
                         <button type="submit" className="primary-link">
                           Marcar pago
+                        </button>
+                      </form>
+                      <form action={advanceChargeCadenceAction} className="card-action">
+                        <input type="hidden" name="id" value={action.id} />
+                        <input type="hidden" name="outcome" value="Prometeu pagar" />
+                        <input type="hidden" name="note" value="Promessa de pagamento registrada direto na fila financeira." />
+                        <input type="hidden" name="dueLabel" value="Cliente prometeu pagar" />
+                        <button type="submit" className="ghost-button">
+                          Prometeu pagar
+                        </button>
+                      </form>
+                      <form action={advanceChargeCadenceAction} className="card-action">
+                        <input type="hidden" name="id" value={action.id} />
+                        <input type="hidden" name="outcome" value="Contestou" />
+                        <input type="hidden" name="note" value="Contestação registrada direto na fila financeira." />
+                        <button type="submit" className="ghost-button">
+                          Contestou
                         </button>
                       </form>
                     </div>
@@ -549,10 +679,19 @@ export default async function BillingPage() {
                   <small className="muted-text">{charge.dueLabel}</small>
                   {charge.dueDate ? <small className="muted-text">Data real: {charge.dueDate}</small> : null}
                   <small className="muted-text">Status operacional: {charge.status}</small>
+                  {charge.externalBilling ? (
+                    <small className="muted-text">
+                      {charge.externalBilling.provider} {charge.externalBilling.environment === "production" ? "produção" : "sandbox"} · {charge.externalBilling.billingType || "cobrança externa"}
+                    </small>
+                  ) : null}
                   {automaticAction ? (
                     <>
                       <small className="muted-text">{automaticAction.slaLabel}</small>
                       <small className="muted-text">{automaticAction.nextFollowUpLabel}</small>
+                      <small className="muted-text">{automaticAction.cadenceLabel}</small>
+                      <small className="muted-text">Execução: {automaticAction.executionLabel}</small>
+                      <small className="muted-text">Etapa concluída: {automaticAction.completedStepLabel}</small>
+                      <small className="muted-text">Próxima etapa: {automaticAction.nextStepLabel}</small>
                     </>
                   ) : null}
                   <small className="muted-text">
@@ -613,6 +752,22 @@ export default async function BillingPage() {
                           </article>
                         ))}
                       </div>
+                    </div>
+                  ) : null}
+                  {charge.externalBilling?.pixCopyPaste ? (
+                    <div className="auth-hint">
+                      <strong>Pix copia e cola pronto</strong>
+                      <span>{charge.externalBilling.pixCopyPaste}</span>
+                      {charge.externalBilling.pixExpirationDate ? (
+                        <small className="muted-text">Expira em {charge.externalBilling.pixExpirationDate}</small>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {charge.paymentLink ? (
+                    <div className="dashboard-actions">
+                      <a href={charge.paymentLink} target="_blank" rel="noreferrer" className="secondary-link">
+                        Abrir cobrança externa
+                      </a>
                     </div>
                   ) : null}
                   {charge.status === "Pago" ? (

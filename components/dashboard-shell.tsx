@@ -14,6 +14,7 @@ type DashboardShellProps = {
   description: string;
   eyebrow?: string;
   actions?: ReactNode;
+  currentPath?: string;
 };
 
 export async function DashboardShell({
@@ -22,6 +23,7 @@ export async function DashboardShell({
   description,
   eyebrow = "Dashboard",
   actions,
+  currentPath = "/dashboard",
 }: DashboardShellProps) {
   const session = await getServerSession(authOptions);
 
@@ -54,7 +56,11 @@ export async function DashboardShell({
 
         <nav className="sidebar-nav" aria-label="Navegação do dashboard">
           {dashboardNav.map((item) => (
-            <Link key={item.href} href={item.href} className="sidebar-link">
+            <Link
+              key={item.href}
+              href={item.href}
+              className={item.href === currentPath ? "sidebar-link sidebar-link-active" : "sidebar-link"}
+            >
               <span>{item.label}</span>
               <small>{item.helper}</small>
             </Link>

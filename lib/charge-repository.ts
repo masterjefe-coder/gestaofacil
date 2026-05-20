@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Charge as DbCharge, Customer as DbCustomer, Order as DbOrder } from "@prisma/client";
 import { getCurrentWorkspaceContext } from "@/lib/auth-session";
+import { createAsaasCharge } from "@/lib/asaas";
 import { recordAuditEvent } from "@/lib/audit-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import {
@@ -34,6 +35,9 @@ type ChargeUpdateInput = {
   dueDate?: string;
   dueLabel?: string;
   source?: string;
+  paymentLink?: string;
+  cadence?: Charge["cadence"];
+  externalBilling?: Charge["externalBilling"];
 };
 
 type ChargeFollowUpInput = {
@@ -52,6 +56,30 @@ function createFollowUpEntry(input: ChargeFollowUpInput): ChargeFollowUpEntry {
   };
 }
 
+async function buildExternalBillingForCharge(input: {
+  chargeReference: string;
+  customerReference: string;
+  customerName: string;
+  customerDocument?: string;
+  customerPhone?: string;
+  amount: string;
+  dueDate?: string;
+  description: string;
+  paymentMethod: string;
+}) {
+  return createAsaasCharge({
+    externalReference: input.chargeReference,
+    customerReference: input.customerReference,
+    customerName: input.customerName,
+    customerDocument: input.customerDocument,
+    customerPhone: input.customerPhone,
+    amount: input.amount,
+    dueDate: input.dueDate,
+    description: input.description,
+    paymentMethod: input.paymentMethod,
+  });
+}
+
 function toChargeView(charge: DbCharge & { customer: DbCustomer; order: DbOrder }): Charge {
   const fallback = {
     dueLabel: charge.dueDate
@@ -59,6 +87,8 @@ function toChargeView(charge: DbCharge & { customer: DbCustomer; order: DbOrder 
       : "acompanhar cobranca",
     source: charge.paymentMethod,
     followUps: [],
+    cadence: undefined,
+    externalBilling: undefined,
   };
   const meta = decodeChargeMeta(charge.pixCode, fallback);
 
@@ -70,7 +100,10 @@ function toChargeView(charge: DbCharge & { customer: DbCustomer; order: DbOrder 
     dueDate: charge.dueDate ? formatDateInput(charge.dueDate) : undefined,
     status: mapDbChargeStatus(charge.status),
     source: meta.source,
+    paymentLink: charge.paymentLink || meta.externalBilling?.invoiceUrl || meta.externalBilling?.bankSlipUrl,
     followUps: meta.followUps,
+    cadence: meta.cadence,
+    externalBilling: meta.externalBilling,
   };
 }
 
@@ -95,6 +128,7 @@ export async function listCharges(): Promise<Charge[]> {
   return data.charges.map((charge) => ({
     ...charge,
     followUps: charge.followUps || [],
+    cadence: charge.cadence,
   }));
 }
 
@@ -160,15 +194,58 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
       },
     });
 
+    let externalCharge;
+
+    try {
+      externalCharge = await buildExternalBillingForCharge({
+        chargeReference: `gf_charge:${workspaceId}:${charge.id}`,
+        customerReference: `gf_customer:${workspaceId}:${customer.id}`,
+        customerName: customer.name,
+        customerDocument: customer.document || undefined,
+        customerPhone: customer.phone || undefined,
+        amount: input.amount,
+        dueDate: input.dueDate,
+        description: `Cobranca para ${customer.name}`,
+        paymentMethod: input.source,
+      });
+    } catch {
+      externalCharge = undefined;
+    }
+
+    const persistedCharge = externalCharge ? await prisma.charge.update({
+      where: { id: charge.id },
+      data: {
+        paymentLink: externalCharge.paymentLink,
+        pixCode: encodeChargeMeta({
+          ...input,
+          followUps: [],
+          externalBilling: externalCharge.externalBilling,
+        }),
+      },
+      include: {
+        customer: true,
+        order: true,
+      },
+    }) : await prisma.charge.findUniqueOrThrow({
+      where: { id: charge.id },
+      include: {
+        customer: true,
+        order: true,
+      },
+    });
+
     const createdCharge = {
-      id: charge.id,
+      id: persistedCharge.id,
       customer: customer.name,
-      amount: formatCurrency(Number(charge.amount)),
+      amount: formatCurrency(Number(persistedCharge.amount)),
       dueLabel: buildChargeDueLabel(input),
       dueDate: input.dueDate,
       status: input.status,
       source: input.source,
+      paymentLink: persistedCharge.paymentLink || undefined,
       followUps: [],
+      cadence: input.cadence,
+      externalBilling: externalCharge?.externalBilling,
     };
 
     await recordAuditEvent({
@@ -182,6 +259,7 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
           amount: createdCharge.amount,
           status: createdCharge.status,
           dueDate: createdCharge.dueDate || null,
+          paymentLink: createdCharge.paymentLink || null,
         },
       },
     });
@@ -190,16 +268,38 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
   }
 
   const data = await readDemoWorkspaceData();
+  const existingCustomer = data.customers.find((customer) => customer.name === input.customer);
+  const localChargeId = randomUUID();
+  let externalCharge;
+
+  try {
+    externalCharge = await buildExternalBillingForCharge({
+      chargeReference: `gf_charge:local:${localChargeId}`,
+      customerReference: `gf_customer:local:${existingCustomer?.id || input.customer}`,
+      customerName: input.customer,
+      customerDocument: existingCustomer?.document,
+      customerPhone: existingCustomer?.phone,
+      amount: input.amount,
+      dueDate: input.dueDate,
+      description: `Cobranca para ${input.customer}`,
+      paymentMethod: input.source,
+    });
+  } catch {
+    externalCharge = undefined;
+  }
 
   const charge: Charge = {
-    id: randomUUID(),
+    id: localChargeId,
     customer: input.customer,
     amount: input.amount,
     dueLabel: buildChargeDueLabel(input),
     dueDate: input.dueDate,
     status: input.status,
     source: input.source,
+    paymentLink: externalCharge?.paymentLink || input.paymentLink,
     followUps: [],
+    cadence: input.cadence,
+    externalBilling: externalCharge?.externalBilling || input.externalBilling,
   };
 
   data.charges = [charge, ...data.charges];
@@ -244,20 +344,66 @@ export async function createChargeFromQuote(
           dueLabel: dueLabel || buildChargeDueLabel({ dueDate, status }),
           source: `${paymentMethod} via orcamento "${dbOrder.quote.title}"`,
           followUps: [],
+          cadence: undefined,
         }),
         dueDate: parseDueDateInput(dueDate),
       },
     });
 
+    let externalCharge;
+
+    try {
+      externalCharge = await buildExternalBillingForCharge({
+        chargeReference: `gf_charge:${workspaceId}:${charge.id}`,
+        customerReference: `gf_customer:${workspaceId}:${dbOrder.customer.id}`,
+        customerName: dbOrder.customer.name,
+        customerDocument: dbOrder.customer.document || undefined,
+        customerPhone: dbOrder.customer.phone || undefined,
+        amount: formatCurrency(Number(charge.amount)),
+        dueDate,
+        description: `Cobranca do orcamento ${dbOrder.quote.title}`,
+        paymentMethod,
+      });
+    } catch {
+      externalCharge = undefined;
+    }
+
+    const persistedCharge = externalCharge ? await prisma.charge.update({
+      where: { id: charge.id },
+      data: {
+        paymentLink: externalCharge.paymentLink,
+        pixCode: encodeChargeMeta({
+          dueLabel: dueLabel || buildChargeDueLabel({ dueDate, status }),
+          source: `${paymentMethod} via orcamento "${dbOrder.quote.title}"`,
+          followUps: [],
+          cadence: undefined,
+          externalBilling: externalCharge.externalBilling,
+        }),
+      },
+      include: {
+        customer: true,
+        order: true,
+      },
+    }) : await prisma.charge.findUniqueOrThrow({
+      where: { id: charge.id },
+      include: {
+        customer: true,
+        order: true,
+      },
+    });
+
     const createdCharge = {
-      id: charge.id,
+      id: persistedCharge.id,
       customer: dbOrder.customer.name,
-      amount: formatCurrency(Number(charge.amount)),
+      amount: formatCurrency(Number(persistedCharge.amount)),
       dueLabel: dueLabel || buildChargeDueLabel({ dueDate, status }),
       dueDate,
       status,
       source: `${paymentMethod} via orcamento "${dbOrder.quote.title}"`,
+      paymentLink: persistedCharge.paymentLink || undefined,
       followUps: [],
+      cadence: undefined,
+      externalBilling: externalCharge?.externalBilling,
     };
 
     await recordAuditEvent({
@@ -272,6 +418,7 @@ export async function createChargeFromQuote(
           status: createdCharge.status,
           dueDate: createdCharge.dueDate || null,
           source: createdCharge.source,
+          paymentLink: createdCharge.paymentLink || null,
         },
       },
     });
@@ -286,15 +433,38 @@ export async function createChargeFromQuote(
     return null;
   }
 
+  const existingCustomer = data.customers.find((customer) => customer.name === order.customer);
+  const localChargeId = randomUUID();
+  let externalCharge;
+
+  try {
+    externalCharge = await buildExternalBillingForCharge({
+      chargeReference: `gf_charge:local:${localChargeId}`,
+      customerReference: `gf_customer:local:${existingCustomer?.id || order.customer}`,
+      customerName: order.customer,
+      customerDocument: existingCustomer?.document,
+      customerPhone: existingCustomer?.phone,
+      amount: order.amount,
+      dueDate,
+      description: `Cobranca do pedido ${order.title}`,
+      paymentMethod,
+    });
+  } catch {
+    externalCharge = undefined;
+  }
+
   const charge: Charge = {
-    id: randomUUID(),
+    id: localChargeId,
     customer: order.customer,
     amount: order.amount,
     dueLabel: dueLabel || buildChargeDueLabel({ dueDate, status }),
     dueDate,
     status,
     source: `${paymentMethod} via pedido "${order.title}"`,
+    paymentLink: externalCharge?.paymentLink,
     followUps: [],
+    cadence: undefined,
+    externalBilling: externalCharge?.externalBilling,
   };
 
   data.charges = [charge, ...data.charges];
@@ -327,16 +497,22 @@ export async function updateCharge(id: string, input: ChargeUpdateInput): Promis
     const nextDueDate = Object.prototype.hasOwnProperty.call(input, "dueDate") ? input.dueDate : currentView.dueDate;
     const nextDueLabel = input.dueLabel || buildChargeDueLabel({ dueDate: nextDueDate, status: nextStatus });
     const nextSource = input.source || currentView.source;
+    const nextCadence = input.cadence || currentView.cadence;
+    const nextExternalBilling = input.externalBilling || currentView.externalBilling;
+    const nextPaymentLink = input.paymentLink || currentView.paymentLink;
 
     const updated = await prisma.charge.update({
       where: { id: existing.id },
       data: {
         status: mapChargeStatus(nextStatus),
         dueDate: parseDueDateInput(nextDueDate),
+        paymentLink: nextPaymentLink || null,
         pixCode: encodeChargeMeta({
           dueLabel: nextDueLabel,
           source: nextSource,
           followUps: currentView.followUps,
+          cadence: nextCadence,
+          externalBilling: nextExternalBilling,
         }),
         paidAt: nextStatus === "Pago" ? new Date() : null,
       },
@@ -378,14 +554,17 @@ export async function updateCharge(id: string, input: ChargeUpdateInput): Promis
   const current = data.charges[index];
   const nextStatus = input.status || current.status;
   const nextDueDate = Object.prototype.hasOwnProperty.call(input, "dueDate") ? input.dueDate : current.dueDate;
-  const updatedCharge: Charge = {
-    ...current,
-    status: nextStatus,
-    dueDate: nextDueDate,
-    dueLabel: input.dueLabel || buildChargeDueLabel({ dueDate: nextDueDate, status: nextStatus }),
-    source: input.source || current.source,
-    followUps: current.followUps || [],
-  };
+    const updatedCharge: Charge = {
+      ...current,
+      status: nextStatus,
+      dueDate: nextDueDate,
+      dueLabel: input.dueLabel || buildChargeDueLabel({ dueDate: nextDueDate, status: nextStatus }),
+      source: input.source || current.source,
+      paymentLink: input.paymentLink || current.paymentLink,
+      followUps: current.followUps || [],
+      cadence: input.cadence || current.cadence,
+      externalBilling: input.externalBilling || current.externalBilling,
+    };
 
   data.charges[index] = updatedCharge;
   await writeDemoWorkspaceData(data);
@@ -422,6 +601,8 @@ export async function addChargeFollowUp(id: string, input: ChargeFollowUpInput):
           dueLabel: currentView.dueLabel,
           source: currentView.source,
           followUps: [entry, ...currentView.followUps],
+          cadence: currentView.cadence,
+          externalBilling: currentView.externalBilling,
         }),
       },
       include: {
@@ -462,6 +643,7 @@ export async function addChargeFollowUp(id: string, input: ChargeFollowUpInput):
   const updatedCharge: Charge = {
     ...current,
     followUps: [entry, ...(current.followUps || [])],
+    cadence: current.cadence,
   };
 
   data.charges[index] = updatedCharge;

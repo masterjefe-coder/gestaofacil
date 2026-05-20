@@ -32,3 +32,22 @@
 - refazer layout cedo demais
 - expandir modulos secundarios
 - tentar virar ERP antes de validar o fluxo comercial
+
+## 2026-05-20
+
+### Produto
+
+- a frente operacional principal agora inclui leitura executiva e exportacao, nao apenas execucao transacional
+- relatorios entram como camada de leitura do proprio fluxo comercial, financeiro e fiscal, nao como modulo de BI separado
+- o proximo salto de produto, se formos alem desta frente, passa a ser analitica por periodo e tendencias
+
+### Escopo imediato
+
+- manter a central de relatorios como snapshot operacional com `tela + Excel + PDF`
+- deixar historico por periodo, comparacao semanal/mensal e tendencias como proximo bloco
+- seguir validando a NFS-e real em paralelo, sem misturar isso com uma expansao grande de interface
+
+### O que evitar
+
+- abrir um modulo de BI amplo antes de validar os recortes analiticos basicos
+- tratar a camada de relatorios como algo separado da operacao do dia

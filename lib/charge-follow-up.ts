@@ -19,6 +19,10 @@ export type ChargeFollowUpAction = {
   title: string;
   summary: string;
   recommendedAction: string;
+  cadenceLabel: string;
+  executionLabel: string;
+  completedStepLabel: string;
+  nextStepLabel: string;
   suggestedMessage: string;
   nextFollowUpDate?: string;
   nextFollowUpLabel: string;
@@ -385,6 +389,163 @@ function buildRecommendedAction(charge: Charge, urgency: ChargeUrgency) {
   }
 }
 
+function buildCadenceLabel(action: {
+  urgency: ChargeUrgency;
+  slaStatus: ChargeFollowUpSlaStatus;
+  lastFollowUp?: ChargeFollowUpEntry;
+  charge?: Charge;
+}) {
+  if (action.charge?.cadence?.cadenceLabel) {
+    return action.charge.cadence.cadenceLabel;
+  }
+
+  if (action.lastFollowUp?.outcome === "Contestou") {
+    return "Cobrança em tratamento de objeção";
+  }
+
+  if (action.lastFollowUp?.outcome === "Reagendado") {
+    return "Cobrança em prazo renegociado";
+  }
+
+  if (action.lastFollowUp?.outcome === "Prometeu pagar" || action.lastFollowUp?.outcome === "Pago em analise") {
+    return "Cobrança aguardando confirmação do cliente";
+  }
+
+  switch (action.slaStatus) {
+    case "overdue":
+      return "Cobrança em atraso com SLA vencido";
+    case "today":
+      return "Cobrança com toque programado para hoje";
+    case "scheduled":
+      return action.urgency === "unscheduled"
+        ? "Cobrança sem vencimento real definido"
+        : "Cobrança em monitoramento preventivo";
+    case "waiting":
+      return "Cobrança pausada aguardando retorno";
+    case "settled":
+      return "Cobrança sem cadência ativa";
+  }
+}
+
+function buildExecutionLabel(action: {
+  urgency: ChargeUrgency;
+  slaStatus: ChargeFollowUpSlaStatus;
+  lastFollowUp?: ChargeFollowUpEntry;
+  charge?: Charge;
+}) {
+  if (action.charge?.cadence?.executionLabel) {
+    return action.charge.cadence.executionLabel;
+  }
+
+  if (action.lastFollowUp?.outcome === "Contestou") {
+    return "Tratar objeção antes de insistir";
+  }
+
+  if (action.lastFollowUp?.outcome === "Reagendado") {
+    return "Ajustar data e reprogramar";
+  }
+
+  if (action.lastFollowUp?.outcome === "Prometeu pagar") {
+    return "Acompanhar promessa pontualmente";
+  }
+
+  if (action.lastFollowUp?.outcome === "Pago em analise") {
+    return "Conferir comprovante ou conciliação";
+  }
+
+  switch (action.slaStatus) {
+    case "overdue":
+      return "Cobrar agora";
+    case "today":
+      return "Executar hoje";
+    case "scheduled":
+      return action.urgency === "unscheduled" ? "Definir vencimento real" : "Manter no radar";
+    case "waiting":
+      return "Aguardar retorno antes do próximo toque";
+    case "settled":
+      return "Sem ação";
+  }
+}
+
+function buildCompletedStepLabel(action: {
+  urgency: ChargeUrgency;
+  lastFollowUp?: ChargeFollowUpEntry;
+  charge?: Charge;
+}) {
+  if (action.charge?.cadence?.completedStepLabel) {
+    return action.charge.cadence.completedStepLabel;
+  }
+
+  if (action.lastFollowUp?.outcome === "Contestou") {
+    return "Cliente contestou a cobrança";
+  }
+
+  if (action.lastFollowUp?.outcome === "Reagendado") {
+    return "Cliente pediu novo prazo";
+  }
+
+  if (action.lastFollowUp?.outcome === "Prometeu pagar") {
+    return "Cliente prometeu regularizar";
+  }
+
+  if (action.lastFollowUp?.outcome === "Pago em analise") {
+    return "Comprovante ou pagamento informado";
+  }
+
+  switch (action.urgency) {
+    case "overdue":
+      return "Vencimento já passou";
+    case "today":
+      return "Cobrança entrou na agenda de hoje";
+    case "upcoming":
+      return "Cobrança já está no radar";
+    case "unscheduled":
+      return "Cobrança criada sem vencimento exato";
+    case "paid":
+      return "Pagamento já foi registrado";
+  }
+}
+
+function buildNextStepLabel(action: {
+  urgency: ChargeUrgency;
+  slaStatus: ChargeFollowUpSlaStatus;
+  lastFollowUp?: ChargeFollowUpEntry;
+  charge?: Charge;
+}) {
+  if (action.charge?.cadence?.nextStepLabel) {
+    return action.charge.cadence.nextStepLabel;
+  }
+
+  if (action.lastFollowUp?.outcome === "Contestou") {
+    return "Resolver objeção e redefinir abordagem";
+  }
+
+  if (action.lastFollowUp?.outcome === "Reagendado") {
+    return "Atualizar vencimento e reagendar cobrança";
+  }
+
+  if (action.lastFollowUp?.outcome === "Prometeu pagar") {
+    return "Confirmar pagamento no prazo prometido";
+  }
+
+  if (action.lastFollowUp?.outcome === "Pago em analise") {
+    return "Conferir baixa ou comprovante";
+  }
+
+  switch (action.slaStatus) {
+    case "overdue":
+      return "Cobrar agora e registrar retorno";
+    case "today":
+      return "Executar contato ainda hoje";
+    case "scheduled":
+      return action.urgency === "unscheduled" ? "Definir data real de vencimento" : "Preparar próximo lembrete";
+    case "waiting":
+      return "Esperar retorno antes de insistir";
+    case "settled":
+      return "Encaminhar para fiscal se aplicável";
+  }
+}
+
 function buildSummary(charge: Charge, urgency: ChargeUrgency, now = new Date()) {
   const dueDate = parseChargeDueDate(charge.dueDate);
 
@@ -427,6 +588,29 @@ export function buildChargeFollowUpActions(charges: Charge[], now = new Date()):
         title: `${charge.customer} · ${charge.amount}`,
         summary: buildSummary(charge, urgency, now),
         recommendedAction: buildRecommendedAction(charge, urgency),
+        cadenceLabel: buildCadenceLabel({
+          urgency,
+          slaStatus,
+          lastFollowUp: latestFollowUp,
+          charge,
+        }),
+        executionLabel: buildExecutionLabel({
+          urgency,
+          slaStatus,
+          lastFollowUp: latestFollowUp,
+          charge,
+        }),
+        completedStepLabel: buildCompletedStepLabel({
+          urgency,
+          lastFollowUp: latestFollowUp,
+          charge,
+        }),
+        nextStepLabel: buildNextStepLabel({
+          urgency,
+          slaStatus,
+          lastFollowUp: latestFollowUp,
+          charge,
+        }),
         suggestedMessage: buildSuggestedMessage(charge, urgency, now),
         nextFollowUpDate: nextFollowUpDate ? nextFollowUpDate.toISOString() : undefined,
         nextFollowUpLabel: getNextFollowUpLabel(slaStatus, nextFollowUpDate),

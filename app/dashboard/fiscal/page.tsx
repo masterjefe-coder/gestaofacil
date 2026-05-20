@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { ModuleQueueFilters } from "@/components/module-queue-filters";
 import {
   createNfseDraftAction,
   createQuickNfseDraftAction,
@@ -17,6 +18,7 @@ import {
   listNfseReadyQueue,
 } from "@/lib/nfse-repository";
 import { buildFiscalInsights } from "@/lib/fiscal-insights";
+import { readDashboardQueuePreference } from "@/lib/dashboard-queue-preferences";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import {
@@ -31,8 +33,12 @@ type FiscalPageProps = {
     integrationOk?: string;
     certificateMessage?: string;
     certificateOk?: string;
+    focus?: string;
+    view?: string;
   }>;
 };
+
+type FiscalQueueView = "all" | "blocked" | "ready" | "review" | "issued";
 
 export default async function FiscalPage({ searchParams }: FiscalPageProps) {
   const [documents, readyQueue, readiness, setup] = await Promise.all([
@@ -55,9 +61,24 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
   const readyCount = documents.filter((document) => document.status === "Pronta").length;
   const issuedCount = documents.filter((document) => document.status === "Emitida").length;
   const errorCount = documents.filter((document) => document.status === "Erro").length;
+  const savedPreference = await readDashboardQueuePreference("fiscal");
+  const focus = params?.focus || savedPreference.focus || "";
+  const requestedView = params?.view || savedPreference.view || "";
+  const viewFromFocus: Partial<Record<string, FiscalQueueView>> = {
+    blocked: "blocked",
+    ready: "ready",
+  };
+  const queueView = (requestedView || viewFromFocus[focus] || "all") as FiscalQueueView;
+  const filteredFiscalItems = fiscalInsights.items.filter((item) => queueView === "all" || item.priority === queueView);
+  const focusMessage = focus === "blocked"
+    ? "O dashboard te trouxe para destravar documentos fiscais com pendência estrutural antes de acumular emissão."
+    : focus === "ready"
+      ? "O dashboard destacou documentos prontos para seguir emissão sem novo retrabalho operacional."
+      : "";
 
   return (
     <DashboardShell
+      currentPath="/dashboard/fiscal"
       eyebrow="Fiscal"
       title="A NFS-e precisa nascer do que já foi vendido e recebido."
       description="O bloco fiscal entra como continuação do fluxo comercial e financeiro, sem redigitar dados nem depender de memória."
@@ -72,6 +93,26 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         </>
       }
     >
+      {focusMessage ? (
+        <div className="auth-hint">
+          <strong>Foco fiscal</strong>
+          <span>{focusMessage}</span>
+        </div>
+      ) : null}
+      <ModuleQueueFilters
+        module="fiscal"
+        path="/dashboard/fiscal"
+        currentView={queueView}
+        title="Persistir a leitura da fila fiscal"
+        helper="Bloqueadas, prontas e revisão passam a abrir no último foco usado pela equipe."
+        options={[
+          { value: "all", label: "Tudo", count: fiscalInsights.items.length },
+          { value: "blocked", label: "Bloqueadas", count: fiscalInsights.summary.blockedCount },
+          { value: "ready", label: "Prontas", count: fiscalInsights.summary.readyCount },
+          { value: "review", label: "Revisão", count: fiscalInsights.summary.reviewCount },
+          { value: "issued", label: "Emitidas", count: fiscalInsights.summary.issuedCount },
+        ]}
+      />
       <section className="stats-row">
         <article className="stat-card">
           <span>Prontas para rascunho</span>
@@ -130,9 +171,9 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
           </article>
         </div>
 
-        {fiscalInsights.items.length > 0 ? (
+        {filteredFiscalItems.length > 0 ? (
           <div className="cards-grid quote-grid">
-            {fiscalInsights.items.slice(0, 4).map((item) => (
+            {filteredFiscalItems.slice(0, 4).map((item) => (
               <article key={item.documentId} className="dashboard-card">
                 <span className="dashboard-kicker">{item.priorityLabel}</span>
                 <h3>{item.customer}</h3>

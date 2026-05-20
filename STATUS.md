@@ -2,7 +2,7 @@
 
 ## Data
 
-2026-05-18
+2026-05-20
 
 ## O que ja foi feito
 
@@ -48,8 +48,8 @@
 - `OWNER` e `ADMIN` passaram a controlar setup e gestao de equipe
 - equipe do workspace agora permite trocar papel, redefinir senha e remover membro
 - regras de seguranca evitam remover o ultimo `OWNER` ou deixar o workspace sem dono
-- `dueDate` agora ordena cobrancas por prioridade real e influencia agenda/indicadores do dashboard
-- auditoria minima agora registra alteracoes de setup, criacao/remocao de membro, troca de papel e reset de senha
+- `dueDate` agora ordena cobrancas por prioridade real e influencia agenda e indicadores do dashboard
+- auditoria minima agora registra alteracoes de setup, criacao e remocao de membro, troca de papel e reset de senha
 - dashboard, orcamentos e cobrancas lendo da fonte central do workspace
 - cobrancas agora aceitam acoes operacionais rapidas para marcar hoje, reagendar ou dar baixa
 - cobrancas em modo `database` agora registram auditoria em criacao, atualizacao e remocao
@@ -62,13 +62,17 @@
 - a fila automatica agora abre WhatsApp e email com mensagem pronta a partir de cada lembrete
 - modulo fiscal inicial em `/dashboard/fiscal` agora organiza rascunhos, prontas, emitidas e erros
 - a fila fiscal agora nasce de recebimentos confirmados e permite criar rascunho de NFS-e
-- cobrancas pagas agora já mostram o próximo passo fiscal direto no painel financeiro
-- o setup e o fiscal agora expõem prontidão fiscal da empresa antes da emissão
-- o fiscal agora já aceita emissão rápida por nome ou CPF/CNPJ para cliente cadastrado
-- o fiscal agora já conhece o ambiente oficial da NFS-e Nacional com configuração por ambiente, assinatura de DPS e teste de conectividade
-- o produto agora já separa emissão assistida via portal oficial e emissão automática com certificado
-- a emissão automática agora consulta a base oficial pública de municípios aderentes e só libera emissão quando o estabelecimento estiver com `AderenteEmissorNacional = Sim`
-- o teste oficial da NFS-e Nacional agora já avançou além de certificado e schema, chegando até regras de negócio reais do emitente e do município
+- cobrancas pagas agora ja mostram o proximo passo fiscal direto no painel financeiro
+- o setup e o fiscal agora expoem prontidao fiscal da empresa antes da emissao
+- o fiscal agora ja aceita emissao rapida por nome ou CPF/CNPJ para cliente cadastrado
+- o fiscal agora ja conhece o ambiente oficial da NFS-e Nacional com configuracao por ambiente, assinatura de DPS e teste de conectividade
+- o produto agora ja separa emissao assistida via portal oficial e emissao automatica com certificado
+- a emissao automatica agora consulta a base oficial publica de municipios aderentes e so libera emissao quando o estabelecimento estiver com `AderenteEmissorNacional = Sim`
+- o teste oficial da NFS-e Nacional agora ja avancou alem de certificado e schema, chegando ate regras de negocio reais do emitente e do municipio
+- dashboard, clientes, orcamentos, cobrancas e fiscal agora ja persistem foco de fila por modulo
+- central de relatorios em `/dashboard/reports` agora consolida resumo executivo, comercial, financeiro, clientes e fiscal
+- exportacao em `Excel` agora sai por `/api/reports/export`
+- versao pronta para impressao em `PDF` agora existe em `/dashboard/reports/print`
 - endpoint `/api/health` criado
 - schema Prisma inicial criado em `prisma/schema.prisma`
 - `.env.example` e scripts de banco adicionados
@@ -78,18 +82,23 @@
 ## Rotas atuais
 
 - `/`
+- `/login`
+- `/onboarding`
 - `/dashboard`
 - `/dashboard/customers`
 - `/dashboard/quotes`
 - `/dashboard/billing`
+- `/dashboard/fiscal`
+- `/dashboard/reports`
+- `/dashboard/reports/print`
 - `/dashboard/setup`
-- `/login`
 - `/api/customers`
 - `/api/quotes`
 - `/api/charges`
 - `/api/setup`
 - `/api/auth/[...nextauth]`
 - `/api/health`
+- `/api/reports/export`
 
 ## Decisao de produto consolidada
 
@@ -103,38 +112,27 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 
 ## Proximo bloco recomendado
 
-1. conectar a auth atual a usuarios reais no banco quando for a hora
-2. conectar o setup de workspace/empresa ao banco real quando houver `DATABASE_URL`
-3. executar `prisma db push` no ambiente com banco para materializar `passwordHash`
-4. preparar auditoria minima para mudancas de equipe, setup e cobranca
-5. comecar a transformar cobrancas atrasadas em gatilhos de follow-up mais acionaveis
+1. adicionar filtros reais de periodo na central de relatorios
+2. criar comparacao semanal e mensal para comercial, financeiro e fiscal
+3. expor tendencias simples de conversao, recebimento e emissao
+4. validar a emissao nacional com certificado real e municipio piloto
+5. so depois decidir sobre uma camada analitica mais ampla
 
 ## Observacoes tecnicas
 
-- o banco ja esta modelado, mas ainda nao conectado a um ambiente real
-- ainda nao ha integracoes externas
-- a autenticacao atual usa Auth.js com provider de credenciais demo
-- a UI atual ja tem leitura e escrita local para clientes
-- a UI atual ja tem leitura e escrita local para orcamentos
-- a UI atual ja tem leitura e escrita local para cobrancas
-- a UI atual ja tem leitura e escrita local para setup de workspace e empresa
-- `setup` e `quotes` ja tem caminho de persistencia para banco
-- `customers` ja tem caminho funcional de persistencia para banco
-- `quotes`, `orders` e `charges` agora compartilham bootstrap demo coerente em banco
+- o banco ja esta modelado, mas ainda nao conectado a um ambiente real de producao
+- ainda nao ha integracoes externas fechadas ponta a ponta
+- a autenticacao atual usa Auth.js com provider de credenciais demo e login real por banco quando configurado
 - o dashboard principal ja nao depende de pipeline e agenda mockados
 - cobrancas ja podem carregar data real alem do texto operacional
 - o contexto de workspace ja nasce da sessao no modo `database`
 - o app ja consegue criar o primeiro usuario real e seu workspace inicial
 - o mesmo workspace ja aceita mais de um usuario real com papel definido
 - o ciclo basico de gestao de equipe ja esta operacional no `setup`
-- cobrancas com data real ja sobem e descem na fila conforme urgencia
 - o `setup` agora ja mostra trilha recente de auditoria para operacoes sensiveis
 - `charges` agora usam `orders` como base estrutural
-- a fila financeira agora permite acao rapida direto do painel de cobrancas
-- a auditoria de cobrancas depende do modo `database`, mas ja esta encaixada no fluxo
-- o historico de follow-up financeiro agora persiste no metadata da cobranca sem exigir migration imediata
-- a cadencia de follow-up agora nasce do vencimento e do ultimo retorno do cliente
 - a automacao atual abre canais externos com mensagem pronta, mas ainda nao confirma entrega real por integracao
-- o bloco fiscal atual agora ja prepara DPS assinada, assina, envia ao endpoint oficial correto e bloqueia a emissão automática quando o município do estabelecimento não estiver habilitado no Emissor Nacional
-- a emissão real final ainda depende da habilitação oficial do município e da coerência cadastral do estabelecimento do CNPJ na base nacional
+- o bloco fiscal atual agora ja prepara DPS assinada, assina, envia ao endpoint oficial correto e bloqueia a emissao automatica quando o municipio do estabelecimento nao estiver habilitado no Emissor Nacional
+- a emissao real final ainda depende da habilitacao oficial do municipio e da coerencia cadastral do estabelecimento do CNPJ na base nacional
+- a camada de relatorios atual ainda trabalha em snapshot operacional; historico por periodo e tendencias ainda nao entraram
 - o workspace local serve como ambiente de produto enquanto o banco real nao entra
