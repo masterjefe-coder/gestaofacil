@@ -8,27 +8,28 @@
 
 ## Estado atual em uma frase
 
-O produto ja tem um core operacional forte entre clientes, orcamentos, cobrancas, fiscal e relatorios, com leitura executiva e exportacao encaixadas no fluxo.
+O produto ja tem um core operacional forte entre clientes, orcamentos, pedidos, cobrancas, fiscal e relatorios, com leitura executiva e exportacao encaixadas no fluxo.
 
 ## Proximo passo recomendado
 
-Se esta frente estiver fechada, o proximo bloco real e aprofundar a camada analitica sem desmontar a operacao.
+O principal restante agora ja nao e base de produto, e sim validacao real das integracoes criticas em producao.
 
 ## Ordem recomendada
 
-1. adicionar filtros de periodo aos relatorios
-2. criar comparacao semanal e mensal de comercial, recebimento e fiscal
-3. expor tendencias de conversao, recebimento e emissao
-4. em paralelo, validar a emissao nacional com certificado real e municipio piloto
-5. so depois decidir se vale abrir uma camada de BI mais ampla
+1. validar a primeira conta ou subconta Asaas criada pelo setup
+2. validar a primeira cobranca real por workspace
+3. validar webhook real do Asaas com baixa automatica
+4. validar a primeira NFS-e real ponta a ponta
+5. depois aprofundar analitica por periodo e tendencias
 
 Observacao:
 
 - a central de relatorios ja existe em [app/dashboard/reports/page.tsx](./app/dashboard/reports/page.tsx)
 - a exportacao em Excel ja existe em [app/api/reports/export/route.ts](./app/api/reports/export/route.ts)
 - a versao de impressao em PDF ja existe em [app/dashboard/reports/print/page.tsx](./app/dashboard/reports/print/page.tsx)
-- os filtros por modulo ja ficam persistidos para `customers`, `quotes`, `billing` e `fiscal`
-- a proxima entrega de produto nao precisa abrir modulo novo; ela pode aprofundar a leitura historica da operacao atual
+- o modulo de pedidos ja existe em [app/dashboard/orders/page.tsx](./app/dashboard/orders/page.tsx)
+- os filtros por modulo ja ficam persistidos para `customers`, `quotes`, `orders`, `billing` e `fiscal`
+- testes minimos ja existem e podem rodar com `npm test`
 
 ## Regra importante
 

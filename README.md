@@ -66,6 +66,7 @@ Hoje o produto ja cobre o fluxo operacional principal:
 
 - clientes com leitura comercial e sinais de relacionamento
 - orcamentos com follow-up e conversao
+- pedidos com fila operacional explicita entre aprovacao, execucao e conclusao
 - cobrancas com fila automatica, lembretes e leitura de WhatsApp
 - fiscal com fila inicial de NFS-e, rascunho e emissao assistida ou automatica quando o municipio permitir
 - relatorios operacionais em tela, Excel e PDF
@@ -114,6 +115,17 @@ Variaveis para integrar a Evolution API:
 - `EVOLUTION_API_KEY`
 - `EVOLUTION_API_INSTANCE`
 - `EVOLUTION_API_TIMEOUT_MS` opcional
+
+Variaveis para integrar o Asaas:
+
+- `ASAAS_API_KEY`
+- `ASAAS_ENVIRONMENT=production` ou `sandbox`
+- `ASAAS_WEBHOOK_AUTH_TOKEN`
+- `ASAAS_ALLOW_ROOT_ACCOUNT_FALLBACK=true` apenas enquanto nem todo workspace tiver conta propria
+- `ASAAS_PLATFORM_WALLET_ID` opcional para split futuro
+- `ASAAS_PLATFORM_SPLIT_PERCENT` opcional para split futuro
+- `ASAAS_PLATFORM_SPLIT_FIXED_VALUE` opcional para split futuro
+- `APP_BASE_URL` com a URL publica do app para webhooks
 
 Variaveis para integrar a NFS-e Nacional:
 

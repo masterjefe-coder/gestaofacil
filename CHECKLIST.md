@@ -10,6 +10,7 @@
 - [x] modulo de orcamentos
 - [x] modulo de cobrancas
 - [x] modulo minimo de pedidos na camada de dados
+- [x] modulo operacional de pedidos no painel
 - [x] fluxo inicial de NFS-e com fila fiscal e rascunho
 - [x] relatorios operacionais em tela, Excel e PDF
 - [ ] emissao automatica de NFS-e validada ponta a ponta em municipio piloto
@@ -57,6 +58,7 @@
 - [x] `/api/customers`
 - [x] `/api/quotes`
 - [x] `/api/charges`
+- [x] `/api/orders`
 - [x] `/api/health`
 - [x] `/api/reports/export`
 
@@ -64,5 +66,6 @@
 
 - [x] `npm run typecheck`
 - [x] `npm run lint`
+- [x] `npm test`
 - [x] `npm run build`
 - [x] `npx prisma validate`

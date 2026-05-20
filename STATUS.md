@@ -73,6 +73,11 @@
 - central de relatorios em `/dashboard/reports` agora consolida resumo executivo, comercial, financeiro, clientes e fiscal
 - exportacao em `Excel` agora sai por `/api/reports/export`
 - versao pronta para impressao em `PDF` agora existe em `/dashboard/reports/print`
+- modulo de pedidos agora ja existe em `/dashboard/orders` com fila operacional explicita
+- API de pedidos agora existe em `/api/orders`
+- Asaas agora ja aceita conta por workspace, subconta guiada e fallback temporario da conta raiz
+- o setup agora ja guia a equipe entre criar conta de recebimento no Asaas ou conectar uma conta existente
+- testes automatizados minimos agora ja existem para utilitarios criticos
 - endpoint `/api/health` criado
 - schema Prisma inicial criado em `prisma/schema.prisma`
 - `.env.example` e scripts de banco adicionados
@@ -87,6 +92,7 @@
 - `/dashboard`
 - `/dashboard/customers`
 - `/dashboard/quotes`
+- `/dashboard/orders`
 - `/dashboard/billing`
 - `/dashboard/fiscal`
 - `/dashboard/reports`
@@ -95,6 +101,7 @@
 - `/api/customers`
 - `/api/quotes`
 - `/api/charges`
+- `/api/orders`
 - `/api/setup`
 - `/api/auth/[...nextauth]`
 - `/api/health`
@@ -112,11 +119,11 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 
 ## Proximo bloco recomendado
 
-1. adicionar filtros reais de periodo na central de relatorios
-2. criar comparacao semanal e mensal para comercial, financeiro e fiscal
-3. expor tendencias simples de conversao, recebimento e emissao
-4. validar a emissao nacional com certificado real e municipio piloto
-5. so depois decidir sobre uma camada analitica mais ampla
+1. validar Asaas real por workspace com conta ou subconta do cliente
+2. validar webhook real do Asaas com recebimento real
+3. validar a emissao nacional com certificado real e municipio piloto
+4. validar operacao real de WhatsApp em rotina
+5. so depois aprofundar analitica por periodo e tendencias
 
 ## Observacoes tecnicas
 
@@ -124,6 +131,7 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 - ainda nao ha integracoes externas fechadas ponta a ponta
 - a autenticacao atual usa Auth.js com provider de credenciais demo e login real por banco quando configurado
 - o dashboard principal ja nao depende de pipeline e agenda mockados
+- o produto agora ja tem um modulo explicito de pedidos entre orcamento e cobranca
 - cobrancas ja podem carregar data real alem do texto operacional
 - o contexto de workspace ja nasce da sessao no modo `database`
 - o app ja consegue criar o primeiro usuario real e seu workspace inicial
@@ -132,6 +140,7 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 - o `setup` agora ja mostra trilha recente de auditoria para operacoes sensiveis
 - `charges` agora usam `orders` como base estrutural
 - a automacao atual abre canais externos com mensagem pronta, mas ainda nao confirma entrega real por integracao
+- o Asaas por workspace agora ja esta pronto estruturalmente, mas ainda depende da primeira validacao real ponta a ponta
 - o bloco fiscal atual agora ja prepara DPS assinada, assina, envia ao endpoint oficial correto e bloqueia a emissao automatica quando o municipio do estabelecimento nao estiver habilitado no Emissor Nacional
 - a emissao real final ainda depende da habilitacao oficial do municipio e da coerencia cadastral do estabelecimento do CNPJ na base nacional
 - a camada de relatorios atual ainda trabalha em snapshot operacional; historico por periodo e tendencias ainda nao entraram
