@@ -39,7 +39,7 @@ export function AuthSignInForm({ callbackUrl = "/dashboard" }: AuthSignInFormPro
     setIsPending(false);
 
     if (!result || result.error) {
-      setErrorMessage("Email ou senha inválidos para o workspace demo.");
+      setErrorMessage("Email ou senha inválidos.");
       return;
     }
 
@@ -49,27 +49,33 @@ export function AuthSignInForm({ callbackUrl = "/dashboard" }: AuthSignInFormPro
   return (
     <>
       <form onSubmit={handleSubmit} className="auth-form">
-        <label>
-          <span>Email</span>
-          <input
-            name="email"
-            type="email"
-            placeholder="demo@gestaofacil.local"
-            defaultValue={createdEmail}
-            required
-          />
-        </label>
-        <label>
-          <span>Senha</span>
-          <input name="password" type="password" placeholder="gestao123" required />
-        </label>
+        <div className="auth-form-section">
+          <div className="auth-form-section-header">
+            <strong>Entrar no workspace</strong>
+            <span>Use seu email de acesso e a senha definida no onboarding.</span>
+          </div>
+          <label>
+            <span>Email</span>
+            <input
+              name="email"
+              type="email"
+              placeholder="demo@gestaofacil.local"
+              defaultValue={createdEmail}
+              required
+            />
+          </label>
+          <label>
+            <span>Senha</span>
+            <input name="password" type="password" placeholder="gestao123" required />
+          </label>
+        </div>
         <button type="submit" className="primary-link form-submit" disabled={isPending}>
           {isPending ? "Entrando..." : "Entrar"}
         </button>
       </form>
 
       {hasError || errorMessage ? (
-        <p className="auth-error">{errorMessage || "Email ou senha inválidos para o workspace demo."}</p>
+        <p className="auth-error">{errorMessage || "Email ou senha inválidos."}</p>
       ) : null}
 
       {created ? (

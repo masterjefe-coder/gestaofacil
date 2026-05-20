@@ -8,10 +8,9 @@ type MarketingTopbarProps = {
 
 const navItems = [
   { href: "/#produto", label: "Produto" },
-  { href: "/planos", label: "Planos" },
-  { href: "/segmentos", label: "Segmentos" },
+  { href: "/#planos", label: "Planos" },
+  { href: "/#segmentos", label: "Segmentos" },
   { href: "/integracoes", label: "Integrações" },
-  { href: "/sobre", label: "Sobre" },
   { href: "/contato", label: "Contato" },
 ];
 
@@ -21,8 +20,11 @@ export function MarketingTopbar({
 }: MarketingTopbarProps) {
   return (
     <section className="site-topbar">
-      <Link href="/" aria-label="Gestão Fácil Sistemas">
+      <Link href="/" aria-label="Gestão Fácil Sistemas" className="topbar-brand">
         <BrandLogo className="topbar-wordmark" priority />
+        <span className="topbar-brand-copy">
+          CRM, cobrança e NFS-e para operações de serviço.
+        </span>
       </Link>
       <div className="topbar-actions">
         {navItems.map((item) => (

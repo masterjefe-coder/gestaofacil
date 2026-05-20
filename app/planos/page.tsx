@@ -7,48 +7,65 @@ import { pricingFaqs, pricingNotes, pricingPlans, pricingPositioning } from "@/l
 
 export const metadata: Metadata = buildMarketingMetadata({
   title: "Planos",
-  description: "Planos do Gestão Fácil com trial de 14 dias, preço fixo e foco em empresas de serviço.",
+  description: "Planos do Gestão Fácil com teste grátis de 14 dias, preço fixo e foco em empresas de serviço.",
   path: "/planos",
 });
+
+const pricingSignals = [
+  "14 dias grátis sem cartão",
+  "Preço fixo por plano",
+  "Sem percentual sobre faturamento",
+];
 
 export default function PricingPage() {
   return (
     <main className="page-shell">
-      <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Iniciar trial" />
+      <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Começar 14 dias grátis" />
 
-      <section className="section-grid brand-strip">
-        <div>
+      <section className="inner-hero">
+        <div className="inner-hero-copy">
           <span className="section-label">Planos do Gestão Fácil</span>
-          <h1>Preço fixo para vender, cobrar e emitir NFS-e com menos retrabalho.</h1>
+          <h1>Preço claro para organizar venda, cobrança e NFS-e sem retrabalho.</h1>
           <p className="hero-text">
-            O posicionamento ideal do Gestão Fácil é competir por clareza de fluxo e velocidade de operação,
-            não por virar o software mais barato nem o sistema clínico mais pesado do mercado.
+            O objetivo aqui não é disputar com software genérico barato. O encaixe
+            do Gestão Fácil é entregar um fluxo mais direto para empresas de
+            serviço que precisam operar com mais consistência.
           </p>
           <div className="hero-actions">
-            <Link href="/onboarding" className="primary-link">
+            <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
               Começar 14 dias grátis
             </Link>
-            <Link href="/" className="secondary-link">
-              Voltar para o site
+            <Link href="/contato" className="secondary-link">
+              Falar com a equipe
             </Link>
           </div>
         </div>
+
+        <div className="inner-hero-aside">
+          {pricingSignals.map((item) => (
+            <span key={item} className="segment-chip">
+              {item}
+            </span>
+          ))}
+        </div>
       </section>
 
-      <section className="section-grid tinted">
-        <div className="cards-grid pricing-grid">
+      <section className="home-section home-pricing-section">
+        <div className="home-section-heading">
+          <span className="section-label">Escolha de plano</span>
+          <h2>Três faixas para tamanhos diferentes de operação, sem perder simplicidade.</h2>
+        </div>
+        <div className="home-pricing-grid">
           {pricingPlans.map((plan) => (
-            <article key={plan.name} className="dashboard-card pricing-card">
-              <div className="pricing-card-top">
+            <article key={plan.name} className="home-pricing-card">
+              <div className="home-pricing-top">
                 <span className="dashboard-kicker">{plan.badge}</span>
-                <h2>{plan.name}</h2>
+                <h3>{plan.name}</h3>
                 <p>{plan.description}</p>
               </div>
-              <div className="pricing-price-block">
-                <strong>{plan.price}</strong>
-                <small>{plan.annualPrice}</small>
-                <span>{plan.audience}</span>
-              </div>
+              <strong className="home-price">{plan.price}</strong>
+              <span className="home-price-note">{plan.annualPrice}</span>
+              <p className="muted-text">{plan.audience}</p>
               <div className="pricing-list-block">
                 <strong>Estrutura</strong>
                 <ul className="stack-list pricing-stack-list">
@@ -73,10 +90,10 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="section-grid">
-        <div className="cards-grid">
+      <section className="home-section">
+        <div className="home-card-grid">
           {pricingPositioning.map((item) => (
-            <article key={item.title} className="info-card compact">
+            <article key={item.title} className="home-feature-card">
               <h3>{item.title}</h3>
               <p>{item.description}</p>
             </article>
@@ -89,10 +106,10 @@ export default function PricingPage() {
         </ul>
       </section>
 
-      <section className="section-grid">
-        <div>
+      <section className="home-section">
+        <div className="home-section-heading">
           <span className="section-label">FAQ</span>
-          <h2>Respostas para trial, público e valor.</h2>
+          <h2>O que normalmente pesa na decisão de entrada.</h2>
         </div>
         <div className="cards-grid faq-grid">
           {pricingFaqs.map((item) => (

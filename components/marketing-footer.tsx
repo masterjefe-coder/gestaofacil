@@ -7,7 +7,7 @@ const footerColumns = [
     links: [
       { href: "/", label: "Visão geral" },
       { href: "/planos", label: "Planos" },
-      { href: "/checkout?plan=PROFESSIONAL", label: "Iniciar trial" },
+      { href: "/checkout?plan=PROFESSIONAL", label: "Começar 14 dias grátis" },
       { href: "/integracoes", label: "Integrações" },
     ],
   },
@@ -34,16 +34,17 @@ export function MarketingFooter() {
   return (
     <footer className="marketing-footer">
       <div className="marketing-footer-band">
-        <div>
+        <div className="marketing-footer-band-copy">
           <span className="section-label">Gestão Fácil Sistemas</span>
-          <h2>Produto com cara de empresa séria, não de ferramenta improvisada.</h2>
+          <h2>Um sistema mais claro para uma operação mais organizada.</h2>
           <p>
-            O foco continua o mesmo: ajudar empresas de serviço a vender, cobrar e emitir com menos atrito no dia real.
+            O foco continua o mesmo: ajudar empresas de serviço a vender, cobrar
+            e emitir com menos atrito no dia real.
           </p>
         </div>
-        <div className="hero-actions">
+        <div className="hero-actions marketing-footer-band-actions">
           <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
-            Iniciar trial
+            Iniciar 14 dias grátis
           </Link>
           <Link href="/contato" className="secondary-link">
             Falar com a equipe
@@ -54,9 +55,18 @@ export function MarketingFooter() {
       <div className="marketing-footer-grid">
         <div className="marketing-footer-brand">
           <BrandLogo className="footer-wordmark" />
+          <span className="marketing-footer-tag">
+            Venda, receba e emita no mesmo fluxo.
+          </span>
           <p>
-            Gestão comercial, cobrança e NFS-e no mesmo fluxo para operações de serviço que precisam de velocidade e clareza.
+            Gestão comercial, cobrança e NFS-e no mesmo fluxo para operações de
+            serviço que precisam de velocidade e clareza.
           </p>
+          <div className="marketing-footer-inline-links">
+            <Link href="/sobre">Sobre</Link>
+            <Link href="/ajuda">Ajuda</Link>
+            <Link href="/login">Entrar</Link>
+          </div>
         </div>
 
         {footerColumns.map((column) => (

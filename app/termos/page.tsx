@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { MarketingFooter } from "@/components/marketing-footer";
 import { MarketingTopbar } from "@/components/marketing-topbar";
 import { buildMarketingMetadata } from "@/lib/marketing-metadata";
@@ -21,20 +22,34 @@ export default function TermsPage() {
     <main className="page-shell">
       <MarketingTopbar />
 
-      <section className="section-grid brand-strip">
-        <div>
+      <section className="inner-hero legal-hero">
+        <div className="inner-hero-copy">
           <span className="section-label">Termos de uso</span>
-          <h1>Base institucional inicial para acesso, contratação e uso do produto.</h1>
+          <h1>Uma base institucional inicial para acesso, contratação e uso do produto.</h1>
           <p className="hero-text">
-            Assim como a política de privacidade, este conteúdo funciona como ponto de partida e deve receber revisão jurídica final antes da expansão comercial ampla.
+            Assim como a política de privacidade, este conteúdo funciona como
+            ponto de partida e deve receber revisão jurídica final antes da
+            expansão comercial ampla.
           </p>
+        </div>
+
+        <div className="inner-hero-aside legal-hero-aside">
+          <Link href="/privacidade" className="secondary-link">
+            Ver privacidade
+          </Link>
         </div>
       </section>
 
-      <section className="stack-list">
-        {termsPoints.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
+      <section className="home-section legal-section">
+        <div className="home-section-heading">
+          <span className="section-label">Resumo</span>
+          <h2>Os termos abaixo resumem responsabilidades básicas de acesso, contratação e uso.</h2>
+        </div>
+        <ul className="stack-list legal-list">
+          {termsPoints.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
       </section>
 
       <MarketingFooter />

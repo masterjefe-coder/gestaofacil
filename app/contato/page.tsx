@@ -31,54 +31,77 @@ const contactCards = [
   },
 ];
 
+const contextItems = [
+  "Segmento ou nicho principal",
+  "Quantidade de usuários",
+  "Volume mensal de cobranças e NFS-e",
+  "Se já usa Asaas e WhatsApp integrado",
+];
+
 export default function ContactPage() {
   return (
     <main className="page-shell">
-      <MarketingTopbar ctaLabel="Iniciar trial" />
+      <MarketingTopbar ctaLabel="Começar 14 dias grátis" />
 
-      <section className="section-grid brand-strip">
-        <div>
+      <section className="inner-hero">
+        <div className="inner-hero-copy">
           <span className="section-label">Contato</span>
-          <h1>Fale com a equipe certa para avançar mais rápido.</h1>
+          <h1>Fale com a equipe certa para avançar sem perder tempo.</h1>
           <p className="hero-text">
-            A melhor conversa comercial acontece quando o contexto já está claro: segmento, volume, rotina de cobrança e necessidade fiscal.
+            A melhor conversa acontece quando o contexto já está claro:
+            segmento, volume, rotina de cobrança e necessidade fiscal.
           </p>
+          <div className="hero-actions">
+            <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
+              Começar 14 dias grátis
+            </Link>
+            <Link href="/ajuda" className="secondary-link">
+              Ver ajuda
+            </Link>
+          </div>
+        </div>
+
+        <div className="inner-hero-aside inner-hero-list">
+          {contextItems.map((item) => (
+            <div key={item} className="inner-hero-note">
+              {item}
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="cards-grid">
-        {contactCards.map((card) => (
-          <article key={card.title} className="info-card">
-            <h3>{card.title}</h3>
-            <p>{card.description}</p>
-            <Link href={card.action} className="secondary-link">
-              {card.label}
-            </Link>
-          </article>
-        ))}
+      <section className="home-section home-section-soft">
+        <div className="home-section-heading">
+          <span className="section-label">Canais</span>
+          <h2>Cada entrada foi pensada para levar a conversa para o lugar certo.</h2>
+        </div>
+        <div className="home-card-grid">
+          {contactCards.map((card) => (
+            <article key={card.title} className="home-feature-card">
+              <h3>{card.title}</h3>
+              <p>{card.description}</p>
+              <Link href={card.action} className="secondary-link">
+                {card.label}
+              </Link>
+            </article>
+          ))}
+        </div>
       </section>
 
-      <section className="section-split">
-        <article className="split-panel success">
-          <span className="section-label">Antes de chamar</span>
-          <h2>Quanto mais contexto você trouxer, melhor fica o direcionamento.</h2>
-          <ul className="stack-list">
-            <li>Segmento ou nicho principal</li>
-            <li>Quantidade de usuários</li>
-            <li>Volume mensal de cobranças e NFS-e</li>
-            <li>Se já usa Asaas e WhatsApp integrado</li>
-          </ul>
-        </article>
-        <article className="split-panel">
+      <section className="home-section home-closing-band">
+        <div className="home-section-heading">
           <span className="section-label">Entrada mais rápida</span>
-          <h2>Se quiser sentir o produto antes, comece pelo trial.</h2>
-          <p>O caminho mais simples é entrar em um trial de 14 dias e depois conversar com mais contexto real de operação.</p>
-          <div className="hero-actions">
-            <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
-              Iniciar trial
-            </Link>
-          </div>
-        </article>
+          <h2>Se quiser sentir o produto antes da conversa, comece pelo teste grátis.</h2>
+          <p>
+            Isso reduz abstração e deixa a conversa comercial muito mais
+            concreta, com contexto real da sua operação.
+          </p>
+        </div>
+        <div className="hero-actions marketing-footer-band-actions">
+          <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
+            Começar 14 dias grátis
+          </Link>
+        </div>
       </section>
 
       <MarketingFooter />

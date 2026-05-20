@@ -22,23 +22,25 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     return (
       <main className="auth-shell">
         <div className="page-shell auth-page-shell">
-          <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Iniciar trial" />
+          <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Começar 14 dias grátis" />
         </div>
-        <section className="auth-card">
-          <BrandLogo className="auth-wordmark" priority />
-          <span className="eyebrow">Sessão ativa</span>
-          <h1>Você já entrou no Gestão Fácil.</h1>
-          <p>
-            O dashboard já está disponível para continuar a configuração e operar o workspace.
-          </p>
-          <div className="hero-actions">
-            <Link href={callbackUrl} className="primary-link">
-              Continuar
-            </Link>
-            <Link href="/" className="secondary-link">
-              Voltar para a landing
-            </Link>
-          </div>
+        <section className="auth-layout auth-layout-single">
+          <section className="auth-card">
+            <BrandLogo className="auth-wordmark" priority />
+            <span className="eyebrow">Sessão ativa</span>
+            <h1>Você já entrou no Gestão Fácil.</h1>
+            <p>
+              O dashboard já está disponível para continuar a configuração e operar o workspace.
+            </p>
+            <div className="hero-actions">
+              <Link href={callbackUrl} className="primary-link">
+                Continuar
+              </Link>
+              <Link href="/" className="secondary-link">
+                Voltar para o site
+              </Link>
+            </div>
+          </section>
         </section>
         <div className="page-shell auth-page-shell">
           <MarketingFooter />
@@ -50,24 +52,33 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="auth-shell">
       <div className="page-shell auth-page-shell">
-        <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Iniciar trial" />
+        <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Começar 14 dias grátis" />
       </div>
-      <section className="auth-card">
-        <BrandLogo className="auth-wordmark" priority />
-        <span className="eyebrow">Acesso ao workspace</span>
-        <h1>Entrar no Gestão Fácil.</h1>
-        <p>
-          Esta primeira camada de autenticação protege o dashboard e prepara o terreno para
-          evoluirmos do acesso demo para contas reais por workspace.
-        </p>
+      <section className="auth-layout">
+        <article className="auth-hero-panel">
+          <BrandLogo className="auth-wordmark" priority />
+          <span className="section-label">Acesso ao workspace</span>
+          <h1>Entrar no Gestão Fácil.</h1>
+          <p>
+            Esta primeira camada de autenticação protege o dashboard e prepara o
+            terreno para a evolução de contas reais por workspace.
+          </p>
+          <div className="auth-hero-points">
+            <div className="auth-hero-point">Acesso centralizado por workspace</div>
+            <div className="auth-hero-point">Base pronta para contas reais</div>
+            <div className="auth-hero-point">Fluxo simples para demo e onboarding</div>
+          </div>
+        </article>
 
-        <AuthSignInForm callbackUrl={callbackUrl} />
+        <section className="auth-card">
+          <AuthSignInForm callbackUrl={callbackUrl} />
 
-        <div className="auth-hint">
-          <strong>Credenciais demo padrão</strong>
-          <span>`demo@gestaofacil.local`</span>
-          <span>`gestao123`</span>
-        </div>
+          <div className="auth-hint">
+            <strong>Credenciais demo padrão</strong>
+            <span>`demo@gestaofacil.local`</span>
+            <span>`gestao123`</span>
+          </div>
+        </section>
       </section>
       <div className="page-shell auth-page-shell">
         <MarketingFooter />

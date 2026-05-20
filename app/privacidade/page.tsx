@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { MarketingFooter } from "@/components/marketing-footer";
 import { MarketingTopbar } from "@/components/marketing-topbar";
 import { buildMarketingMetadata } from "@/lib/marketing-metadata";
@@ -20,20 +21,34 @@ export default function PrivacyPage() {
     <main className="page-shell">
       <MarketingTopbar />
 
-      <section className="section-grid brand-strip">
-        <div>
+      <section className="inner-hero legal-hero">
+        <div className="inner-hero-copy">
           <span className="section-label">Privacidade</span>
-          <h1>Política de privacidade resumida e clara para transmitir segurança desde o início.</h1>
+          <h1>Uma base clara de privacidade para transmitir segurança desde o primeiro acesso.</h1>
           <p className="hero-text">
-            Este texto serve como base institucional inicial. Antes de operação ampliada, recomenda-se revisão jurídica final conforme o modelo comercial adotado.
+            Este texto funciona como base institucional inicial. Antes de uma
+            operação ampliada, recomenda-se revisão jurídica final conforme o
+            modelo comercial adotado.
           </p>
+        </div>
+
+        <div className="inner-hero-aside legal-hero-aside">
+          <Link href="/contato" className="secondary-link">
+            Falar com a equipe
+          </Link>
         </div>
       </section>
 
-      <section className="stack-list">
-        {privacyPoints.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
+      <section className="home-section legal-section">
+        <div className="home-section-heading">
+          <span className="section-label">Resumo</span>
+          <h2>O objetivo aqui é deixar o tratamento de dados compreensível e sem juridiquês desnecessário.</h2>
+        </div>
+        <ul className="stack-list legal-list">
+          {privacyPoints.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
       </section>
 
       <MarketingFooter />

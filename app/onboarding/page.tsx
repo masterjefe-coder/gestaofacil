@@ -33,32 +33,41 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
       <div className="page-shell auth-page-shell">
         <MarketingTopbar ctaHref={`/checkout?plan=${selectedPlan}`} ctaLabel="Plano escolhido" />
       </div>
-      <section className="auth-card">
-        <BrandLogo className="auth-wordmark" priority />
-        <span className="eyebrow">Primeiro workspace</span>
-        <h1>Criar conta real no Gestão Fácil.</h1>
-        <p>
-          Este fluxo abre um usuário real, cria o workspace principal e deixa a empresa pronta
-          para continuar no dashboard.
-        </p>
-
-        {isLocalDataMode() ? (
-          <div className="auth-hint">
-            <strong>Modo local ativo</strong>
-            <span>Defina `DATABASE_URL` para habilitar onboarding real com persistência no banco.</span>
+      <section className="auth-layout">
+        <article className="auth-hero-panel">
+          <BrandLogo className="auth-wordmark" priority />
+          <span className="section-label">Primeiro workspace</span>
+          <h1>Criar conta real no Gestão Fácil.</h1>
+          <p>
+            Este fluxo abre um usuário real, cria o workspace principal e deixa
+            a empresa pronta para continuar no dashboard.
+          </p>
+          <div className="auth-hero-points">
+            <div className="auth-hero-point">Usuário, workspace e trial no mesmo fluxo</div>
+            <div className="auth-hero-point">Base preparada para assinatura depois</div>
+            <div className="auth-hero-point">Entrada pensada para ativação rápida</div>
           </div>
-        ) : (
-          <OnboardingForm selectedPlan={selectedPlan} nextUrl={nextUrl} />
-        )}
+        </article>
 
-        <div className="hero-actions">
-          <Link href="/login" className="secondary-link">
-            Já tenho acesso
-          </Link>
-          <Link href="/" className="secondary-link">
-            Voltar para a landing
-          </Link>
-        </div>
+        <section className="auth-card auth-card-wide">
+          {isLocalDataMode() ? (
+            <div className="auth-hint">
+              <strong>Modo local ativo</strong>
+              <span>Defina `DATABASE_URL` para habilitar onboarding real com persistência no banco.</span>
+            </div>
+          ) : (
+            <OnboardingForm selectedPlan={selectedPlan} nextUrl={nextUrl} />
+          )}
+
+          <div className="hero-actions">
+            <Link href="/login" className="secondary-link">
+              Já tenho acesso
+            </Link>
+            <Link href="/" className="secondary-link">
+              Voltar para o site
+            </Link>
+          </div>
+        </section>
       </section>
       <div className="page-shell auth-page-shell">
         <MarketingFooter />
