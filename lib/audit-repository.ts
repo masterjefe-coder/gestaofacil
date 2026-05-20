@@ -16,6 +16,8 @@ type RecordAuditEventInput = {
   entityId: string;
   payload: AuditPayload;
   context?: WorkspaceContext;
+  workspaceId?: string;
+  actorId?: string | null;
 };
 
 type AuditClient = Prisma.TransactionClient | typeof prisma;
@@ -56,15 +58,23 @@ export async function recordAuditEvent(
     return null;
   }
 
-  const context = input.context || (await getCurrentWorkspaceContext());
+  const context = input.context || (!input.workspaceId ? await getCurrentWorkspaceContext() : null);
+  const workspaceId = input.workspaceId || context?.workspaceId;
+  const actorId = Object.prototype.hasOwnProperty.call(input, "actorId")
+    ? input.actorId
+    : (context?.userId || null);
+
+  if (!workspaceId) {
+    throw new Error("Workspace ausente para registrar auditoria.");
+  }
 
   return client.auditEvent.create({
     data: {
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId,
-      workspaceId: context.workspaceId,
-      actorId: context.userId,
+      workspaceId,
+      actorId,
       payload: toJsonValue(input.payload),
     },
   });
@@ -91,6 +101,50 @@ export async function listAuditEntries(limit = 10): Promise<AuditEntry[]> {
   const events = await prisma.auditEvent.findMany({
     where: {
       workspaceId: context.workspaceId,
+    },
+    include: {
+      actor: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: limit,
+  });
+
+  return events.map((event) => ({
+    id: event.id,
+    action: event.action,
+    entityType: event.entityType,
+    entityId: event.entityId,
+    actorName: event.actor?.name || event.actor?.email?.split("@")[0] || "Sistema",
+    actorEmail: event.actor?.email || "sistema@workspace.local",
+    createdAt: formatCreatedAt(event.createdAt),
+    summary: getSummary(event.payload, "Evento registrado no workspace."),
+  }));
+}
+
+export async function listWorkspaceAuditEntriesByType(entityType: string, limit = 10): Promise<AuditEntry[]> {
+  if (isLocalDataMode()) {
+    return [
+      {
+        id: `demo-audit-${entityType}`,
+        action: `${entityType}.demo`,
+        entityType,
+        entityId: "demo",
+        actorName: "Sistema",
+        actorEmail: "sistema@workspace.local",
+        createdAt: "Modo local",
+        summary: `Ative o banco para acompanhar eventos reais de ${entityType}.`,
+      },
+    ];
+  }
+
+  await ensureDemoCommerceSeeded();
+  const context = await getCurrentWorkspaceContext();
+  const events = await prisma.auditEvent.findMany({
+    where: {
+      workspaceId: context.workspaceId,
+      entityType,
     },
     include: {
       actor: true,

@@ -91,6 +91,7 @@ export async function ensureDemoCommerceSeeded() {
           id: customer.id,
           workspaceId,
           name: customer.name,
+          phone: customer.phone,
           city: customer.city,
           notes: encodeCustomerNotes(customer),
         },
@@ -112,6 +113,7 @@ export async function ensureDemoCommerceSeeded() {
           data: {
             workspaceId,
             name: quote.customer,
+            phone: null,
             notes: encodeCustomerNotes({
               segment: "Servico",
               status: "Ativo",
@@ -193,6 +195,7 @@ export async function ensureDemoCommerceSeeded() {
           data: {
             workspaceId,
             name: charge.customer,
+            phone: null,
             notes: encodeCustomerNotes({
               segment: "Servico",
               status: "Ativo",

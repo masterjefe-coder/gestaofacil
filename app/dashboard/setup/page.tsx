@@ -1,6 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
 import {
+  connectEvolutionInstanceAction,
+  createEvolutionInstanceAction,
   createWorkspaceMemberAction,
   removeWorkspaceMemberAction,
   resetWorkspaceMemberPasswordAction,
@@ -8,8 +11,15 @@ import {
   updateWorkspaceSetupAction,
 } from "@/app/dashboard/setup/actions";
 import { listAuditEntries } from "@/lib/audit-repository";
+import { listWorkspaceAuditEntriesByType } from "@/lib/audit-repository";
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
+import {
+  fetchEvolutionInstances,
+  getEvolutionConnectionState,
+  getEvolutionIntegrationStatus,
+  probeEvolutionApi,
+} from "@/lib/evolution-api";
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
@@ -18,6 +28,10 @@ import { getNfseEmissionModeSummary, getNfseNationalIntegrationStatus } from "@/
 
 type SetupPageProps = {
   searchParams?: Promise<{
+    evolutionMessage?: string;
+    evolutionOk?: string;
+    evolutionPairingCode?: string;
+    evolutionQrCode?: string;
     teamCreated?: string;
     teamUpdated?: string;
     teamRemoved?: string;
@@ -26,24 +40,49 @@ type SetupPageProps = {
   }>;
 };
 
+function getEvolutionStateLabel(value: string | undefined) {
+  switch (value) {
+    case "open":
+      return "conectada";
+    case "connecting":
+      return "aguardando pareamento";
+    case "close":
+      return "desconectada";
+    default:
+      return value || "desconhecido";
+  }
+}
+
 export default async function SetupPage({ searchParams }: SetupPageProps) {
-  const [setup, members, auditEntries, context, params, fiscalReadiness] = await Promise.all([
+  const [setup, members, auditEntries, evolutionAuditEntries, context, params, fiscalReadiness, evolutionProbe, evolutionInstances] = await Promise.all([
     getWorkspaceSetup(),
     listWorkspaceMembers(),
     listAuditEntries(8),
+    listWorkspaceAuditEntriesByType("evolution", 8),
     getCurrentWorkspaceContext(),
     searchParams,
     getFiscalSetupReadiness(),
+    probeEvolutionApi(),
+    fetchEvolutionInstances().catch(() => []),
   ]);
   const teamCreated = params?.teamCreated === "1";
   const teamUpdated = params?.teamUpdated === "1";
   const teamRemoved = params?.teamRemoved === "1";
   const teamPasswordReset = params?.teamPasswordReset === "1";
   const teamError = params?.teamError;
+  const evolutionMessage = params?.evolutionMessage;
+  const evolutionOk = params?.evolutionOk === "1";
+  const evolutionPairingCode = params?.evolutionPairingCode;
+  const evolutionQrCode = params?.evolutionQrCode;
   const canManage = isLocalDataMode() || canManageWorkspace(context.workspaceRole);
   const emissionModes = getNfseEmissionModeSummary();
   const nfseIntegration = getNfseNationalIntegrationStatus();
+  const evolutionIntegration = getEvolutionIntegrationStatus();
   const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const selectedEvolutionInstanceName = evolutionIntegration.instance || evolutionInstances[0]?.instanceName || "";
+  const selectedEvolutionInstanceState = selectedEvolutionInstanceName
+    ? await getEvolutionConnectionState(selectedEvolutionInstanceName).catch(() => null)
+    : null;
 
   return (
     <DashboardShell
@@ -162,6 +201,133 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <h2>Certificado ativa a API oficial da NFS-e Nacional</h2>
           <p>{emissionModes.automatic.helper}</p>
         </article>
+      </section>
+
+      <section className="section-split">
+        <article className={evolutionIntegration.enabled ? "split-panel success" : "split-panel"}>
+          <span className="section-label">WhatsApp server-side</span>
+          <h2>Evolution API como base das automações comerciais</h2>
+          <p>{evolutionIntegration.helper}</p>
+        </article>
+
+        <article className={evolutionProbe.reachable ? "split-panel success" : "split-panel"}>
+          <span className="section-label">Saúde da integração</span>
+          <h2>Status do endpoint configurado</h2>
+          <p>{evolutionProbe.summary}</p>
+        </article>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Canal WhatsApp</span>
+            <h2>Criar e operar a instância principal da Evolution</h2>
+          </div>
+        </div>
+
+        {evolutionMessage ? (
+          <div className={evolutionOk ? "auth-hint" : "auth-hint fiscal-warning"}>
+            <strong>{evolutionOk ? "Operação concluída" : "Operação com falha"}</strong>
+            <span>{evolutionMessage}</span>
+          </div>
+        ) : null}
+
+        {evolutionPairingCode ? (
+          <div className="auth-hint">
+            <strong>Código de pareamento</strong>
+            <span>{evolutionPairingCode}</span>
+            <small className="muted-text">Use este código no aparelho se preferir pareamento numérico.</small>
+          </div>
+        ) : null}
+
+        {evolutionQrCode ? (
+          <div className="auth-hint">
+            <strong>QR para conectar o WhatsApp</strong>
+            <span>Escaneie este QR com o aparelho que será usado na operação.</span>
+            <Image
+              src={evolutionQrCode}
+              alt="QR code para pareamento da instância Evolution"
+              width={280}
+              height={280}
+              unoptimized
+              style={{ width: "100%", maxWidth: 280, height: "auto" }}
+            />
+          </div>
+        ) : null}
+
+        {canManage ? (
+          <form action={createEvolutionInstanceAction} className="inline-form">
+            <label>
+              <span>Nome da instância</span>
+              <input
+                name="instanceName"
+                type="text"
+                defaultValue={setup.slug}
+                placeholder="Ex.: gestao-facil-demo"
+                required
+              />
+            </label>
+            <label>
+              <span>Número opcional</span>
+              <input
+                name="instanceNumber"
+                type="text"
+                placeholder="Ex.: 5511999998888"
+              />
+            </label>
+            <button type="submit" className="primary-link form-submit">
+              Criar instância
+            </button>
+          </form>
+        ) : null}
+
+        {selectedEvolutionInstanceName ? (
+          <div className="auth-hint">
+            <strong>Instância alvo</strong>
+            <span>
+              {selectedEvolutionInstanceName}
+              {selectedEvolutionInstanceState?.instance?.state
+                ? ` · estado ${getEvolutionStateLabel(selectedEvolutionInstanceState.instance.state)}`
+                : ""}
+            </span>
+          </div>
+        ) : null}
+
+        {canManage && selectedEvolutionInstanceName ? (
+          <form action={connectEvolutionInstanceAction} className="card-action">
+            <input type="hidden" name="instanceName" value={selectedEvolutionInstanceName} />
+            <button type="submit" className="secondary-link">
+              Gerar pareamento
+            </button>
+          </form>
+        ) : null}
+
+        <div className="data-table">
+          <div className="data-table-head">
+            <span>Instância</span>
+            <span>Status</span>
+            <span>Dono</span>
+            <span>Webhook</span>
+          </div>
+          {evolutionInstances.length > 0 ? evolutionInstances.map((instance) => (
+            <article key={instance.instanceName} className="data-table-row">
+              <div>
+                <strong>{instance.instanceName}</strong>
+                <small>{instance.profileName || instance.integration || "Sem perfil conectado ainda"}</small>
+              </div>
+              <span>{getEvolutionStateLabel(instance.status)}</span>
+              <span>{instance.owner || "Aguardando conexão"}</span>
+              <span>{instance.webhookUrl || evolutionIntegration.webhookUrl || "Sem webhook visível"}</span>
+            </article>
+          )) : (
+            <article className="data-table-row">
+              <span>Nenhuma instância encontrada</span>
+              <span>Configure env + API</span>
+              <span>-</span>
+              <span>-</span>
+            </article>
+          )}
+        </div>
       </section>
 
       {municipalityStatus ? (
@@ -361,6 +527,35 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <span>Resumo</span>
           </div>
           {auditEntries.map((entry) => (
+            <article key={entry.id} className="data-table-row">
+              <span>{entry.createdAt}</span>
+              <div>
+                <strong>{entry.actorName}</strong>
+                <small>{entry.actorEmail}</small>
+              </div>
+              <span>{entry.action}</span>
+              <span>{entry.summary}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Atividade WhatsApp</span>
+            <h2>Eventos recentes recebidos da Evolution API</h2>
+          </div>
+        </div>
+
+        <div className="data-table">
+          <div className="data-table-head">
+            <span>Quando</span>
+            <span>Origem</span>
+            <span>Evento</span>
+            <span>Resumo</span>
+          </div>
+          {evolutionAuditEntries.map((entry) => (
             <article key={entry.id} className="data-table-row">
               <span>{entry.createdAt}</span>
               <div>

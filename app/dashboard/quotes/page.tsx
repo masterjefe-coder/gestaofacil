@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { createQuoteAction, deleteQuoteAction } from "@/app/dashboard/quotes/actions";
+import { listCustomerWhatsappActivity } from "@/lib/customer-whatsapp-activity";
 import { listCustomers } from "@/lib/customer-repository";
+import { buildQuoteInsights } from "@/lib/quote-insights";
 import { listQuotes } from "@/lib/quote-repository";
 import { quoteGoals } from "@/lib/site-data";
 
 export default async function QuotesPage() {
-  const customers = await listCustomers();
-  const quotes = await listQuotes();
+  const [customers, quotes, whatsappActivity] = await Promise.all([
+    listCustomers(),
+    listQuotes(),
+    listCustomerWhatsappActivity().catch(() => []),
+  ]);
+  const quoteInsights = buildQuoteInsights(quotes, customers, whatsappActivity);
 
   return (
     <DashboardShell
@@ -85,17 +91,82 @@ export default async function QuotesPage() {
         </form>
       </section>
 
+      <section className="stats-row">
+        <article className="stat-card">
+          <span>Quentes no canal</span>
+          <strong>{quoteInsights.summary.hotCount}</strong>
+          <p>Propostas com cliente ativo no WhatsApp e mais chance de avanço rápido.</p>
+        </article>
+        <article className="stat-card">
+          <span>Follow-up ativo</span>
+          <strong>{quoteInsights.summary.followUpCount}</strong>
+          <p>Orçamentos que já pedem retomada explícita para não esfriarem na fila.</p>
+        </article>
+        <article className="stat-card">
+          <span>Aprovados</span>
+          <strong>{quoteInsights.summary.approvedCount}</strong>
+          <p>Propostas já prontas para virar operação, cobrança ou próximo passo concreto.</p>
+        </article>
+        <article className="stat-card">
+          <span>Aguardando</span>
+          <strong>{quoteInsights.summary.waitingCount}</strong>
+          <p>Itens enviados sem sinal recente do cliente, bons candidatos para nova cadência.</p>
+        </article>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Fila comercial</span>
+            <h2>Quais propostas merecem ação primeiro</h2>
+          </div>
+        </div>
+
+        {quoteInsights.items.length > 0 ? (
+          <div className="cards-grid quote-grid">
+            {quoteInsights.items.slice(0, 4).map((item) => (
+              <article key={item.quoteId} className="dashboard-card">
+                <span className="dashboard-kicker">{item.priorityLabel}</span>
+                <h3>{item.customer}</h3>
+                <strong className="quote-amount">{item.amount}</strong>
+                <p>{item.title}</p>
+                <small className="muted-text">{item.helper}</small>
+                <small className="muted-text">{item.dueLabel}</small>
+                {item.whatsappLastEventAt ? (
+                  <small className="muted-text">Último sinal no canal: {item.whatsappLastEventAt}</small>
+                ) : null}
+                {item.whatsappLastEventSummary ? (
+                  <div className="follow-up-entry">
+                    <strong>Contexto recente</strong>
+                    <small>{item.whatsappLastEventSummary}</small>
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Sem propostas na fila</strong>
+            <span>Quando os orçamentos começarem a rodar com mais contexto do canal, esta área ordena a fila comercial por calor e necessidade de follow-up.</span>
+          </div>
+        )}
+      </section>
+
       <section className="cards-grid quote-grid">
-        {quotes.map((quote) => (
-          <article key={quote.id} className="dashboard-card">
-            <span className="dashboard-kicker">{quote.status}</span>
+        {quoteInsights.items.map((quote) => (
+          <article key={quote.quoteId} className="dashboard-card">
+            <span className="dashboard-kicker">{quote.priorityLabel}</span>
             <h3>{quote.title}</h3>
             <p>{quote.customer}</p>
             <strong className="quote-amount">{quote.amount}</strong>
             <p>{quote.summary}</p>
             <small className="muted-text">{quote.dueLabel}</small>
+            <small className="muted-text">{quote.helper}</small>
+            {quote.customerStatus ? (
+              <small className="muted-text">Cliente: {quote.customerStatus}{quote.customerOpenAmount ? ` · Em aberto ${quote.customerOpenAmount}` : ""}</small>
+            ) : null}
             <form action={deleteQuoteAction} className="card-action">
-              <input type="hidden" name="id" value={quote.id} />
+              <input type="hidden" name="id" value={quote.quoteId} />
               <button type="submit" className="ghost-button">
                 Remover
               </button>

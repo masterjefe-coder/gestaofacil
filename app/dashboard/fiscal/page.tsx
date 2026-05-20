@@ -16,6 +16,7 @@ import {
   listNfseDocuments,
   listNfseReadyQueue,
 } from "@/lib/nfse-repository";
+import { buildFiscalInsights } from "@/lib/fiscal-insights";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import {
@@ -49,6 +50,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
   const integrationStatus = getNfseNationalIntegrationStatus();
   const emissionModes = getNfseEmissionModeSummary();
   const portalUrls = getNfseNationalPortalUrls();
+  const fiscalInsights = buildFiscalInsights(documents, issuePreviewMap);
   const draftCount = documents.filter((document) => document.status === "Rascunho").length;
   const readyCount = documents.filter((document) => document.status === "Pronta").length;
   const issuedCount = documents.filter((document) => document.status === "Emitida").length;
@@ -91,6 +93,65 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
           <strong>{errorCount}</strong>
           <p>{errorCount > 0 ? "Existe documento pedindo revisão antes da emissão." : "Sem bloqueios fiscais críticos agora."}</p>
         </article>
+        <article className="stat-card">
+          <span>Bloqueadas</span>
+          <strong>{fiscalInsights.summary.blockedCount}</strong>
+          <p>
+            {fiscalInsights.summary.blockedCount > 0
+              ? "Há documentos travados por pendência de setup, município ou dados do tomador."
+              : "Nenhum documento está travado por bloqueio estrutural agora."}
+          </p>
+        </article>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Leitura da fila</span>
+            <h2>Onde o fiscal deve agir primeiro</h2>
+          </div>
+        </div>
+
+        <div className="stats-row">
+          <article className="stat-card">
+            <span>Prontas</span>
+            <strong>{fiscalInsights.summary.readyCount}</strong>
+            <p>Documentos já aptos para seguir o fluxo de emissão sem bloqueio estrutural.</p>
+          </article>
+          <article className="stat-card">
+            <span>Revisão</span>
+            <strong>{fiscalInsights.summary.reviewCount}</strong>
+            <p>Itens com erro operacional que pedem revisão humana antes de nova tentativa.</p>
+          </article>
+          <article className="stat-card">
+            <span>Emitidas</span>
+            <strong>{fiscalInsights.summary.issuedCount}</strong>
+            <p>Documentos já concluídos e fora da fila do dia.</p>
+          </article>
+        </div>
+
+        {fiscalInsights.items.length > 0 ? (
+          <div className="cards-grid quote-grid">
+            {fiscalInsights.items.slice(0, 4).map((item) => (
+              <article key={item.documentId} className="dashboard-card">
+                <span className="dashboard-kicker">{item.priorityLabel}</span>
+                <h3>{item.customer}</h3>
+                <strong className="quote-amount">{item.amount}</strong>
+                <p>{item.serviceDescription}</p>
+                <small className="muted-text">{item.helper}</small>
+                {item.issuedAt ? <small className="muted-text">Emitida em {item.issuedAt}</small> : null}
+                {item.missingFields.length > 0 ? (
+                  <small className="muted-text">Pendências: {item.missingFields.join(", ")}</small>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Sem documentos na fila</strong>
+            <span>Quando a operação gerar rascunhos, esta leitura passa a separar prontas, bloqueadas e itens em revisão.</span>
+          </div>
+        )}
       </section>
 
       <section className="data-panel">

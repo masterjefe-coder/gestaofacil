@@ -82,6 +82,7 @@ export const customers: Customer[] = [
   {
     id: "cus_001",
     name: "Clinica Horizonte",
+    phone: "5531991112201",
     document: "12.345.678/0001-95",
     segment: "Clinica pequena",
     city: "Belo Horizonte",
@@ -93,6 +94,7 @@ export const customers: Customer[] = [
   {
     id: "cus_002",
     name: "Studio Lume",
+    phone: "5511993344556",
     document: "48.321.654/0001-43",
     segment: "Agencia pequena",
     city: "Sao Paulo",
@@ -104,6 +106,7 @@ export const customers: Customer[] = [
   {
     id: "cus_003",
     name: "Oficina Ponto Certo",
+    phone: "5519987766554",
     document: "22.444.888/0001-94",
     segment: "Assistencia tecnica",
     city: "Campinas",
@@ -115,6 +118,7 @@ export const customers: Customer[] = [
   {
     id: "cus_004",
     name: "Casa Nobre",
+    phone: "5541995566778",
     document: "084.512.990-24",
     segment: "Servico local",
     city: "Curitiba",

@@ -1,15 +1,30 @@
+import { buildBillingWhatsappInsights } from "@/lib/billing-whatsapp-insights";
+import { listChargeWhatsappSignals } from "@/lib/charge-whatsapp-signals";
 import { buildChargeFollowUpActions, summarizeChargeFollowUp } from "@/lib/charge-follow-up";
 import { getChargeUrgency, sortChargesByPriority } from "@/lib/charge-priority";
+import { buildCustomerEngagementInsights, buildCustomerPipelineItems } from "@/lib/customer-engagement-insights";
+import { listCustomerWhatsappActivity } from "@/lib/customer-whatsapp-activity";
+import { buildFiscalInsights } from "@/lib/fiscal-insights";
 import { listCharges } from "@/lib/charge-repository";
 import { listCustomers } from "@/lib/customer-repository";
-import { listNfseDocuments, listNfseReadyQueue } from "@/lib/nfse-repository";
+import { getNfseNationalIssuePreview, listNfseDocuments, listNfseReadyQueue } from "@/lib/nfse-repository";
 import { listOrders } from "@/lib/order-repository";
+import { buildQuoteInsights } from "@/lib/quote-insights";
 import { listQuotes } from "@/lib/quote-repository";
 import type { PipelineColumn, Stat } from "@/lib/types";
 
 type AgendaItem = {
   title: string;
   description: string;
+};
+
+export type DashboardRecommendation = {
+  title: string;
+  description: string;
+  href: string;
+  hrefLabel: string;
+  priority: "critical" | "high" | "normal";
+  kicker: string;
 };
 
 function parseCurrencyToNumber(value: string) {
@@ -34,14 +49,27 @@ function formatCountLabel(value: number, singular: string, plural: string) {
   return `${value} ${value === 1 ? singular : plural}`;
 }
 
+function getRecommendationWeight(priority: DashboardRecommendation["priority"]) {
+  switch (priority) {
+    case "critical":
+      return 0;
+    case "high":
+      return 1;
+    case "normal":
+      return 2;
+  }
+}
+
 export async function getDashboardStats(): Promise<Stat[]> {
-  const [customers, quotes, charges, orders, nfseDocuments, nfseReadyQueue] = await Promise.all([
+  const [customers, quotes, charges, orders, nfseDocuments, nfseReadyQueue, chargeWhatsappSignals, customerWhatsappActivity] = await Promise.all([
     listCustomers(),
     listQuotes(),
     listCharges(),
     listOrders(),
     listNfseDocuments(),
     listNfseReadyQueue(),
+    listChargeWhatsappSignals().catch(() => []),
+    listCustomerWhatsappActivity().catch(() => []),
   ]);
 
   const activeQuotes = quotes.filter((quote) => quote.status !== "Aprovado");
@@ -52,6 +80,12 @@ export async function getDashboardStats(): Promise<Stat[]> {
   const activeOrders = orders.filter((order) => order.status !== "Concluido");
   const recurringCustomers = customers.filter((customer) => customer.status === "Recorrente").length;
   const fiscalPendingCount = nfseReadyQueue.length + nfseDocuments.filter((document) => document.status === "Rascunho" || document.status === "Pronta" || document.status === "Erro").length;
+  const whatsappInsights = buildBillingWhatsappInsights(charges, chargeWhatsappSignals);
+  const customerEngagement = buildCustomerEngagementInsights(customers, customerWhatsappActivity);
+  const nfsePreviewEntries = await Promise.all(
+    nfseDocuments.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
+  );
+  const fiscalInsights = buildFiscalInsights(nfseDocuments, new Map(nfsePreviewEntries));
 
   return [
     {
@@ -79,20 +113,52 @@ export async function getDashboardStats(): Promise<Stat[]> {
             ? `${followUpSummary.waitingCount} cobranças estão aguardando retorno do cliente`
             : `${recurringCustomers} clientes recorrentes sustentam base de previsibilidade`,
     },
+    {
+      label: "WhatsApp financeiro",
+      value: String(whatsappInsights.summary.openReplyCount),
+      helper:
+        whatsappInsights.summary.contestedCount > 0
+          ? `${whatsappInsights.summary.contestedCount} resposta(s) pedem tratamento antes de nova cobrança`
+          : whatsappInsights.summary.promisedCount > 0
+            ? `${whatsappInsights.summary.promisedCount} cliente(s) prometeram pagar e merecem acompanhamento`
+            : whatsappInsights.summary.unresolvedReplyCount > 0
+              ? `${whatsappInsights.summary.unresolvedReplyCount} retorno(s) ainda aguardam leitura humana`
+              : "Sem respostas recentes no canal financeiro agora.",
+    },
+    {
+      label: "Relacionamento ativo",
+      value: String(customerEngagement.summary.hotCount + customerEngagement.summary.followUpCount),
+      helper:
+        customerEngagement.summary.reactivationCount > 0
+          ? `${customerEngagement.summary.reactivationCount} cliente(s) já entram no radar de reativação`
+          : customerEngagement.summary.hotCount > 0
+            ? `${customerEngagement.summary.hotCount} cliente(s) estão quentes no canal agora`
+            : `${recurringCustomers} cliente(s) sustentam a base recorrente sem urgência comercial`,
+    },
+    {
+      label: "Fila fiscal",
+      value: String(fiscalPendingCount),
+      helper:
+        fiscalInsights.summary.blockedCount > 0
+          ? `${fiscalInsights.summary.blockedCount} documento(s) travam por pendência estrutural`
+          : fiscalInsights.summary.reviewCount > 0
+            ? `${fiscalInsights.summary.reviewCount} documento(s) pedem revisão antes de emitir`
+            : fiscalInsights.summary.readyCount > 0
+              ? `${fiscalInsights.summary.readyCount} documento(s) já estão prontos para seguir`
+              : "Sem pressão fiscal imediata agora.",
+    },
   ];
 }
 
 export async function getDashboardPipeline(): Promise<PipelineColumn[]> {
-  const [customers, quotes, orders] = await Promise.all([listCustomers(), listQuotes(), listOrders()]);
+  const [customers, quotes, orders, customerWhatsappActivity] = await Promise.all([
+    listCustomers(),
+    listQuotes(),
+    listOrders(),
+    listCustomerWhatsappActivity().catch(() => []),
+  ]);
 
-  const newConversations = customers
-    .filter((customer) => customer.status === "Aguardando retorno")
-    .slice(0, 4)
-    .map((customer) => ({
-      title: customer.name,
-      subtitle: customer.segment,
-      meta: customer.note,
-    }));
+  const newConversations = buildCustomerPipelineItems(customers, customerWhatsappActivity);
 
   const activeQuotes = quotes
     .filter((quote) => quote.status !== "Aprovado")
@@ -159,13 +225,15 @@ export async function getDashboardPipeline(): Promise<PipelineColumn[]> {
 }
 
 export async function getTodayAgenda(): Promise<AgendaItem[]> {
-  const [customers, quotes, charges, orders, nfseDocuments, nfseReadyQueue] = await Promise.all([
+  const [customers, quotes, charges, orders, nfseDocuments, nfseReadyQueue, chargeWhatsappSignals, customerWhatsappActivity] = await Promise.all([
     listCustomers(),
     listQuotes(),
     listCharges(),
     listOrders(),
     listNfseDocuments(),
     listNfseReadyQueue(),
+    listChargeWhatsappSignals().catch(() => []),
+    listCustomerWhatsappActivity().catch(() => []),
   ]);
 
   const prioritizedCharges = sortChargesByPriority(charges.filter((charge) => charge.status !== "Pago"));
@@ -181,6 +249,12 @@ export async function getTodayAgenda(): Promise<AgendaItem[]> {
   const waitingCustomers = customers.filter((customer) => customer.status === "Aguardando retorno");
   const fiscalReadyCount = nfseReadyQueue.length;
   const fiscalErrorCount = nfseDocuments.filter((document) => document.status === "Erro").length;
+  const whatsappInsights = buildBillingWhatsappInsights(charges, chargeWhatsappSignals);
+  const customerEngagement = buildCustomerEngagementInsights(customers, customerWhatsappActivity);
+  const nfsePreviewEntries = await Promise.all(
+    nfseDocuments.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
+  );
+  const fiscalInsights = buildFiscalInsights(nfseDocuments, new Map(nfsePreviewEntries));
 
   const agenda: AgendaItem[] = [
     {
@@ -240,5 +314,170 @@ export async function getTodayAgenda(): Promise<AgendaItem[]> {
     });
   }
 
+  if (whatsappInsights.summary.contestedCount > 0 || whatsappInsights.summary.unresolvedReplyCount > 0) {
+    agenda.unshift({
+      title:
+        whatsappInsights.summary.contestedCount > 0
+          ? `Tratar ${formatCountLabel(whatsappInsights.summary.contestedCount, "contestação", "contestações")} no WhatsApp`
+          : `Ler ${formatCountLabel(whatsappInsights.summary.unresolvedReplyCount, "resposta", "respostas")} do financeiro`,
+      description:
+        whatsappInsights.summary.contestedCount > 0
+          ? "O canal já devolveu objeções em cobranças abertas e vale resolver isso antes de insistir no recebimento."
+          : "Existem retornos recentes no WhatsApp que ainda não foram incorporados ao follow-up financeiro.",
+    });
+  } else if (whatsappInsights.summary.promisedCount > 0) {
+    agenda.unshift({
+      title: `Acompanhar ${formatCountLabel(whatsappInsights.summary.promisedCount, "promessa", "promessas")} de pagamento`,
+      description: "Clientes já sinalizaram intenção de pagar e agora o melhor movimento é acompanhar, não reenviar no escuro.",
+    });
+  }
+
+  if (customerEngagement.summary.hotCount > 0) {
+    agenda.unshift({
+      title: `Responder ${formatCountLabel(customerEngagement.summary.hotCount, "cliente quente", "clientes quentes")}`,
+      description: "O canal já mostrou atividade recente e vale aproveitar esse calor antes de esfriar a conversa.",
+    });
+  } else if (customerEngagement.summary.reactivationCount > 0) {
+    agenda.push({
+      title: `Reativar ${formatCountLabel(customerEngagement.summary.reactivationCount, "cliente", "clientes")} da base`,
+      description: "A base já mostra espaço claro para retomada comercial com número cadastrado e pouco sinal recente.",
+    });
+  }
+
+  if (fiscalInsights.summary.blockedCount > 0) {
+    agenda.unshift({
+      title: `Destravar ${formatCountLabel(fiscalInsights.summary.blockedCount, "documento fiscal", "documentos fiscais")}`,
+      description: "Existem itens na fila fiscal parados por pendência estrutural e isso deve ser resolvido antes de acumular emissão.",
+    });
+  } else if (fiscalInsights.summary.readyCount > 0) {
+    agenda.push({
+      title: `Emitir ${formatCountLabel(fiscalInsights.summary.readyCount, "documento pronto", "documentos prontos")}`,
+      description: "A fila fiscal já tem itens aptos para emissão sem novo retrabalho operacional.",
+    });
+  }
+
   return agenda.slice(0, 4);
+}
+
+export async function getDashboardRecommendations(): Promise<DashboardRecommendation[]> {
+  const [
+    customers,
+    quotes,
+    charges,
+    nfseDocuments,
+    chargeWhatsappSignals,
+    customerWhatsappActivity,
+  ] = await Promise.all([
+    listCustomers(),
+    listQuotes(),
+    listCharges(),
+    listNfseDocuments(),
+    listChargeWhatsappSignals().catch(() => []),
+    listCustomerWhatsappActivity().catch(() => []),
+  ]);
+
+  const billingInsights = buildBillingWhatsappInsights(charges, chargeWhatsappSignals);
+  const customerInsights = buildCustomerEngagementInsights(customers, customerWhatsappActivity);
+  const quoteInsights = buildQuoteInsights(quotes, customers, customerWhatsappActivity);
+  const nfsePreviewEntries = await Promise.all(
+    nfseDocuments.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
+  );
+  const fiscalInsights = buildFiscalInsights(nfseDocuments, new Map(nfsePreviewEntries));
+
+  const recommendations: DashboardRecommendation[] = [];
+
+  const contestedItem = billingInsights.items.find((item) => item.suggestedOutcome === "Contestou" && item.requiresHumanAction);
+
+  if (contestedItem) {
+    recommendations.push({
+      kicker: "Financeiro",
+      title: `Tratar contestação de ${contestedItem.customer}`,
+      description: "O cliente respondeu no WhatsApp com objeção e vale resolver isso antes de insistir em nova cobrança.",
+      href: "/dashboard/billing",
+      hrefLabel: "Abrir cobranças",
+      priority: "critical",
+    });
+  }
+
+  const blockedFiscal = fiscalInsights.items.find((item) => item.priority === "blocked");
+
+  if (blockedFiscal) {
+    recommendations.push({
+      kicker: "Fiscal",
+      title: `Destravar documento de ${blockedFiscal.customer}`,
+      description: blockedFiscal.helper,
+      href: "/dashboard/fiscal",
+      hrefLabel: "Abrir fiscal",
+      priority: "critical",
+    });
+  }
+
+  const hotQuote = quoteInsights.items.find((item) => item.priority === "hot");
+
+  if (hotQuote) {
+    recommendations.push({
+      kicker: "Comercial",
+      title: `Retomar proposta de ${hotQuote.customer}`,
+      description: hotQuote.helper,
+      href: "/dashboard/quotes",
+      hrefLabel: "Abrir orçamentos",
+      priority: "high",
+    });
+  }
+
+  const hotCustomer = customerInsights.items.find((item) => item.priority === "hot");
+
+  if (hotCustomer) {
+    recommendations.push({
+      kicker: "Relacionamento",
+      title: `Responder ${hotCustomer.customerName}`,
+      description: hotCustomer.helper,
+      href: "/dashboard/customers",
+      hrefLabel: "Abrir clientes",
+      priority: "high",
+    });
+  }
+
+  const promisedPayment = billingInsights.items.find((item) => item.suggestedOutcome === "Prometeu pagar");
+
+  if (promisedPayment) {
+    recommendations.push({
+      kicker: "Caixa",
+      title: `Acompanhar promessa de ${promisedPayment.customer}`,
+      description: "O cliente já sinalizou intenção de pagar, então o melhor próximo passo é acompanhamento pontual.",
+      href: "/dashboard/billing",
+      hrefLabel: "Acompanhar recebimento",
+      priority: "normal",
+    });
+  }
+
+  const readyFiscal = fiscalInsights.items.find((item) => item.priority === "ready");
+
+  if (readyFiscal) {
+    recommendations.push({
+      kicker: "Emissão",
+      title: `Emitir documento de ${readyFiscal.customer}`,
+      description: "A fila fiscal já tem documento pronto para seguir sem novo retrabalho operacional.",
+      href: "/dashboard/fiscal",
+      hrefLabel: "Emitir NFS-e",
+      priority: "normal",
+    });
+  }
+
+  const reactivationCustomer = customerInsights.items.find((item) => item.priority === "reactivation");
+
+  if (reactivationCustomer) {
+    recommendations.push({
+      kicker: "Base",
+      title: `Reativar ${reactivationCustomer.customerName}`,
+      description: reactivationCustomer.helper,
+      href: "/dashboard/customers",
+      hrefLabel: "Ver base de clientes",
+      priority: "normal",
+    });
+  }
+
+  return recommendations
+    .sort((left, right) => getRecommendationWeight(left.priority) - getRecommendationWeight(right.priority))
+    .slice(0, 6);
 }

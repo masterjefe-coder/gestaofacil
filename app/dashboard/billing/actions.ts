@@ -1,7 +1,25 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addChargeFollowUp, createCharge, createChargeFromQuote, deleteCharge, updateCharge } from "@/lib/charge-repository";
+import { recordAuditEvent } from "@/lib/audit-repository";
+import { buildChargeReminderQueue } from "@/lib/charge-follow-up";
+import {
+  addChargeFollowUp,
+  createCharge,
+  createChargeFromQuote,
+  deleteCharge,
+  listCharges,
+  updateCharge,
+} from "@/lib/charge-repository";
+import { listCustomers } from "@/lib/customer-repository";
+import { EvolutionApiError, sendEvolutionTextMessage } from "@/lib/evolution-api";
+import {
+  extractMessageId,
+  extractMessagePreview,
+  extractRemoteJid,
+  normalizePhone,
+  normalizeRemoteJid,
+} from "@/lib/whatsapp-message-metadata";
 import type { ChargeFollowUpChannel, ChargeFollowUpOutcome, ChargeInput } from "@/lib/types";
 
 function getString(formData: FormData, key: string) {
@@ -136,6 +154,117 @@ export async function runChargeReminderAction(formData: FormData) {
     channel,
     outcome,
     note: note || "Lembrete operacional registrado na fila automática.",
+  });
+  revalidateBillingViews();
+}
+
+export async function sendChargeReminderWhatsappAction(formData: FormData) {
+  const id = getString(formData, "id");
+  const customerName = getString(formData, "customer");
+  const customerPhone = getString(formData, "phone");
+  const message = getString(formData, "message");
+  const channel = (getString(formData, "channel") as ChargeFollowUpChannel) || "WhatsApp";
+
+  if (!id || !customerName || !customerPhone || !message) {
+    return;
+  }
+
+  try {
+    const response = await sendEvolutionTextMessage({
+      number: customerPhone,
+      text: message,
+    });
+
+    const charges = await listCharges();
+    const customers = await listCustomers();
+    const charge = charges.find((item) => item.id === id);
+    const customer = customers.find((item) => item.name === customerName);
+    const reminder = charge ? buildChargeReminderQueue([charge]).find((task) => task.chargeId === id && task.channel === channel) : null;
+    const responseMessageId = extractMessageId(response);
+    const responseRemoteJid = extractRemoteJid(response);
+    const normalizedCustomerPhone = normalizePhone(customer?.phone || customerPhone);
+    const normalizedResponsePhone = normalizeRemoteJid(responseRemoteJid);
+    const resolvedPhone = normalizedResponsePhone || normalizedCustomerPhone;
+    const responsePreview = extractMessagePreview(response) || message;
+
+    await addChargeFollowUp(id, {
+      channel,
+      outcome: reminder?.suggestedOutcome || "Sem resposta",
+      note: `Mensagem enviada via Evolution API para ${customer?.phone || customerPhone}. ${message}`,
+    });
+    await recordAuditEvent({
+      action: "charge.whatsapp.sent",
+      entityType: "charge",
+      entityId: id,
+      payload: {
+        summary: `Mensagem de cobrança enviada por WhatsApp para ${customerName}.`,
+        metadata: {
+          customer: customerName,
+          phone: resolvedPhone,
+          channel,
+          outcome: reminder?.suggestedOutcome || "Sem resposta",
+          message,
+          messageId: responseMessageId || null,
+          remoteJid: responseRemoteJid || null,
+          messagePreview: responsePreview,
+        },
+      },
+    });
+    revalidateBillingViews();
+    return;
+  } catch (error) {
+    const detail = error instanceof EvolutionApiError ? error.message : "Falha desconhecida no envio pelo WhatsApp.";
+
+    await addChargeFollowUp(id, {
+      channel,
+      outcome: "Sem resposta",
+      note: `Falha no envio via Evolution API: ${detail}`,
+    });
+    await recordAuditEvent({
+      action: "charge.whatsapp.failed",
+      entityType: "charge",
+      entityId: id,
+      payload: {
+        summary: `Falha no envio de WhatsApp para ${customerName}.`,
+        metadata: {
+          customer: customerName,
+          phone: customerPhone,
+          channel,
+          detail,
+        },
+      },
+    });
+    revalidateBillingViews();
+    return;
+  }
+}
+
+export async function applyWhatsappSignalFollowUpAction(formData: FormData) {
+  const id = getString(formData, "id");
+  const outcome = getString(formData, "outcome") as ChargeFollowUpOutcome;
+  const note = getString(formData, "note");
+
+  if (!id || !outcome || !note) {
+    return;
+  }
+
+  await addChargeFollowUp(id, {
+    channel: "WhatsApp",
+    outcome,
+    note,
+  });
+  await recordAuditEvent({
+    action: "charge.whatsapp.signal_applied",
+    entityType: "charge",
+    entityId: id,
+    payload: {
+      summary: `Retorno do WhatsApp registrado como ${outcome.toLowerCase()}.`,
+      metadata: {
+        channel: "WhatsApp",
+        outcome,
+        note,
+      },
+    },
   });
   revalidateBillingViews();
 }

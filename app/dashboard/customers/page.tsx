@@ -1,11 +1,19 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { createCustomerAction, deleteCustomerAction } from "@/app/dashboard/customers/actions";
+import { buildCustomerEngagementInsights } from "@/lib/customer-engagement-insights";
+import { listCustomerWhatsappActivity } from "@/lib/customer-whatsapp-activity";
 import { listCustomers } from "@/lib/customer-repository";
 import { customerMoments } from "@/lib/site-data";
 
 export default async function CustomersPage() {
-  const customers = await listCustomers();
+  const [customers, whatsappActivity] = await Promise.all([
+    listCustomers(),
+    listCustomerWhatsappActivity().catch(() => []),
+  ]);
+  const whatsappActivityByCustomerId = new Map(whatsappActivity.map((entry) => [entry.customerId, entry]));
+  const customersWithWhatsappHistory = whatsappActivity.filter((entry) => entry.eventCount > 0).length;
+  const engagement = buildCustomerEngagementInsights(customers, whatsappActivity);
 
   return (
     <DashboardShell
@@ -35,6 +43,10 @@ export default async function CustomersPage() {
           <label>
             <span>Nome</span>
             <input name="name" type="text" placeholder="Ex.: Oficina Centro Sul" required />
+          </label>
+          <label>
+            <span>WhatsApp</span>
+            <input name="phone" type="text" placeholder="Ex.: 5511999998888" />
           </label>
           <label>
             <span>CPF/CNPJ</span>
@@ -78,9 +90,43 @@ export default async function CustomersPage() {
           </div>
         </div>
 
+        <div className="auth-hint">
+          <strong>WhatsApp com sinal real</strong>
+          <span>
+            {customersWithWhatsappHistory > 0
+              ? `${customersWithWhatsappHistory} cliente(s) já têm atividade real recebida pelo webhook da Evolution.`
+              : "Ainda não há atividade real de WhatsApp associada aos clientes cadastrados."}
+          </span>
+        </div>
+
+        <section className="stats-row">
+          <article className="stat-card">
+            <span>Quentes no canal</span>
+            <strong>{engagement.summary.hotCount}</strong>
+            <p>Clientes com retorno real no WhatsApp e contexto pronto para abordagem comercial.</p>
+          </article>
+          <article className="stat-card">
+            <span>Pedem follow-up</span>
+            <strong>{engagement.summary.followUpCount}</strong>
+            <p>Relacionamentos que já justificam próxima ação, sem depender de busca manual.</p>
+          </article>
+          <article className="stat-card">
+            <span>Reativação</span>
+            <strong>{engagement.summary.reactivationCount}</strong>
+            <p>Clientes sem sinal recente e com espaço claro para retomar a conversa.</p>
+          </article>
+          <article className="stat-card">
+            <span>Base estável</span>
+            <strong>{engagement.summary.stableCount}</strong>
+            <p>Clientes sem urgência imediata, úteis para previsibilidade e rotina recorrente.</p>
+          </article>
+        </section>
+
         <div className="data-table">
           <div className="data-table-head">
             <span>Cliente</span>
+            <span>WhatsApp</span>
+            <span>Atividade recente</span>
             <span>Segmento</span>
             <span>Última venda</span>
             <span>Em aberto</span>
@@ -88,27 +134,67 @@ export default async function CustomersPage() {
             <span>Ações</span>
           </div>
           {customers.map((customer) => (
-            <article key={customer.id} className="data-table-row">
-              <div>
-                <strong>{customer.name}</strong>
-                <small>{customer.document ? `${customer.city} · ${customer.document}` : customer.city}</small>
-              </div>
-              <span>{customer.segment}</span>
-              <span>{customer.lastSale}</span>
-              <span>{customer.openAmount}</span>
-              <div>
-                <strong>{customer.status}</strong>
-                <small>{customer.note}</small>
-              </div>
-              <form action={deleteCustomerAction} className="row-action">
-                <input type="hidden" name="id" value={customer.id} />
-                <button type="submit" className="ghost-button">
-                  Remover
-                </button>
-              </form>
-            </article>
+            (() => {
+              const activity = whatsappActivityByCustomerId.get(customer.id);
+
+              return (
+                <article key={customer.id} className="data-table-row">
+                  <div>
+                    <strong>{customer.name}</strong>
+                    <small>{customer.document ? `${customer.city} · ${customer.document}` : customer.city}</small>
+                  </div>
+                  <span>{customer.phone || "Sem número"}</span>
+                  <div>
+                    <strong>{activity?.lastEventAt || "Sem evento real"}</strong>
+                    <small>{activity?.lastEventSummary || "Webhook ainda não associou mensagens a este cliente."}</small>
+                  </div>
+                  <span>{customer.segment}</span>
+                  <span>{customer.lastSale}</span>
+                  <span>{customer.openAmount}</span>
+                  <div>
+                    <strong>{customer.status}</strong>
+                    <small>{customer.note}</small>
+                  </div>
+                  <form action={deleteCustomerAction} className="row-action">
+                    <input type="hidden" name="id" value={customer.id} />
+                    <button type="submit" className="ghost-button">
+                      Remover
+                    </button>
+                  </form>
+                </article>
+              );
+            })()
           ))}
         </div>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Atenção comercial</span>
+            <h2>Quem merece ação primeiro na base de clientes</h2>
+          </div>
+        </div>
+
+        {engagement.items.length > 0 ? (
+          <div className="cards-grid quote-grid">
+            {engagement.items.slice(0, 4).map((item) => (
+              <article key={item.customerId} className="dashboard-card">
+                <span className="dashboard-kicker">{item.priority === "hot" ? "Quente" : item.priority === "followup" ? "Follow-up" : item.priority === "reactivation" ? "Reativação" : "Estável"}</span>
+                <h3>{item.customerName}</h3>
+                <p>{item.headline}</p>
+                <small className="muted-text">{item.helper}</small>
+                {item.lastEventAt ? <small className="muted-text">Último sinal em {item.lastEventAt}</small> : null}
+                <small className="muted-text">Em aberto: {item.openAmount} · Última venda: {item.lastSale}</small>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Base ainda sem leitura operacional</strong>
+            <span>Assim que clientes ganharem histórico e sinais no canal, esta área passa a ordenar follow-up, calor e reativação.</span>
+          </div>
+        )}
       </section>
 
       <section className="section-grid">

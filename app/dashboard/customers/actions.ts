@@ -11,6 +11,7 @@ function getString(formData: FormData, key: string) {
 export async function createCustomerAction(formData: FormData) {
   const input: CustomerInput = {
     name: getString(formData, "name"),
+    phone: getString(formData, "phone") || undefined,
     document: getString(formData, "document") || undefined,
     segment: getString(formData, "segment"),
     city: getString(formData, "city"),

@@ -68,6 +68,7 @@ export type PipelineColumn = {
 export type Customer = {
   id: string;
   name: string;
+  phone?: string;
   document?: string;
   segment: string;
   city: string;
@@ -79,11 +80,21 @@ export type Customer = {
 
 export type CustomerInput = {
   name: string;
+  phone?: string;
   document?: string;
   segment: string;
   city: string;
   status: Customer["status"];
   note: string;
+};
+
+export type CustomerWhatsappActivity = {
+  customerId: string;
+  customerName: string;
+  phone?: string;
+  lastEventAt?: string;
+  lastEventSummary?: string;
+  eventCount: number;
 };
 
 export type Quote = {

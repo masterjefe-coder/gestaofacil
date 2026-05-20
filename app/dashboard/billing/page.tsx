@@ -2,20 +2,30 @@ import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
 import {
   addChargeFollowUpAction,
+  applyWhatsappSignalFollowUpAction,
   createChargeAction,
   deleteChargeAction,
   markChargeAsDueTodayAction,
   markChargeAsPaidAction,
   postponeChargeAction,
   runChargeReminderAction,
+  sendChargeReminderWhatsappAction,
 } from "@/app/dashboard/billing/actions";
 import { createNfseDraftAction } from "@/app/dashboard/fiscal/actions";
+import { buildBillingWhatsappInsights } from "@/lib/billing-whatsapp-insights";
 import { buildChargeFollowUpActions, buildChargeReminderQueue, summarizeChargeFollowUp } from "@/lib/charge-follow-up";
+import { listChargeWhatsappHistory, type ChargeWhatsappHistoryEntry } from "@/lib/charge-whatsapp-history";
 import { getChargeUrgency, getChargeUrgencyLabel, sortChargesByPriority } from "@/lib/charge-priority";
+import { listChargeWhatsappSignals } from "@/lib/charge-whatsapp-signals";
+import { listCustomerWhatsappActivity } from "@/lib/customer-whatsapp-activity";
 import { listNfseDocuments } from "@/lib/nfse-repository";
 import { billingMoments } from "@/lib/site-data";
 import { listCharges } from "@/lib/charge-repository";
+import { listCustomers } from "@/lib/customer-repository";
+import { getEvolutionIntegrationStatus } from "@/lib/evolution-api";
 import { listQuotes } from "@/lib/quote-repository";
+import type { ChargeWhatsappSignal } from "@/lib/charge-whatsapp-signals";
+import type { Charge } from "@/lib/types";
 
 function formatFollowUpDate(value: string) {
   const parsed = new Date(value);
@@ -32,20 +42,53 @@ function formatFollowUpDate(value: string) {
   }).format(parsed);
 }
 
+function getHumanTriageLabel(signal: { suggestedOutcome?: string; inboundReplyDetected: boolean }) {
+  switch (signal.suggestedOutcome) {
+    case "Contestou":
+      return "Precisa tratar objeção antes de cobrar de novo.";
+    case "Pago em analise":
+      return "Vale conferir comprovante ou conciliação antes do próximo toque.";
+    case "Reagendado":
+      return "Cliente respondeu com novo prazo e pede ajuste da cadência.";
+    case "Prometeu pagar":
+      return "Cliente sinalizou intenção de pagar e merece acompanhamento manual.";
+    default:
+      return signal.inboundReplyDetected
+        ? "Cliente respondeu no canal, mas a leitura ainda depende de avaliação humana."
+        : "Sem triagem pendente.";
+  }
+}
+
 export default async function BillingPage() {
-  const [quotes, loadedCharges, nfseDocuments] = await Promise.all([
+  const [quotes, loadedCharges, nfseDocuments, customers, customerWhatsappActivity, chargeWhatsappSignals] = await Promise.all([
     listQuotes(),
     listCharges(),
     listNfseDocuments(),
+    listCustomers(),
+    listCustomerWhatsappActivity().catch(() => []),
+    listChargeWhatsappSignals().catch(() => []),
   ]);
   const charges = sortChargesByPriority(loadedCharges);
+  const chargeWhatsappHistory = await listChargeWhatsappHistory(charges).catch(() => new Map());
+  const customersByName = new Map(customers.map((customer) => [customer.name, customer]));
+  const whatsappActivityByCustomerName = new Map(customerWhatsappActivity.map((entry) => [entry.customerName, entry]));
+  const whatsappSignalsByCustomerName = new Map(chargeWhatsappSignals.map((entry) => [entry.customerName, entry]));
+  const evolution = getEvolutionIntegrationStatus();
   const approvedQuotes = quotes.filter((quote) => quote.status === "Aprovado");
   const followUpActions = buildChargeFollowUpActions(charges);
   const reminderQueue = buildChargeReminderQueue(charges);
   const followUpSummary = summarizeChargeFollowUp(followUpActions);
   const highlightedFollowUps = followUpActions.slice(0, 4);
   const unscheduledCount = followUpActions.filter((action) => action.bucket === "unmapped").length;
+  const whatsappReplyCount = chargeWhatsappSignals.filter((entry) => entry.inboundReplyDetected).length;
+  const whatsappSuggestedCount = chargeWhatsappSignals.filter((entry) => entry.suggestedOutcome).length;
+  const whatsappInsights = buildBillingWhatsappInsights(charges, chargeWhatsappSignals as ChargeWhatsappSignal[]);
   const chargesById = new Map(charges.map((charge) => [charge.id, charge]));
+  const chargesNeedingHumanTriage = whatsappInsights.items
+    .filter((item) => item.requiresHumanAction)
+    .slice(0, 4)
+    .map((item) => chargesById.get(item.chargeId))
+    .filter((item): item is Charge => Boolean(item));
   const nfseByCustomerAndAmount = new Map(
     nfseDocuments.map((document) => [`${document.customer}:::${document.serviceAmount}`, document]),
   );
@@ -176,6 +219,145 @@ export default async function BillingPage() {
               : "Toda cobrança aberta já tem ou não precisa de data operacional."}
           </p>
         </article>
+        <article className="stat-card">
+          <span>Respostas no canal</span>
+          <strong>{whatsappReplyCount}</strong>
+          <p>
+            {whatsappSuggestedCount > 0
+              ? `${whatsappSuggestedCount} retorno(s) já sugerem leitura operacional para follow-up.`
+              : "Acompanhe aqui quem respondeu pelo WhatsApp antes de insistir na cobrança."}
+          </p>
+        </article>
+        <article className="stat-card">
+          <span>Triagem humana</span>
+          <strong>{chargesNeedingHumanTriage.length}</strong>
+          <p>
+            {chargesNeedingHumanTriage.length > 0
+              ? "Clientes em aberto responderam no canal e pedem leitura antes do próximo disparo."
+              : "Nenhuma cobrança aberta com resposta pendente de triagem agora."}
+          </p>
+        </article>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Leituras do canal</span>
+            <h2>O que o WhatsApp já está dizendo sobre a fila de recebimentos</h2>
+          </div>
+        </div>
+
+        <div className="stats-row">
+          <article className="stat-card">
+            <span>Promessas</span>
+            <strong>{whatsappInsights.summary.promisedCount}</strong>
+            <p>Clientes em aberto que responderam sinalizando intenção de pagar.</p>
+          </article>
+          <article className="stat-card">
+            <span>Contestadas</span>
+            <strong>{whatsappInsights.summary.contestedCount}</strong>
+            <p>Cobranças que pedem tratamento humano antes de qualquer nova insistência.</p>
+          </article>
+          <article className="stat-card">
+            <span>Pago em análise</span>
+            <strong>{whatsappInsights.summary.paidInAnalysisCount}</strong>
+            <p>Respostas que sugerem comprovante ou pagamento já feito, ainda sem conciliação final.</p>
+          </article>
+          <article className="stat-card">
+            <span>Reagendadas</span>
+            <strong>{whatsappInsights.summary.rescheduledCount}</strong>
+            <p>Clientes que responderam com novo prazo e precisam de ajuste de cadência.</p>
+          </article>
+        </div>
+
+        {whatsappInsights.items.length > 0 ? (
+          <div className="cards-grid quote-grid">
+            {whatsappInsights.items.slice(0, 4).map((item) => (
+              <article key={item.chargeId} className="dashboard-card">
+                <span className="dashboard-kicker">{item.suggestedOutcome || "Resposta recebida"}</span>
+                <h3>{item.customer}</h3>
+                <strong className="quote-amount">{item.amount}</strong>
+                <p>{item.requiresHumanAction ? "Pede ação humana antes do próximo disparo." : "Já incorporado ao follow-up da cobrança."}</p>
+                <small className="muted-text">{item.dueLabel}</small>
+                {item.lastEventAt ? (
+                  <small className="muted-text">Último retorno em {item.lastEventAt}</small>
+                ) : null}
+                {item.lastMessagePreview ? (
+                  <div className="follow-up-entry">
+                    <strong>Mensagem recebida</strong>
+                    <small>{item.lastMessagePreview}</small>
+                  </div>
+                ) : null}
+                <Link href="#recebimentos" className="secondary-link">
+                  Abrir cobrança
+                </Link>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Canal ainda sem leitura pendente</strong>
+            <span>Quando clientes responderem no WhatsApp, essa área passa a separar promessa, contestação e confirmação em análise.</span>
+          </div>
+        )}
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Triagem de respostas</span>
+            <h2>Clientes que responderam e merecem ação humana antes de nova cobrança</h2>
+          </div>
+        </div>
+
+        {chargesNeedingHumanTriage.length > 0 ? (
+          <div className="cards-grid quote-grid">
+            {chargesNeedingHumanTriage.map((charge) => {
+              const signal = whatsappSignalsByCustomerName.get(charge.customer);
+
+              if (!signal) {
+                return null;
+              }
+
+              return (
+                <article key={charge.id} className="dashboard-card">
+                  <span className="dashboard-kicker">Resposta recebida</span>
+                  <h3>{charge.customer}</h3>
+                  <strong className="quote-amount">{charge.amount}</strong>
+                  <p>{getHumanTriageLabel(signal)}</p>
+                  <small className="muted-text">{getChargeUrgencyLabel(charge)}</small>
+                  {signal.lastEventAt ? (
+                    <small className="muted-text">Último sinal em {signal.lastEventAt}</small>
+                  ) : null}
+                  {signal.lastMessagePreview ? (
+                    <div className="follow-up-entry">
+                      <strong>Mensagem recebida</strong>
+                      <small>{signal.lastMessagePreview}</small>
+                    </div>
+                  ) : null}
+                  {signal.suggestedOutcome && signal.suggestedNote ? (
+                    <form action={applyWhatsappSignalFollowUpAction} className="card-action">
+                      <input type="hidden" name="id" value={charge.id} />
+                      <input type="hidden" name="outcome" value={signal.suggestedOutcome} />
+                      <input type="hidden" name="note" value={signal.suggestedNote} />
+                      <button type="submit" className="primary-link">
+                        Registrar {signal.suggestedOutcome}
+                      </button>
+                    </form>
+                  ) : null}
+                  <Link href="#recebimentos" className="secondary-link">
+                    Ver cobrança completa
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Sem triagem pendente</strong>
+            <span>As respostas recentes do WhatsApp já foram incorporadas ao fluxo ou não há cobranças abertas aguardando leitura humana.</span>
+          </div>
+        )}
       </section>
 
       <section className="data-panel">
@@ -189,35 +371,69 @@ export default async function BillingPage() {
         {reminderQueue.length > 0 ? (
           <div className="cards-grid quote-grid">
             {reminderQueue.map((task) => (
-              <article key={task.id} className="dashboard-card">
-                <span className="dashboard-kicker">{task.channel}</span>
-                <h3>{task.title}</h3>
-                <strong className="quote-amount">{task.amount}</strong>
-                <p>{task.reason}</p>
-                <small className="muted-text">{task.slaLabel}</small>
-                <small className="muted-text">{task.nextFollowUpLabel}</small>
-                <div className="follow-up-entry">
-                  <strong>Mensagem pronta</strong>
-                  <small>{task.message}</small>
-                </div>
-                <div className="dashboard-actions">
-                  {task.deliveryUrl && task.deliveryLabel ? (
-                    <a href={task.deliveryUrl} target="_blank" rel="noreferrer" className="secondary-link">
-                      {task.deliveryLabel}
-                    </a>
-                  ) : null}
-                  <form action={runChargeReminderAction} className="card-action">
-                    <input type="hidden" name="id" value={task.chargeId} />
-                    <input type="hidden" name="channel" value={task.channel} />
-                    <input type="hidden" name="outcome" value={task.suggestedOutcome} />
-                    <input type="hidden" name="reason" value={task.reason} />
-                    <input type="hidden" name="message" value={task.message} />
-                    <button type="submit" className="primary-link">
-                      Registrar envio
-                    </button>
-                  </form>
-                </div>
-              </article>
+              (() => {
+                const customer = customersByName.get(task.customer);
+                const whatsappActivity = whatsappActivityByCustomerName.get(task.customer);
+                const canSendViaEvolution = evolution.enabled
+                  && Boolean(customer?.phone)
+                  && (task.channel === "WhatsApp" || task.channel === "Pix reenviado");
+
+                return (
+                  <article key={task.id} className="dashboard-card">
+                    <span className="dashboard-kicker">{task.channel}</span>
+                    <h3>{task.title}</h3>
+                    <strong className="quote-amount">{task.amount}</strong>
+                    <p>{task.reason}</p>
+                    <small className="muted-text">{task.slaLabel}</small>
+                    <small className="muted-text">{task.nextFollowUpLabel}</small>
+                    <div className="follow-up-entry">
+                      <strong>Mensagem pronta</strong>
+                      <small>{task.message}</small>
+                    </div>
+                    {task.channel === "WhatsApp" || task.channel === "Pix reenviado" ? (
+                      <small className="muted-text">
+                        {customer?.phone
+                          ? `Número cadastrado: ${customer.phone}`
+                          : "Cliente ainda sem número cadastrado para envio automático."}
+                      </small>
+                    ) : null}
+                    {whatsappActivity?.eventCount ? (
+                      <small className="muted-text">
+                        Último sinal no WhatsApp: {whatsappActivity.lastEventAt} · {whatsappActivity.lastEventSummary}
+                      </small>
+                    ) : null}
+                    <div className="dashboard-actions">
+                      {task.deliveryUrl && task.deliveryLabel ? (
+                        <a href={task.deliveryUrl} target="_blank" rel="noreferrer" className="secondary-link">
+                          {task.deliveryLabel}
+                        </a>
+                      ) : null}
+                      {canSendViaEvolution ? (
+                        <form action={sendChargeReminderWhatsappAction} className="card-action">
+                          <input type="hidden" name="id" value={task.chargeId} />
+                          <input type="hidden" name="customer" value={task.customer} />
+                          <input type="hidden" name="phone" value={customer?.phone || ""} />
+                          <input type="hidden" name="channel" value={task.channel} />
+                          <input type="hidden" name="message" value={task.message} />
+                          <button type="submit" className="primary-link">
+                            Enviar via API
+                          </button>
+                        </form>
+                      ) : null}
+                      <form action={runChargeReminderAction} className="card-action">
+                        <input type="hidden" name="id" value={task.chargeId} />
+                        <input type="hidden" name="channel" value={task.channel} />
+                        <input type="hidden" name="outcome" value={task.suggestedOutcome} />
+                        <input type="hidden" name="reason" value={task.reason} />
+                        <input type="hidden" name="message" value={task.message} />
+                        <button type="submit" className="primary-link">
+                          Registrar envio
+                        </button>
+                      </form>
+                    </div>
+                  </article>
+                );
+              })()
             ))}
           </div>
         ) : (
@@ -228,7 +444,7 @@ export default async function BillingPage() {
         )}
       </section>
 
-      <section className="data-panel">
+      <section id="recebimentos" className="data-panel">
         <div className="card-header">
           <div>
             <span className="section-label">Fila de follow-up</span>
@@ -242,6 +458,7 @@ export default async function BillingPage() {
               (() => {
                 const linkedCharge = chargesById.get(action.id);
                 const latestFollowUp = linkedCharge?.followUps[0];
+                const whatsappSignal = whatsappSignalsByCustomerName.get(action.customer);
 
                 return (
                   <article key={action.id} className="dashboard-card">
@@ -257,6 +474,14 @@ export default async function BillingPage() {
                       <small className="muted-text">
                         Ultimo contato: {action.lastContactLabel}.
                       </small>
+                    ) : null}
+                    {whatsappSignal?.suggestedOutcome ? (
+                      <div className="auth-hint">
+                        <strong>Retorno recente no WhatsApp</strong>
+                        <span>
+                          Cliente respondeu no canal e o texto sugere: {whatsappSignal.suggestedOutcome}.
+                        </span>
+                      </div>
                     ) : null}
                     <div className="auth-hint">
                       <strong>Próxima ação</strong>
@@ -310,6 +535,10 @@ export default async function BillingPage() {
             (() => {
               const automaticAction = followUpActions.find((action) => action.id === charge.id);
               const relatedNfse = nfseByCustomerAndAmount.get(`${charge.customer}:::${charge.amount}`);
+              const customer = customersByName.get(charge.customer);
+              const whatsappActivity = whatsappActivityByCustomerName.get(charge.customer);
+              const whatsappSignal = whatsappSignalsByCustomerName.get(charge.customer);
+              const whatsappHistory = chargeWhatsappHistory.get(charge.id) || [];
 
               return (
                 <article key={charge.id} className="dashboard-card">
@@ -331,6 +560,61 @@ export default async function BillingPage() {
                       ? `${charge.followUps.length} follow-up(s) financeiro(s) registrados`
                       : "Nenhum follow-up financeiro registrado ainda"}
                   </small>
+                  {whatsappActivity?.eventCount ? (
+                    <div className="auth-hint">
+                      <strong>Cliente ativo no WhatsApp</strong>
+                      <span>
+                        Último evento em {whatsappActivity.lastEventAt}. {whatsappActivity.lastEventSummary}
+                      </span>
+                      <small className="muted-text">
+                        {whatsappActivity.eventCount} evento(s) recente(s) associados a este cliente pelo número cadastrado.
+                      </small>
+                    </div>
+                  ) : customer?.phone ? (
+                    <div className="auth-hint">
+                      <strong>Sem retorno recente no canal</strong>
+                      <span>O cliente tem número cadastrado, mas ainda não houve evento recente associado pelo webhook.</span>
+                    </div>
+                  ) : null}
+                  {whatsappSignal?.suggestedOutcome && whatsappSignal.suggestedNote ? (
+                    <div className="auth-hint">
+                      <strong>Leitura sugerida do retorno</strong>
+                      <span>
+                        A última mensagem recebida sugere: {whatsappSignal.suggestedOutcome}.
+                      </span>
+                      {whatsappSignal.lastMessagePreview ? (
+                        <small className="muted-text">&quot;{whatsappSignal.lastMessagePreview}&quot;</small>
+                      ) : null}
+                      <form action={applyWhatsappSignalFollowUpAction} className="card-action">
+                        <input type="hidden" name="id" value={charge.id} />
+                        <input type="hidden" name="outcome" value={whatsappSignal.suggestedOutcome} />
+                        <input type="hidden" name="note" value={whatsappSignal.suggestedNote} />
+                        <button type="submit" className="secondary-link">
+                          Registrar retorno sugerido
+                        </button>
+                      </form>
+                    </div>
+                  ) : whatsappSignal?.inboundReplyDetected ? (
+                    <div className="auth-hint">
+                      <strong>Cliente respondeu no canal</strong>
+                      <span>
+                        Houve mensagem recebida recentemente, mas ainda sem leitura automática confiável para classificar o retorno.
+                      </span>
+                    </div>
+                  ) : null}
+                  {whatsappHistory.length > 0 ? (
+                    <div className="follow-up-block">
+                      <strong>Histórico do WhatsApp desta cobrança</strong>
+                      <div className="follow-up-list">
+                        {whatsappHistory.map((entry: ChargeWhatsappHistoryEntry) => (
+                          <article key={entry.id} className="follow-up-entry">
+                            <strong>{entry.createdAt}</strong>
+                            <span>{entry.summary}</span>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   {charge.status === "Pago" ? (
                     relatedNfse ? (
                       <div className="auth-hint">

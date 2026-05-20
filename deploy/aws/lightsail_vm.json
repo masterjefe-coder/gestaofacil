@@ -1,0 +1,9 @@
+{
+  "provider": "aws_lightsail",
+  "region": "us-east-1",
+  "instance_name": "traderjefe-bot-large-dualstack",
+  "static_ip_name": "traderjefe-bot-static-ip",
+  "public_ip": "3.91.115.172",
+  "username": "ubuntu",
+  "notes": "VM compartilhada hoje com o projeto Bot-Trader e validada para futuro uso do Evolution API."
+}

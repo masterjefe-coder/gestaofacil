@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { dashboardSections } from "@/lib/site-data";
-import { getDashboardPipeline, getDashboardStats, getTodayAgenda } from "@/lib/workspace-repository";
+import {
+  getDashboardPipeline,
+  getDashboardRecommendations,
+  getDashboardStats,
+  getTodayAgenda,
+} from "@/lib/workspace-repository";
 
 export default async function DashboardPage() {
-  const [dashboardStats, pipelineColumns, todayAgenda] = await Promise.all([
+  const [dashboardStats, pipelineColumns, todayAgenda, recommendations] = await Promise.all([
     getDashboardStats(),
     getDashboardPipeline(),
     getTodayAgenda(),
+    getDashboardRecommendations(),
   ]);
 
   return (
@@ -35,6 +41,38 @@ export default async function DashboardPage() {
             <p>{stat.helper}</p>
           </article>
         ))}
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Ações recomendadas</span>
+            <h2>O melhor próximo passo do dia já aparece aqui</h2>
+          </div>
+        </div>
+
+        {recommendations.length > 0 ? (
+          <div className="cards-grid quote-grid">
+            {recommendations.map((item) => (
+              <article key={`${item.kicker}-${item.title}`} className="dashboard-card">
+                <span className="dashboard-kicker">{item.kicker}</span>
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+                <small className="muted-text">
+                  {item.priority === "critical" ? "Prioridade crítica" : item.priority === "high" ? "Prioridade alta" : "Prioridade normal"}
+                </small>
+                <Link href={item.href} className="secondary-link">
+                  {item.hrefLabel}
+                </Link>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Sem ação destacada</strong>
+            <span>Quando o produto identificar gargalos claros entre comercial, cobrança e fiscal, as próximas ações vão aparecer aqui.</span>
+          </div>
+        )}
       </section>
 
       <section className="section-grid dashboard-preview">

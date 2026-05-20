@@ -53,6 +53,8 @@ Frase secundaria:
 - [ARCHITECTURE.md](./ARCHITECTURE.md): arquitetura sugerida
 - [STATUS.md](./STATUS.md): estado atual resumido do projeto
 - [HANDOFF-2026-05-18.md](./HANDOFF-2026-05-18.md): handoff operacional completo para retomada
+- [AWS-VM-ACCESS.md](./AWS-VM-ACCESS.md): copia local do acesso da VM AWS compartilhada com o `Bot-Trader`
+- [deploy/evolution/README.md](./deploy/evolution/README.md): stack reproduzivel da Evolution API para a Lightsail
 - [NEXT-STEPS.md](./NEXT-STEPS.md): ponto de entrada rapido para continuar
 - [CHECKLIST.md](./CHECKLIST.md): checklist objetiva do que ja esta pronto e do que falta
 - [DECISIONS.md](./DECISIONS.md): decisoes tecnicas e de produto tomadas
@@ -88,6 +90,13 @@ Variaveis de ambiente minimas na Vercel:
 - `AUTH_DEMO_EMAIL`
 - `AUTH_DEMO_PASSWORD`
 - `GESTAO_FACIL_DATA_MODE=database`
+
+Variaveis para integrar a Evolution API:
+
+- `EVOLUTION_API_BASE_URL`
+- `EVOLUTION_API_KEY`
+- `EVOLUTION_API_INSTANCE`
+- `EVOLUTION_API_TIMEOUT_MS` opcional
 
 Variaveis para integrar a NFS-e Nacional:
 

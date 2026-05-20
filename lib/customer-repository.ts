@@ -61,6 +61,7 @@ export async function listCustomers(): Promise<Customer[]> {
     return {
       id: customer.id,
       name: customer.name,
+      phone: customer.phone || undefined,
       document: customer.document || undefined,
       segment: meta.segment,
       city: customer.city || "Sem cidade",
@@ -78,6 +79,7 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
     const customer: Customer = {
       id: randomUUID(),
       name: input.name,
+      phone: input.phone,
       document: input.document,
       segment: input.segment,
       city: input.city,
@@ -95,18 +97,20 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
   const workspace = await ensureDemoCustomersSeeded();
 
   const customer = await prisma.customer.create({
-    data: {
-      workspaceId: workspace.id,
-      name: input.name,
-      document: input.document,
-      city: input.city,
-      notes: encodeCustomerNotes(input),
+      data: {
+        workspaceId: workspace.id,
+        name: input.name,
+        phone: input.phone,
+        document: input.document,
+        city: input.city,
+        notes: encodeCustomerNotes(input),
     },
   });
 
   return {
     id: customer.id,
     name: customer.name,
+    phone: customer.phone || undefined,
     document: customer.document || undefined,
     segment: input.segment,
     city: customer.city || "Sem cidade",
