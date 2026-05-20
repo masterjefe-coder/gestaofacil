@@ -31,8 +31,8 @@ export function BrandLogo({
       <Image
         src="/brand/logo-wordmark.png"
         alt="Gestão Fácil Sistemas"
-        width={485}
-        height={123}
+        width={1080}
+        height={326}
         priority={priority}
         className="brand-logo-image brand-logo-image-wordmark"
       />
