@@ -2,9 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
 import {
+  connectWorkspaceAsaasAccountAction,
   connectEvolutionInstanceAction,
   createEvolutionInstanceAction,
   createWorkspaceMemberAction,
+  disconnectWorkspaceAsaasAccountAction,
   removeWorkspaceMemberAction,
   resetWorkspaceMemberPasswordAction,
   updateWorkspaceMemberRoleAction,
@@ -23,6 +25,7 @@ import {
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { getAsaasIntegrationStatus } from "@/lib/asaas";
+import { getWorkspaceAsaasConnection } from "@/lib/asaas-workspace";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getFiscalSetupReadiness } from "@/lib/nfse-repository";
 import { getNfseEmissionModeSummary, getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
@@ -33,6 +36,9 @@ type SetupPageProps = {
     evolutionOk?: string;
     evolutionPairingCode?: string;
     evolutionQrCode?: string;
+    asaasConnected?: string;
+    asaasDisconnected?: string;
+    asaasError?: string;
     teamCreated?: string;
     teamUpdated?: string;
     teamRemoved?: string;
@@ -55,7 +61,7 @@ function getEvolutionStateLabel(value: string | undefined) {
 }
 
 export default async function SetupPage({ searchParams }: SetupPageProps) {
-  const [setup, members, auditEntries, evolutionAuditEntries, context, params, fiscalReadiness, evolutionProbe, evolutionInstances] = await Promise.all([
+  const [setup, members, auditEntries, evolutionAuditEntries, context, params, fiscalReadiness, evolutionProbe, evolutionInstances, workspaceAsaas] = await Promise.all([
     getWorkspaceSetup(),
     listWorkspaceMembers(),
     listAuditEntries(8),
@@ -65,6 +71,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     getFiscalSetupReadiness(),
     probeEvolutionApi(),
     fetchEvolutionInstances().catch(() => []),
+    getWorkspaceAsaasConnection(),
   ]);
   const teamCreated = params?.teamCreated === "1";
   const teamUpdated = params?.teamUpdated === "1";
@@ -75,6 +82,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const evolutionOk = params?.evolutionOk === "1";
   const evolutionPairingCode = params?.evolutionPairingCode;
   const evolutionQrCode = params?.evolutionQrCode;
+  const asaasConnected = params?.asaasConnected === "1";
+  const asaasDisconnected = params?.asaasDisconnected === "1";
+  const asaasError = params?.asaasError;
   const canManage = isLocalDataMode() || canManageWorkspace(context.workspaceRole);
   const emissionModes = getNfseEmissionModeSummary();
   const nfseIntegration = getNfseNationalIntegrationStatus();
@@ -365,6 +375,13 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <small className="muted-text">
             Ambiente: {asaasIntegration.environment === "production" ? "produção" : "sandbox"}.
           </small>
+          <small className="muted-text">
+            Modo atual do workspace: {workspaceAsaas.mode === "workspace"
+              ? "conta própria ou subconta conectada"
+              : workspaceAsaas.mode === "root_fallback"
+                ? "fallback da conta raiz"
+                : "sem integração ativa"}.
+          </small>
         </div>
 
         <div className={asaasIntegration.webhookConfigured ? "auth-hint" : "auth-hint fiscal-warning"}>
@@ -383,6 +400,82 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <small className="muted-text">
             Eventos recomendados: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_OVERDUE`, `PAYMENT_UPDATED` e `PAYMENT_DELETED`.
           </small>
+        </div>
+
+        {asaasConnected ? (
+          <div className="auth-hint">
+            <strong>Conta Asaas conectada</strong>
+            <span>O workspace passa a emitir cobranças pela própria conta ou subconta configurada.</span>
+          </div>
+        ) : null}
+        {asaasDisconnected ? (
+          <div className="auth-hint fiscal-warning">
+            <strong>Conta Asaas desconectada</strong>
+            <span>O workspace voltou ao comportamento sem conta própria configurada.</span>
+          </div>
+        ) : null}
+        {asaasError ? (
+          <div className="auth-hint fiscal-warning">
+            <strong>Falha na configuração Asaas</strong>
+            <span>{asaasError}</span>
+          </div>
+        ) : null}
+
+        {canManage ? (
+          <form action={connectWorkspaceAsaasAccountAction} className="inline-form">
+            <label className="form-span-2">
+              <span>API key da conta ou subconta do workspace</span>
+              <input
+                name="asaasApiKey"
+                type="password"
+                placeholder={workspaceAsaas.mode === "workspace" ? "Preencha apenas para trocar a chave atual" : "Cole a API key da conta do cliente"}
+                required={workspaceAsaas.mode !== "workspace"}
+              />
+            </label>
+            <label>
+              <span>ID da conta Asaas</span>
+              <input
+                name="asaasAccountId"
+                type="text"
+                defaultValue={setup.asaasAccountId || ""}
+                placeholder="Opcional por enquanto"
+              />
+            </label>
+            <label>
+              <span>WalletId detectado</span>
+              <input value={setup.asaasWalletId || workspaceAsaas.walletId || ""} type="text" readOnly />
+            </label>
+            <label className="form-span-2">
+              <span>Split de plataforma</span>
+              <div className="checkbox-row">
+                <input
+                  id="asaas-split-enabled"
+                  name="asaasSplitEnabled"
+                  type="checkbox"
+                  defaultChecked={Boolean(setup.asaasSplitEnabled)}
+                />
+                <span>Deixar a estrutura pronta para split futuro. Por enquanto, mantenha desligado se não houver taxa.</span>
+              </div>
+            </label>
+            <button type="submit" className="primary-link form-submit">
+              Conectar conta própria
+            </button>
+          </form>
+        ) : null}
+
+        {canManage && workspaceAsaas.mode === "workspace" ? (
+          <form action={disconnectWorkspaceAsaasAccountAction} className="card-action">
+            <button type="submit" className="ghost-button">
+              Desconectar conta própria
+            </button>
+          </form>
+        ) : null}
+
+        <div className="auth-hint">
+          <strong>Estrutura recomendada</strong>
+          <span>
+            O melhor modelo é cada workspace cobrar pela própria conta ou subconta Asaas. O fallback da conta raiz só deve ser usado enquanto a configuração individual ainda não existir.
+          </span>
         </div>
       </section>
 

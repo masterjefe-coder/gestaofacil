@@ -106,6 +106,11 @@ model Company {
   defaultFiscalServiceCode String?
   defaultPixKey         String?
   defaultPaymentMessage String?
+  asaasApiKey           String?
+  asaasAccountId        String?
+  asaasWalletId         String?
+  asaasUseOwnAccount    Boolean   @default(false)
+  asaasSplitEnabled     Boolean   @default(false)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   workspaceId           String    @unique

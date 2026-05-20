@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { WorkspaceRole } from "@prisma/client";
 import { connectEvolutionInstance, createEvolutionInstance, EvolutionApiError } from "@/lib/evolution-api";
-import { updateWorkspaceSetup } from "@/lib/workspace-settings-repository";
+import {
+  connectWorkspaceAsaasAccount,
+  disconnectWorkspaceAsaasAccount,
+  updateWorkspaceSetup,
+} from "@/lib/workspace-settings-repository";
 import {
   createWorkspaceMember,
   removeWorkspaceMember,
@@ -199,4 +203,48 @@ export async function connectEvolutionInstanceAction(formData: FormData) {
 
     redirectEvolution(message);
   }
+}
+
+export async function connectWorkspaceAsaasAccountAction(formData: FormData) {
+  const apiKey = getString(formData, "asaasApiKey");
+  const accountId = getString(formData, "asaasAccountId");
+  const splitEnabled = getString(formData, "asaasSplitEnabled") === "on";
+
+  if (!apiKey) {
+    redirect(`/dashboard/setup?asaasError=${encodeURIComponent("Informe a API key da conta ou subconta Asaas do workspace.")}`);
+  }
+
+  try {
+    await connectWorkspaceAsaasAccount({
+      apiKey,
+      accountId: accountId || undefined,
+      splitEnabled,
+    });
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Nao foi possivel conectar a conta Asaas do workspace.";
+
+    redirect(`/dashboard/setup?asaasError=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirect("/dashboard/setup?asaasConnected=1");
+}
+
+export async function disconnectWorkspaceAsaasAccountAction() {
+  try {
+    await disconnectWorkspaceAsaasAccount();
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Nao foi possivel desconectar a conta Asaas do workspace.";
+
+    redirect(`/dashboard/setup?asaasError=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirect("/dashboard/setup?asaasDisconnected=1");
 }

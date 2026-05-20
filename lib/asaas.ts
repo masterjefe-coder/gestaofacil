@@ -8,6 +8,10 @@ type AsaasCustomer = {
   id: string;
 };
 
+type AsaasWallet = {
+  id: string;
+};
+
 type AsaasPayment = {
   id: string;
   invoiceUrl?: string | null;
@@ -40,6 +44,20 @@ export class AsaasApiError extends Error {
 
 function getAsaasConfig() {
   const apiKey = process.env.ASAAS_API_KEY?.trim();
+  const environment = (process.env.ASAAS_ENVIRONMENT?.trim().toLowerCase() === "production" ? "production" : "sandbox") as AsaasEnvironment;
+  const baseUrl = environment === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
+  const enabled = Boolean(apiKey);
+
+  return {
+    apiKey,
+    environment,
+    baseUrl,
+    enabled,
+  };
+}
+
+function getAsaasConfigForApiKey(apiKeyOverride?: string) {
+  const apiKey = apiKeyOverride?.trim() || process.env.ASAAS_API_KEY?.trim();
   const environment = (process.env.ASAAS_ENVIRONMENT?.trim().toLowerCase() === "production" ? "production" : "sandbox") as AsaasEnvironment;
   const baseUrl = environment === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
   const enabled = Boolean(apiKey);
@@ -134,8 +152,8 @@ async function parseAsaasResponse<T>(response: Response): Promise<T> {
   return body as T;
 }
 
-async function asaasFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const config = getAsaasConfig();
+async function asaasFetchWithApiKey<T>(apiKey: string, path: string, init?: RequestInit): Promise<T> {
+  const config = getAsaasConfigForApiKey(apiKey);
 
   if (!config.apiKey) {
     throw new AsaasApiError("ASAAS_API_KEY nao configurada.");
@@ -154,7 +172,45 @@ async function asaasFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return parseAsaasResponse<T>(response);
 }
 
-async function findAsaasCustomer(externalReference: string, document?: string): Promise<AsaasCustomer | null> {
+function resolvePlatformSplitConfig() {
+  const walletId = process.env.ASAAS_PLATFORM_WALLET_ID?.trim();
+  const percent = process.env.ASAAS_PLATFORM_SPLIT_PERCENT?.trim();
+  const fixed = process.env.ASAAS_PLATFORM_SPLIT_FIXED_VALUE?.trim();
+
+  if (!walletId) {
+    return null;
+  }
+
+  if (percent) {
+    return {
+      walletId,
+      percentualValue: Number(percent),
+    };
+  }
+
+  if (fixed) {
+    return {
+      walletId,
+      fixedValue: Number(fixed),
+    };
+  }
+
+  return null;
+}
+
+export async function inspectAsaasAccount(apiKey: string) {
+  const wallets = await asaasFetchWithApiKey<AsaasWallet[]>(apiKey, "/wallets", {
+    method: "GET",
+  });
+
+  const firstWallet = Array.isArray(wallets) ? wallets[0] : null;
+
+  return {
+    walletId: firstWallet?.id,
+  };
+}
+
+async function findAsaasCustomer(apiKey: string, externalReference: string, document?: string): Promise<AsaasCustomer | null> {
   const params = new URLSearchParams({
     externalReference,
     limit: "1",
@@ -167,7 +223,7 @@ async function findAsaasCustomer(externalReference: string, document?: string): 
     params.set("cpfCnpj", documentDigits);
   }
 
-  const response = await asaasFetch<AsaasListResponse<AsaasCustomer>>(`/customers?${params.toString()}`, {
+  const response = await asaasFetchWithApiKey<AsaasListResponse<AsaasCustomer>>(apiKey, `/customers?${params.toString()}`, {
     method: "GET",
   });
 
@@ -175,12 +231,13 @@ async function findAsaasCustomer(externalReference: string, document?: string): 
 }
 
 async function ensureAsaasCustomer(input: {
+  apiKey: string;
   externalReference: string;
   name: string;
   document?: string;
   phone?: string;
 }): Promise<AsaasCustomer> {
-  const existing = await findAsaasCustomer(input.externalReference, input.document);
+  const existing = await findAsaasCustomer(input.apiKey, input.externalReference, input.document);
 
   if (existing) {
     return existing;
@@ -193,7 +250,7 @@ async function ensureAsaasCustomer(input: {
     throw new AsaasApiError(`Cliente ${input.name} ainda nao possui CPF/CNPJ para criar cobranca no Asaas.`);
   }
 
-  return asaasFetch<AsaasCustomer>("/customers", {
+  return asaasFetchWithApiKey<AsaasCustomer>(input.apiKey, "/customers", {
     method: "POST",
     body: JSON.stringify({
       name: truncate(input.name, 100),
@@ -205,15 +262,21 @@ async function ensureAsaasCustomer(input: {
   });
 }
 
+type AsaasPaymentSplit =
+  | { walletId: string; percentualValue: number }
+  | { walletId: string; fixedValue: number };
+
 async function createAsaasPayment(input: {
+  apiKey?: string;
   customerId: string;
   billingType: AsaasBillingType;
   value: number;
   dueDate: string;
   description: string;
   externalReference: string;
+  split?: AsaasPaymentSplit[];
 }): Promise<AsaasPayment> {
-  return asaasFetch<AsaasPayment>("/payments", {
+  return asaasFetchWithApiKey<AsaasPayment>(input.apiKey || process.env.ASAAS_API_KEY?.trim() || "", "/payments", {
     method: "POST",
     body: JSON.stringify({
       customer: input.customerId,
@@ -222,17 +285,19 @@ async function createAsaasPayment(input: {
       dueDate: input.dueDate,
       description: truncate(input.description, 500),
       externalReference: input.externalReference,
+      split: input.split,
     }),
   });
 }
 
-async function getPixQrCode(paymentId: string): Promise<AsaasPixQrCode> {
-  return asaasFetch<AsaasPixQrCode>(`/payments/${paymentId}/pixQrCode`, {
+async function getPixQrCode(paymentId: string, apiKey?: string): Promise<AsaasPixQrCode> {
+  return asaasFetchWithApiKey<AsaasPixQrCode>(apiKey || process.env.ASAAS_API_KEY?.trim() || "", `/payments/${paymentId}/pixQrCode`, {
     method: "GET",
   });
 }
 
 export async function createAsaasCharge(input: {
+  apiKey?: string;
   externalReference: string;
   customerReference: string;
   customerName: string;
@@ -242,8 +307,9 @@ export async function createAsaasCharge(input: {
   dueDate?: string;
   description: string;
   paymentMethod: string;
+  splitEnabled?: boolean;
 }): Promise<{ paymentLink?: string; externalBilling: ExternalChargeBilling }> {
-  const config = getAsaasConfig();
+  const config = getAsaasConfigForApiKey(input.apiKey);
 
   if (!config.enabled) {
     throw new AsaasApiError("Asaas ainda nao esta configurado neste ambiente.");
@@ -252,24 +318,29 @@ export async function createAsaasCharge(input: {
   const dueDate = input.dueDate || new Date().toISOString().slice(0, 10);
   const billingType = resolveBillingType(input.paymentMethod);
   const customer = await ensureAsaasCustomer({
+    apiKey: config.apiKey || "",
     externalReference: input.customerReference,
     name: input.customerName,
     document: input.customerDocument,
     phone: input.customerPhone,
   });
+  const splitConfig = input.splitEnabled ? resolvePlatformSplitConfig() : null;
+  const split = splitConfig ? [splitConfig] : undefined;
   const payment = await createAsaasPayment({
+    apiKey: config.apiKey || undefined,
     customerId: customer.id,
     billingType,
     value: parseCurrencyToNumber(input.amount),
     dueDate,
     description: input.description,
     externalReference: input.externalReference,
+    split,
   });
 
   let pixQrCode: AsaasPixQrCode | null = null;
 
   if (billingType === "PIX") {
-    pixQrCode = await getPixQrCode(payment.id);
+    pixQrCode = await getPixQrCode(payment.id, config.apiKey || undefined);
   }
 
   const paymentLink = payment.invoiceUrl || payment.bankSlipUrl || undefined;

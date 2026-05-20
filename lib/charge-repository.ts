@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Charge as DbCharge, Customer as DbCustomer, Order as DbOrder } from "@prisma/client";
 import { getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { createAsaasCharge } from "@/lib/asaas";
+import { getWorkspaceAsaasConnection } from "@/lib/asaas-workspace";
 import { recordAuditEvent } from "@/lib/audit-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import {
@@ -67,7 +68,10 @@ async function buildExternalBillingForCharge(input: {
   description: string;
   paymentMethod: string;
 }) {
+  const connection = await getWorkspaceAsaasConnection();
+
   return createAsaasCharge({
+    apiKey: connection.apiKey || undefined,
     externalReference: input.chargeReference,
     customerReference: input.customerReference,
     customerName: input.customerName,
@@ -77,6 +81,7 @@ async function buildExternalBillingForCharge(input: {
     dueDate: input.dueDate,
     description: input.description,
     paymentMethod: input.paymentMethod,
+    splitEnabled: connection.mode === "workspace" && connection.splitEnabled,
   });
 }
 

@@ -1,5 +1,6 @@
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { recordAuditEvent } from "@/lib/audit-repository";
+import { inspectAsaasAccount } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { resolveIbgeMunicipalityCode } from "@/lib/ibge";
@@ -36,6 +37,10 @@ export async function getWorkspaceSetup() {
       defaultFiscalServiceCode: company?.defaultFiscalServiceCode || "",
       defaultPixKey: company?.defaultPixKey || "",
       defaultPaymentMessage: company?.defaultPaymentMessage || "",
+      asaasAccountId: company?.asaasAccountId || "",
+      asaasWalletId: company?.asaasWalletId || "",
+      asaasUseOwnAccount: company?.asaasUseOwnAccount || false,
+      asaasSplitEnabled: company?.asaasSplitEnabled || false,
     };
   }
 
@@ -192,9 +197,126 @@ export async function updateWorkspaceSetup(input: SetupInput) {
     serviceDescription: input.serviceDescription,
     defaultFiscalServiceCode: input.defaultFiscalServiceCode || "",
     defaultPixKey: input.defaultPixKey,
-    defaultPaymentMessage: input.defaultPaymentMessage,
-  };
+      defaultPaymentMessage: input.defaultPaymentMessage,
+      asaasAccountId: data.company.asaasAccountId || "",
+      asaasWalletId: data.company.asaasWalletId || "",
+      asaasUseOwnAccount: data.company.asaasUseOwnAccount || false,
+      asaasSplitEnabled: data.company.asaasSplitEnabled || false,
+    };
 
   await writeDemoWorkspaceData(data);
   return data;
+}
+
+export async function connectWorkspaceAsaasAccount(input: {
+  apiKey: string;
+  accountId?: string;
+  splitEnabled: boolean;
+}) {
+  const inspection = await inspectAsaasAccount(input.apiKey);
+  const walletId = inspection.walletId;
+
+  if (!walletId) {
+    throw new Error("Nao foi possivel recuperar o walletId da conta Asaas informada.");
+  }
+
+  if (!isLocalDataMode()) {
+    await ensureDemoCommerceSeeded();
+    const context = await getCurrentWorkspaceContext();
+
+    if (!canManageWorkspace(context.workspaceRole)) {
+      throw new Error("Apenas owner ou admin podem conectar a conta Asaas do workspace.");
+    }
+
+    await prisma.company.upsert({
+      where: { workspaceId: context.workspaceId },
+      update: {
+        asaasApiKey: input.apiKey,
+        asaasAccountId: input.accountId || null,
+        asaasWalletId: walletId,
+        asaasUseOwnAccount: true,
+        asaasSplitEnabled: input.splitEnabled,
+      },
+      create: {
+        workspaceId: context.workspaceId,
+        legalName: "Empresa sem razão social definida",
+        tradeName: "Workspace sem setup completo",
+        document: `workspace-${context.workspaceId}`,
+        asaasApiKey: input.apiKey,
+        asaasAccountId: input.accountId || null,
+        asaasWalletId: walletId,
+        asaasUseOwnAccount: true,
+        asaasSplitEnabled: input.splitEnabled,
+      },
+    });
+
+    await recordAuditEvent({
+      action: "workspace.asaas.connected",
+      entityType: "workspace",
+      entityId: context.workspaceId,
+      context,
+      payload: {
+        summary: "Conta Asaas propria conectada ao workspace.",
+        metadata: {
+          walletId,
+          accountId: input.accountId || null,
+          splitEnabled: input.splitEnabled,
+        },
+      },
+    });
+
+    return { walletId };
+  }
+
+  const data = await readDemoWorkspaceData();
+  data.company.asaasApiKey = input.apiKey;
+  data.company.asaasAccountId = input.accountId || "";
+  data.company.asaasWalletId = walletId;
+  data.company.asaasUseOwnAccount = true;
+  data.company.asaasSplitEnabled = input.splitEnabled;
+  await writeDemoWorkspaceData(data);
+  return { walletId };
+}
+
+export async function disconnectWorkspaceAsaasAccount() {
+  if (!isLocalDataMode()) {
+    await ensureDemoCommerceSeeded();
+    const context = await getCurrentWorkspaceContext();
+
+    if (!canManageWorkspace(context.workspaceRole)) {
+      throw new Error("Apenas owner ou admin podem desconectar a conta Asaas do workspace.");
+    }
+
+    await prisma.company.updateMany({
+      where: { workspaceId: context.workspaceId },
+      data: {
+        asaasApiKey: null,
+        asaasAccountId: null,
+        asaasWalletId: null,
+        asaasUseOwnAccount: false,
+        asaasSplitEnabled: false,
+      },
+    });
+
+    await recordAuditEvent({
+      action: "workspace.asaas.disconnected",
+      entityType: "workspace",
+      entityId: context.workspaceId,
+      context,
+      payload: {
+        summary: "Conta Asaas propria desconectada do workspace.",
+        metadata: {},
+      },
+    });
+
+    return;
+  }
+
+  const data = await readDemoWorkspaceData();
+  data.company.asaasApiKey = "";
+  data.company.asaasAccountId = "";
+  data.company.asaasWalletId = "";
+  data.company.asaasUseOwnAccount = false;
+  data.company.asaasSplitEnabled = false;
+  await writeDemoWorkspaceData(data);
 }

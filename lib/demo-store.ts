@@ -24,6 +24,10 @@ const defaultCompany: CompanyProfile = {
   defaultPixKey: "43300030000126",
   defaultPaymentMessage:
     "Pagamento referente aos servicos contratados. Envie o comprovante por WhatsApp.",
+  asaasAccountId: "",
+  asaasWalletId: "",
+  asaasUseOwnAccount: false,
+  asaasSplitEnabled: false,
 };
 
 const defaultData: DemoWorkspaceData = {

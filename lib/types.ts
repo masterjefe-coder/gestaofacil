@@ -21,6 +21,11 @@ export type CompanyProfile = {
   defaultFiscalServiceCode?: string;
   defaultPixKey: string;
   defaultPaymentMessage: string;
+  asaasApiKey?: string;
+  asaasAccountId?: string;
+  asaasWalletId?: string;
+  asaasUseOwnAccount?: boolean;
+  asaasSplitEnabled?: boolean;
 };
 
 export type SetupInput = WorkspaceProfile & CompanyProfile;
