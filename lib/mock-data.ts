@@ -1,14 +1,14 @@
 import type { Charge, Customer, NavItem, NfseDocument, Order, PipelineColumn, Quote, Stat } from "@/lib/types";
 
 export const dashboardNav: NavItem[] = [
-  { href: "/dashboard", label: "Visao geral", helper: "Resumo do dia" },
-  { href: "/dashboard/customers", label: "Clientes", helper: "Historico comercial" },
-  { href: "/dashboard/quotes", label: "Orcamentos", helper: "Propostas e follow-up" },
-  { href: "/dashboard/orders", label: "Pedidos", helper: "Execucao da venda" },
-  { href: "/dashboard/billing", label: "Cobrancas", helper: "Pix e recebimentos" },
-  { href: "/dashboard/fiscal", label: "Fiscal", helper: "Fila de NFS-e" },
-  { href: "/dashboard/reports", label: "Relatorios", helper: "Tela, PDF e Excel" },
-  { href: "/dashboard/setup", label: "Setup", helper: "Workspace e empresa" },
+  { href: "/dashboard", label: "Inicio", helper: "Central da operação" },
+  { href: "/dashboard/customers", label: "Clientes", helper: "Relacionamento e histórico" },
+  { href: "/dashboard/quotes", label: "Orçamentos", helper: "Propostas e negociações" },
+  { href: "/dashboard/orders", label: "Pedidos", helper: "Serviços em andamento" },
+  { href: "/dashboard/billing", label: "Financeiro", helper: "Cobranças e pagamentos" },
+  { href: "/dashboard/fiscal", label: "Notas", helper: "Emissão e revisão" },
+  { href: "/dashboard/reports", label: "Relatórios", helper: "Resumo e exportação" },
+  { href: "/dashboard/setup", label: "Empresa", helper: "Equipe, WhatsApp e cobrança" },
 ];
 
 export const dashboardStats: Stat[] = [
