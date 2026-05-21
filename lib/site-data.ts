@@ -88,8 +88,8 @@ export const pricingPlans = [
       "1 usuário",
       "1 workspace",
       "1 conexão WhatsApp",
-      "até 100 cobranças por mês",
-      "até 50 NFS-e por mês",
+      "até 150 cobranças por mês",
+      "até 80 NFS-e por mês",
     ],
     features: [
       "Clientes ilimitados",
@@ -109,11 +109,11 @@ export const pricingPlans = [
     cta: "Testar plano profissional",
     audience: "Clínicas de estética, mecânicas, serviços técnicos e pequenos times",
     limits: [
-      "até 3 usuários",
+      "até 5 usuários",
       "1 workspace",
       "até 2 conexões WhatsApp",
-      "até 400 cobranças por mês",
-      "até 200 NFS-e por mês",
+      "até 600 cobranças por mês",
+      "até 300 NFS-e por mês",
     ],
     features: [
       "Tudo do Essencial",
@@ -135,9 +135,9 @@ export const pricingPlans = [
     limits: [
       "até 8 usuários",
       "até 2 unidades ou operações",
-      "Múltiplas conexões WhatsApp",
-      "Cobranças ilimitadas na prática operacional",
-      "até 600 NFS-e por mês",
+      "até 4 conexões WhatsApp",
+      "até 1.500 cobranças por mês",
+      "até 1.000 NFS-e por mês",
     ],
     features: [
       "Tudo do Profissional",

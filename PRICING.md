@@ -27,19 +27,19 @@ O posicionamento comercial ideal no lancamento e:
 - 1 usuario
 - 1 workspace
 - 1 conexao WhatsApp
-- ate 100 cobrancas por mes
-- ate 50 NFS-e por mes
+- ate 150 cobrancas por mes
+- ate 80 NFS-e por mes
 - clientes ilimitados
 - orcamentos e pedidos ilimitados
 
 ### Profissional
 
 - `R$ 219/mês`
-- ate 3 usuarios
+- ate 5 usuarios
 - 1 workspace
 - ate 2 conexoes WhatsApp
-- ate 400 cobrancas por mes
-- ate 200 NFS-e por mes
+- ate 600 cobrancas por mes
+- ate 300 NFS-e por mes
 - relatorios completos
 - fila fiscal e cobranca mais fortes
 
@@ -48,9 +48,9 @@ O posicionamento comercial ideal no lancamento e:
 - `R$ 349/mês`
 - ate 8 usuarios
 - operacao mais puxada ou mais de uma unidade
-- multiplas conexoes WhatsApp
-- cobrancas ilimitadas na pratica operacional
-- ate 600 NFS-e por mes
+- ate 4 conexoes WhatsApp
+- ate 1.500 cobrancas por mes
+- ate 1.000 NFS-e por mes
 - onboarding assistido
 - prioridade operacional
 
