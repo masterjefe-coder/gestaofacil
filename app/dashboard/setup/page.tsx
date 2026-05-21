@@ -109,12 +109,21 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const evolutionIntegration = getEvolutionIntegrationStatus();
   const asaasIntegration = getAsaasIntegrationStatus();
   const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
-  const selectedEvolutionInstanceName = evolutionIntegration.instance || evolutionInstances[0]?.instanceName || "";
+  const workspaceEvolutionInstance = evolutionInstances.find((instance) => instance.instanceName === setup.slug);
+  const fallbackEvolutionInstance = evolutionInstances.find((instance) => instance.instanceName === evolutionIntegration.instance);
+  const selectedEvolutionInstanceName =
+    workspaceEvolutionInstance?.instanceName
+    || fallbackEvolutionInstance?.instanceName
+    || evolutionIntegration.instance
+    || evolutionInstances[0]?.instanceName
+    || "";
   const selectedEvolutionInstanceState = selectedEvolutionInstanceName
     ? await getEvolutionConnectionState(selectedEvolutionInstanceName).catch(() => null)
     : null;
+  const isUsingWorkspaceEvolutionInstance = selectedEvolutionInstanceName === setup.slug;
   const subscriptionPlan = getSubscriptionPlanPresentation(subscription.plan);
   const trialRemainingDays = getTrialRemainingDays(subscription);
+  const localMode = isLocalDataMode();
 
   return (
     <DashboardShell
@@ -204,6 +213,69 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             </div>
           </article>
         </aside>
+      </section>
+
+      {localMode ? (
+        <div className="auth-hint fiscal-warning">
+          <strong>Ambiente local em modo demo</strong>
+          <span>
+            Este workspace local não está usando `DATABASE_URL`, então ele não reflete automaticamente usuários ou dados criados no site em produção.
+          </span>
+          <small className="muted-text">
+            Para validar o usuário que você criou ontem e testar integrações ponta a ponta, o ambiente precisa rodar em modo banco.
+          </small>
+        </div>
+      ) : null}
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Prontidão de produção</span>
+            <h2>O que já está pronto e o que ainda depende de validação real</h2>
+          </div>
+        </div>
+
+        <div className="cards-grid quote-grid">
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Runtime</span>
+            <h3>{localMode ? "Modo local" : "Modo banco"}</h3>
+            <p>
+              {localMode
+                ? "Bom para desenvolvimento visual e fluxo demo, mas não confirma dados reais do site."
+                : "Ambiente ligado ao banco, apto para refletir usuários e workspaces reais."}
+            </p>
+          </article>
+
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Assinatura</span>
+            <h3>{subscription.asaasSubscriptionId ? "Recorrência criada" : "Recorrência pendente"}</h3>
+            <p>
+              {subscription.asaasSubscriptionId
+                ? "O workspace já tem vínculo de assinatura criado no Asaas."
+                : "O plano já existe no produto, mas a recorrência real ainda precisa ser criada e validada."}
+            </p>
+          </article>
+
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Cobrança real</span>
+            <h3>{workspaceAsaas.mode === "workspace" ? "Conta conectada" : "Conta pendente"}</h3>
+            <p>
+              {workspaceAsaas.mode === "workspace"
+                ? "A conta de recebimento do workspace está conectada; o próximo passo é validar cobrança e webhook reais."
+                : "Ainda falta conectar ou criar a conta de recebimento do workspace para fechar o ciclo real."}
+            </p>
+          </article>
+
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Fiscal real</span>
+            <h3>{nfseIntegration.ready ? "Base técnica pronta" : "Base incompleta"}</h3>
+            <p>
+              {nfseIntegration.ready
+                ? "A parte técnica principal está configurada; falta validar emissão real com certificado e município piloto."
+                : "Ainda há pendências de ambiente fiscal antes da primeira emissão ponta a ponta."}
+            </p>
+          </article>
+        </div>
       </section>
 
       <section className="data-panel">
@@ -474,6 +546,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <div className={evolutionOk ? "auth-hint" : "auth-hint fiscal-warning"}>
             <strong>{evolutionOk ? "Operação concluída" : "Operação com falha"}</strong>
             <span>{evolutionMessage}</span>
+            <small className="muted-text">Você continua nesta seção para validar o resultado e, se necessário, tentar de novo sem perder o contexto.</small>
           </div>
         ) : null}
 
@@ -535,6 +608,23 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 ? ` · estado ${getEvolutionStateLabel(selectedEvolutionInstanceState.instance.state)}`
                 : ""}
             </span>
+            <small className="muted-text">
+              {isUsingWorkspaceEvolutionInstance
+                ? "O setup está priorizando a instância com o mesmo slug do workspace, que é o comportamento esperado em produção."
+                : "O setup está usando a instância padrão do ambiente porque ainda não encontrou uma instância com o slug deste workspace."}
+            </small>
+          </div>
+        ) : null}
+
+        {workspaceEvolutionInstance && evolutionIntegration.instance && evolutionIntegration.instance !== workspaceEvolutionInstance.instanceName ? (
+          <div className="auth-hint fiscal-warning">
+            <strong>Padrão do ambiente ainda aponta para a demo</strong>
+            <span>
+              O ambiente está configurado com `EVOLUTION_API_INSTANCE={evolutionIntegration.instance}`, mas este workspace já possui a instância real `{workspaceEvolutionInstance.instanceName}`.
+            </span>
+            <small className="muted-text">
+              A tela agora prioriza a instância do workspace para pareamento, mas vale atualizar a variável de produção para não deixar mensagens automáticas saírem pela instância errada.
+            </small>
           </div>
         ) : null}
 
@@ -659,6 +749,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <div className="auth-hint fiscal-warning">
             <strong>Falha na configuração Asaas</strong>
             <span>{asaasError}</span>
+            {asaasError.includes("ASAAS_API_KEY da conta principal") ? (
+              <small className="muted-text">
+                Para criar subcontas dentro do produto, a plataforma precisa ter uma `ASAAS_API_KEY` principal válida no ambiente de produção.
+              </small>
+            ) : null}
           </div>
         ) : null}
 

@@ -29,19 +29,29 @@ function getString(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
 }
 
-function redirectEvolution(message: string, ok = false, extras?: Record<string, string | undefined>) {
-  const params = new URLSearchParams({
-    evolutionMessage: message,
-    evolutionOk: ok ? "1" : "0",
-  });
+function redirectToSetup(params: Record<string, string | undefined>, hash?: string): never {
+  const query = new URLSearchParams();
 
-  for (const [key, value] of Object.entries(extras || {})) {
+  for (const [key, value] of Object.entries(params)) {
     if (value) {
-      params.set(key, value);
+      query.set(key, value);
     }
   }
 
-  redirect(`/dashboard/setup?${params.toString()}`);
+  const queryString = query.toString();
+  const target = `/dashboard/setup${queryString ? `?${queryString}` : ""}${hash || ""}`;
+  redirect(target);
+}
+
+function redirectEvolution(message: string, ok = false, extras?: Record<string, string | undefined>): never {
+  return redirectToSetup(
+    {
+      evolutionMessage: message,
+      evolutionOk: ok ? "1" : "0",
+      ...(extras || {}),
+    },
+    "#integrations-section",
+  );
 }
 
 export async function updateWorkspaceSetupAction(formData: FormData) {
@@ -88,12 +98,12 @@ export async function createWorkspaceMemberAction(formData: FormData) {
         ? error.message
         : "Não foi possível adicionar o usuário ao workspace.";
 
-    redirect(`/dashboard/setup?teamError=${encodeURIComponent(message)}`);
+    redirectToSetup({ teamError: message }, "#team-section");
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
-  redirect("/dashboard/setup?teamCreated=1");
+  redirectToSetup({ teamCreated: "1" }, "#team-section");
 }
 
 export async function updateWorkspaceMemberRoleAction(formData: FormData) {
@@ -111,12 +121,12 @@ export async function updateWorkspaceMemberRoleAction(formData: FormData) {
         ? error.message
         : "Não foi possível atualizar o papel do usuário.";
 
-    redirect(`/dashboard/setup?teamError=${encodeURIComponent(message)}`);
+    redirectToSetup({ teamError: message }, "#team-section");
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
-  redirect("/dashboard/setup?teamUpdated=1");
+  redirectToSetup({ teamUpdated: "1" }, "#team-section");
 }
 
 export async function removeWorkspaceMemberAction(formData: FormData) {
@@ -130,12 +140,12 @@ export async function removeWorkspaceMemberAction(formData: FormData) {
         ? error.message
         : "Não foi possível remover o usuário do workspace.";
 
-    redirect(`/dashboard/setup?teamError=${encodeURIComponent(message)}`);
+    redirectToSetup({ teamError: message }, "#team-section");
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
-  redirect("/dashboard/setup?teamRemoved=1");
+  redirectToSetup({ teamRemoved: "1" }, "#team-section");
 }
 
 export async function resetWorkspaceMemberPasswordAction(formData: FormData) {
@@ -153,12 +163,12 @@ export async function resetWorkspaceMemberPasswordAction(formData: FormData) {
         ? error.message
         : "Não foi possível redefinir a senha do usuário.";
 
-    redirect(`/dashboard/setup?teamError=${encodeURIComponent(message)}`);
+    redirectToSetup({ teamError: message }, "#team-section");
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
-  redirect("/dashboard/setup?teamPasswordReset=1");
+  redirectToSetup({ teamPasswordReset: "1" }, "#team-section");
 }
 
 export async function createEvolutionInstanceAction(formData: FormData) {
@@ -218,7 +228,10 @@ export async function connectWorkspaceAsaasAccountAction(formData: FormData) {
   const splitEnabled = getString(formData, "asaasSplitEnabled") === "on";
 
   if (!apiKey) {
-    redirect(`/dashboard/setup?asaasError=${encodeURIComponent("Informe a API key da conta ou subconta Asaas do workspace.")}`);
+    redirectToSetup(
+      { asaasError: "Informe a API key da conta ou subconta Asaas do workspace." },
+      "#integrations-section",
+    );
   }
 
   try {
@@ -232,12 +245,12 @@ export async function connectWorkspaceAsaasAccountAction(formData: FormData) {
       ? error.message
       : "Nao foi possivel conectar a conta Asaas do workspace.";
 
-    redirect(`/dashboard/setup?asaasError=${encodeURIComponent(message)}`);
+    redirectToSetup({ asaasError: message }, "#integrations-section");
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
-  redirect("/dashboard/setup?asaasConnected=1");
+  redirectToSetup({ asaasConnected: "1" }, "#integrations-section");
 }
 
 export async function disconnectWorkspaceAsaasAccountAction() {
@@ -248,12 +261,12 @@ export async function disconnectWorkspaceAsaasAccountAction() {
       ? error.message
       : "Nao foi possivel desconectar a conta Asaas do workspace.";
 
-    redirect(`/dashboard/setup?asaasError=${encodeURIComponent(message)}`);
+    redirectToSetup({ asaasError: message }, "#integrations-section");
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
-  redirect("/dashboard/setup?asaasDisconnected=1");
+  redirectToSetup({ asaasDisconnected: "1" }, "#integrations-section");
 }
 
 export async function createWorkspaceAsaasSubaccountAction(formData: FormData) {
@@ -271,7 +284,10 @@ export async function createWorkspaceAsaasSubaccountAction(formData: FormData) {
   const birthDate = getString(formData, "subaccountBirthDate");
 
   if (!name || !email || !cpfCnpj || !mobilePhone || !incomeValue || !address || !addressNumber || !province || !postalCode) {
-    redirect(`/dashboard/setup?asaasError=${encodeURIComponent("Preencha os dados essenciais para criar a conta de recebimento no Asaas.")}`);
+    redirectToSetup(
+      { asaasError: "Preencha os dados essenciais para criar a conta de recebimento no Asaas." },
+      "#integrations-section",
+    );
   }
 
   try {
@@ -294,12 +310,12 @@ export async function createWorkspaceAsaasSubaccountAction(formData: FormData) {
       ? error.message
       : "Nao foi possivel criar a conta de recebimento no Asaas.";
 
-    redirect(`/dashboard/setup?asaasError=${encodeURIComponent(message)}`);
+    redirectToSetup({ asaasError: message }, "#integrations-section");
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
-  redirect("/dashboard/setup?asaasConnected=1&asaasCreated=1");
+  redirectToSetup({ asaasConnected: "1", asaasCreated: "1" }, "#integrations-section");
 }
 
 export async function updateWorkspaceSubscriptionPlanAction(formData: FormData) {
@@ -307,13 +323,19 @@ export async function updateWorkspaceSubscriptionPlanAction(formData: FormData) 
   const billingCycle = getString(formData, "subscriptionBillingCycle");
 
   if (!isSubscriptionPlanCode(plan) || !isSubscriptionBillingCycleCode(billingCycle)) {
-    redirect(`/dashboard/setup?subscriptionError=${encodeURIComponent("Escolha um plano e um ciclo válidos para o workspace.")}`);
+    redirectToSetup(
+      { subscriptionError: "Escolha um plano e um ciclo válidos para o workspace." },
+      "#subscription-section",
+    );
   }
 
   try {
+    const selectedPlan = plan;
+    const selectedBillingCycle = billingCycle;
+
     await updateWorkspaceSubscriptionPlan({
-      plan,
-      billingCycle,
+      plan: selectedPlan,
+      billingCycle: selectedBillingCycle,
       note: "Plano preferido ajustado pelo setup do workspace.",
     });
   } catch (error) {
@@ -321,12 +343,12 @@ export async function updateWorkspaceSubscriptionPlanAction(formData: FormData) 
       ? error.message
       : "Nao foi possivel atualizar o plano do workspace.";
 
-    redirect(`/dashboard/setup?subscriptionError=${encodeURIComponent(message)}`);
+    redirectToSetup({ subscriptionError: message }, "#subscription-section");
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
-  redirect("/dashboard/setup?subscriptionUpdated=1");
+  redirectToSetup({ subscriptionUpdated: "1" }, "#subscription-section");
 }
 
 export async function createWorkspaceSubscriptionCheckoutAction() {
@@ -337,10 +359,10 @@ export async function createWorkspaceSubscriptionCheckoutAction() {
       ? error.message
       : "Nao foi possivel criar a assinatura do workspace no Asaas.";
 
-    redirect(`/dashboard/setup?subscriptionError=${encodeURIComponent(message)}`);
+    redirectToSetup({ subscriptionError: message }, "#subscription-section");
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
-  redirect("/dashboard/setup?subscriptionCheckoutCreated=1");
+  redirectToSetup({ subscriptionCheckoutCreated: "1" }, "#subscription-section");
 }
