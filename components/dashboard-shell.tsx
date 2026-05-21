@@ -48,11 +48,14 @@ export async function DashboardShell({
     <main className="workspace-shell">
       <aside className="workspace-sidebar">
         <div className="sidebar-brand">
-          <span className="sidebar-status-pill">Empresa ativa</span>
-          <BrandLogo className="sidebar-wordmark" />
-          <span className="eyebrow">Painel da empresa</span>
-          <h2>{setup.tradeName || setup.name}</h2>
-          <p>{setup.niche || "Vendas, cobranças e nota fiscal no mesmo caminho."}</p>
+          <div className="sidebar-brand-top">
+            <BrandLogo variant="mark" className="sidebar-brand-mark" priority />
+            <div className="sidebar-identity">
+              <span className="sidebar-status-pill">Empresa ativa</span>
+              <h2>{setup.tradeName || setup.name}</h2>
+              <p>{session.user.name || session.user.email || "Operador"}</p>
+            </div>
+          </div>
         </div>
 
         <nav className="sidebar-nav" aria-label="Navegação do dashboard">
@@ -69,10 +72,6 @@ export async function DashboardShell({
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-meta sidebar-session">
-            <strong>{setup.tradeName || setup.name}</strong>
-            <small>{session.user.name || session.user.email || "Operador"}</small>
-          </div>
           <LogoutButton />
         </div>
       </aside>
