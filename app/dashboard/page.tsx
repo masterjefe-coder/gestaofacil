@@ -61,14 +61,14 @@ export default async function DashboardPage() {
       currentPath="/dashboard"
       eyebrow="Central de operação"
       title="Um dashboard mais limpo, mais executivo e muito mais acionável."
-      description="A home operacional agora destaca foco, risco, próximos passos e leitura de performance sem te afogar em texto ou blocos dispersos."
+      description="A tela principal destaca foco, pendências e próximos passos sem excesso de informação ou linguagem complicada."
       actions={
         <>
           <Link href="/" className="secondary-link">
             Ver site
           </Link>
           <Link href="/dashboard/setup" className="primary-link">
-            Configurar workspace
+            Ajustar empresa
           </Link>
         </>
       }

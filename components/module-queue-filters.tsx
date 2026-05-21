@@ -30,11 +30,12 @@ export function ModuleQueueFilters({
     <section className="data-panel queue-filter-panel">
       <div className="card-header queue-filter-header">
         <div>
-          <span className="section-label">Filtro persistido</span>
+          <span className="section-label">Visão da fila</span>
           <h2>{title}</h2>
         </div>
         <div className="queue-filter-summary">
           <strong>{activeOption?.label || "Todos"}</strong>
+          <span>Mostrando agora</span>
           <small>{helper}</small>
         </div>
       </div>

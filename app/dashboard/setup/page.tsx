@@ -123,9 +123,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   return (
     <DashboardShell
       currentPath="/dashboard/setup"
-      eyebrow="Setup"
-      title="O sistema precisa conhecer a empresa para vender, cobrar e emitir melhor."
-      description="Aqui nasce a identidade do workspace, a configuração da empresa e a base para futuras automações de cobrança e NFS-e."
+      eyebrow="Empresa"
+      title="Deixe a empresa pronta para vender, cobrar e atender sem atrito."
+      description="Aqui você organiza os dados principais, conecta os canais e deixa a operação mais prática para o dia a dia."
       actions={
         <Link href="/dashboard" className="secondary-link">
           Voltar ao dashboard
@@ -137,21 +137,21 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <div className="dashboard-spotlight-header">
             <div>
               <span className="section-label">Leitura estrutural</span>
-              <h2>O setup define se o workspace consegue vender, cobrar e emitir sem atrito.</h2>
+              <h2>Essa área mostra se a empresa já está pronta para operar com segurança.</h2>
             </div>
             <span className={`dashboard-priority-badge ${fiscalReadiness.ready ? "priority-normal" : "priority-critical"}`}>
-              {fiscalReadiness.ready ? "Base pronta" : "Configuração pendente"}
+              {fiscalReadiness.ready ? "Tudo em ordem" : "Falta ajustar"}
             </span>
           </div>
           <p>
-            {fiscalReadiness.helper} Este bloco concentra identidade da empresa, assinatura, integrações e time em um mesmo comando.
+            {fiscalReadiness.helper} Aqui ficam os dados da empresa, cobrança, WhatsApp e equipe no mesmo lugar.
           </p>
 
           <div className="dashboard-top-metrics">
             <article className="dashboard-metric-tile">
               <span>Fiscal</span>
               <strong>{fiscalReadiness.ready ? "Pronto" : "Parcial"}</strong>
-              <small>{fiscalReadiness.ready ? "Base fiscal suficiente para operar no fluxo." : fiscalReadiness.helper}</small>
+              <small>{fiscalReadiness.ready ? "A empresa já consegue seguir o fluxo de cobrança e emissão." : fiscalReadiness.helper}</small>
             </article>
             <article className="dashboard-metric-tile">
               <span>Assinatura</span>
@@ -164,7 +164,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <small>{evolutionIntegration.helper}</small>
             </article>
             <article className="dashboard-metric-tile">
-              <span>Asaas</span>
+              <span>Cobrança</span>
               <strong>{asaasIntegration.enabled ? "Ativo" : "Pendente"}</strong>
               <small>{asaasIntegration.helper}</small>
             </article>
@@ -176,12 +176,12 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <span className="section-label">Objetivo do módulo</span>
             <div className="dashboard-mini-list">
               <article>
-                <strong>Preparar a empresa real</strong>
-                <p>O workspace precisa conhecer negócio, cobrança, fiscal e equipe para operar bem.</p>
+                <strong>Organizar a operação</strong>
+                <p>A empresa precisa ter dados, cobrança, WhatsApp e equipe bem alinhados para o trabalho fluir.</p>
               </article>
               <article>
-                <strong>Evitar bloqueio futuro</strong>
-                <p>Assinatura, webhook, certificado e município precisam aparecer antes da operação quebrar.</p>
+                <strong>Evitar travas depois</strong>
+                <p>Quando essa base está ajustada, você evita retrabalho na cobrança, no atendimento e na emissão.</p>
               </article>
             </div>
           </article>
@@ -212,12 +212,12 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
 
       {localMode ? (
         <div className="auth-hint fiscal-warning">
-          <strong>Ambiente local em modo demo</strong>
+          <strong>Ambiente de teste</strong>
           <span>
-            Este workspace local não está usando `DATABASE_URL`, então ele não reflete automaticamente usuários ou dados criados no site em produção.
+            Este ambiente é só para teste e não mostra automaticamente os dados reais criados no site.
           </span>
           <small className="muted-text">
-            Para validar o usuário que você criou ontem e testar integrações ponta a ponta, o ambiente precisa rodar em modo banco.
+            Para validar usuários e integrações reais, o sistema precisa estar ligado ao banco oficial.
           </small>
         </div>
       ) : null}
@@ -225,49 +225,49 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       <section className="data-panel">
         <div className="card-header">
           <div>
-            <span className="section-label">Prontidão de produção</span>
-            <h2>O que já está pronto e o que ainda depende de validação real</h2>
+            <span className="section-label">Resumo rápido</span>
+            <h2>O que já está pronto e o que ainda falta ajustar</h2>
           </div>
         </div>
 
         <div className="cards-grid quote-grid">
           <article className="dashboard-card">
-            <span className="dashboard-kicker">Runtime</span>
-            <h3>{localMode ? "Modo local" : "Modo banco"}</h3>
+            <span className="dashboard-kicker">Ambiente</span>
+            <h3>{localMode ? "Teste local" : "Dados reais"}</h3>
             <p>
               {localMode
-                ? "Bom para desenvolvimento visual e fluxo demo, mas não confirma dados reais do site."
-                : "Ambiente ligado ao banco, apto para refletir usuários e workspaces reais."}
+                ? "Bom para testar a interface, mas não confirma clientes e empresas reais."
+                : "Ligado ao banco oficial e pronto para refletir o que acontece no produto real."}
             </p>
           </article>
 
           <article className="dashboard-card">
-            <span className="dashboard-kicker">Assinatura</span>
-            <h3>{subscription.asaasSubscriptionId ? "Recorrência criada" : "Recorrência pendente"}</h3>
+            <span className="dashboard-kicker">Plano</span>
+            <h3>{subscription.asaasSubscriptionId ? "Cobrança pronta" : "Cobrança pendente"}</h3>
             <p>
               {subscription.asaasSubscriptionId
-                ? "O workspace já tem vínculo de assinatura criado no Asaas."
-                : "O plano já existe no produto, mas a recorrência real ainda precisa ser criada e validada."}
+                ? "O plano já está ligado à cobrança automática."
+                : "O plano já existe no sistema, mas ainda falta preparar a cobrança automática."}
             </p>
           </article>
 
           <article className="dashboard-card">
-            <span className="dashboard-kicker">Cobrança real</span>
+            <span className="dashboard-kicker">Recebimentos</span>
             <h3>{workspaceAsaas.mode === "workspace" ? "Conta conectada" : "Conta pendente"}</h3>
             <p>
               {workspaceAsaas.mode === "workspace"
-                ? "A conta de recebimento do workspace está conectada; o próximo passo é validar cobrança e webhook reais."
-                : "Ainda falta conectar ou criar a conta de recebimento do workspace para fechar o ciclo real."}
+                ? "A conta já está pronta para receber e acompanhar pagamentos."
+                : "Ainda falta conectar a conta que vai receber os pagamentos da empresa."}
             </p>
           </article>
 
           <article className="dashboard-card">
-            <span className="dashboard-kicker">Fiscal real</span>
-            <h3>{nfseIntegration.ready ? "Base técnica pronta" : "Base incompleta"}</h3>
+            <span className="dashboard-kicker">Emissão</span>
+            <h3>{nfseIntegration.ready ? "Base pronta" : "Base incompleta"}</h3>
             <p>
               {nfseIntegration.ready
-                ? "A parte técnica principal está configurada; falta validar emissão real com certificado e município piloto."
-                : "Ainda há pendências de ambiente fiscal antes da primeira emissão ponta a ponta."}
+                ? "A empresa já está mais perto de emitir sem retrabalho."
+                : "Ainda faltam alguns dados antes de deixar a emissão pronta no fluxo."}
             </p>
           </article>
         </div>
@@ -276,14 +276,14 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       <section className="data-panel">
         <div className="card-header">
           <div>
-            <span className="section-label">Workspace e empresa</span>
-            <h2>Defina a identidade operacional do negócio</h2>
+            <span className="section-label">Dados da empresa</span>
+            <h2>Organize a base principal do negócio</h2>
           </div>
         </div>
 
         {!fiscalReadiness.ready ? (
           <div className="auth-hint fiscal-warning">
-            <strong>Fiscal ainda não pronto</strong>
+            <strong>Alguns dados ainda faltam</strong>
             <span>{fiscalReadiness.helper}</span>
           </div>
         ) : null}
@@ -291,11 +291,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         {canManage ? (
           <form action={updateWorkspaceSetupAction} className="inline-form">
             <label>
-              <span>Nome do workspace</span>
+              <span>Nome interno da empresa</span>
               <input name="name" type="text" defaultValue={setup.name} required />
             </label>
             <label>
-              <span>Slug</span>
+              <span>Identificador interno</span>
               <input name="slug" type="text" defaultValue={setup.slug} required />
             </label>
             <label className="form-span-2">
@@ -331,7 +331,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               />
             </label>
             <label>
-              <span>Código IBGE detectado</span>
+              <span>Código da cidade</span>
               <input value={setup.municipalCode || ""} type="text" readOnly />
             </label>
             <label>
@@ -361,8 +361,8 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </form>
         ) : (
           <div className="auth-hint">
-            <strong>Acesso de leitura</strong>
-            <span>Somente owner ou admin podem alterar o setup e convidar novos usuários.</span>
+            <strong>Somente leitura</strong>
+            <span>Apenas perfis com permissão de gestão podem alterar estes dados e convidar pessoas.</span>
           </div>
         )}
       </section>
@@ -370,20 +370,21 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       <section className="section-split">
         <article className="split-panel">
           <span className="section-label">Emissão assistida</span>
-          <h2>Clientes sem certificado ainda conseguem emitir</h2>
+          <h2>Mesmo sem certificado, dá para seguir com apoio manual</h2>
           <p>{emissionModes.assisted.helper}</p>
         </article>
 
         <article className={nfseIntegration.ready ? "split-panel success" : "split-panel"}>
           <span className="section-label">Emissão automática</span>
-          <h2>Certificado ativa a API oficial da NFS-e Nacional</h2>
+          <h2>Com certificado, a emissão fica mais automática</h2>
           <p>{emissionModes.automatic.helper}</p>
         </article>
       </section>
 
       <section className="section-split">
         <article className={subscription.status === "TRIALING" ? "split-panel success" : "split-panel"}>
-          <span className="section-label">Assinatura do workspace</span>
+          <span className="section-label">Assinatura da empresa</span>
+          
           <h2>{subscriptionPlan.name} em {getBillingCycleLabel(subscription.billingCycle).toLowerCase()}</h2>
           <p>
             Status atual: {getSubscriptionStatusLabel(subscription.status)}.
@@ -392,32 +393,32 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </article>
 
         <article className={evolutionIntegration.enabled ? "split-panel success" : "split-panel"}>
-          <span className="section-label">WhatsApp server-side</span>
-          <h2>Evolution API como base das automações comerciais</h2>
+          <span className="section-label">WhatsApp da empresa</span>
+          <h2>Canal pronto para mensagens, lembretes e respostas</h2>
           <p>{evolutionIntegration.helper}</p>
         </article>
 
         <article className={asaasIntegration.enabled ? "split-panel success" : "split-panel"}>
-          <span className="section-label">Cobranca externa</span>
-          <h2>Asaas como provedor de Pix e link de pagamento</h2>
+          <span className="section-label">Recebimentos</span>
+          <h2>Conta pronta para Pix, boleto, cartão e links de pagamento</h2>
           <p>{asaasIntegration.helper}</p>
         </article>
       </section>
 
       <section className="section-split">
         <article className={evolutionProbe.reachable ? "split-panel success" : "split-panel"}>
-          <span className="section-label">Saúde da integração</span>
-          <h2>Status do endpoint configurado</h2>
+          <span className="section-label">Status do WhatsApp</span>
+          <h2>Conexão do canal principal</h2>
           <p>{evolutionProbe.summary}</p>
         </article>
 
         <article className={asaasIntegration.webhookConfigured ? "split-panel success" : "split-panel"}>
-          <span className="section-label">Webhook Asaas</span>
-          <h2>Baixa automatica por evento de pagamento</h2>
+          <span className="section-label">Atualização de pagamentos</span>
+          <h2>Confirmação automática quando o cliente paga</h2>
           <p>
             {asaasIntegration.webhookConfigured
-              ? "Webhook pronto para receber PAYMENT_RECEIVED e PAYMENT_CONFIRMED."
-              : "Defina token e URL publica para receber eventos do Asaas com seguranca."}
+              ? "O sistema já consegue receber a confirmação de pagamento automaticamente."
+              : "Ainda falta concluir a ligação automática entre a conta de cobrança e o sistema."}
           </p>
         </article>
       </section>
@@ -425,8 +426,8 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       <section id="subscription-section" className="data-panel">
         <div className="card-header">
           <div>
-            <span className="section-label">Plano e trial</span>
-            <h2>Assinatura SaaS do workspace</h2>
+            <span className="section-label">Plano</span>
+            <h2>Plano da empresa e cobrança automática</h2>
           </div>
         </div>
 
@@ -444,26 +445,26 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
 
         {subscriptionIntent ? (
           <div className="auth-hint">
-            <strong>Próximo passo recomendado</strong>
-            <span>Seu workspace já nasceu com trial. Agora, se quiser deixar a assinatura recorrente pronta desde já, crie o vínculo no Asaas abaixo.</span>
+            <strong>Próximo passo</strong>
+            <span>A empresa já está em teste. Se quiser deixar a cobrança automática pronta, faça isso aqui embaixo.</span>
           </div>
         ) : null}
 
         {subscriptionUpdated ? (
           <div className="auth-hint">
             <strong>Plano atualizado</strong>
-            <span>O plano preferido do workspace foi ajustado com sucesso.</span>
+            <span>O plano da empresa foi ajustado com sucesso.</span>
           </div>
         ) : null}
         {subscriptionCheckoutCreated ? (
           <div className="auth-hint">
-            <strong>Assinatura criada no Asaas</strong>
-            <span>O vínculo recorrente do workspace foi preparado com sucesso na conta da plataforma.</span>
+            <strong>Cobrança automática criada</strong>
+            <span>O plano da empresa já está ligado à cobrança automática.</span>
           </div>
         ) : null}
         {subscriptionError ? (
           <div className="auth-hint fiscal-warning">
-            <strong>Falha na assinatura</strong>
+            <strong>Não foi possível concluir essa etapa</strong>
             <span>{subscriptionError}</span>
           </div>
         ) : null}
@@ -504,7 +505,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <div className="auth-hint">
           <strong>O que já fica pronto agora</strong>
           <span>
-            Trial de 14 dias, plano por workspace, referência externa da futura assinatura e base para recorrência no Asaas.
+            Trial de 14 dias, plano por empresa e base pronta para recorrência.
           </span>
           <small className="muted-text">
             A cobrança recorrente automática ainda será ligada na próxima etapa, mas a modelagem já nasce alinhada.
@@ -516,7 +517,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             {!subscription.asaasSubscriptionId ? (
               <form action={createWorkspaceSubscriptionCheckoutAction}>
                 <button type="submit" className="primary-link">
-                  Criar assinatura no Asaas
+                  Ativar cobrança do plano
                 </button>
               </form>
             ) : null}
@@ -532,28 +533,28 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       <section id="integrations-section" className="data-panel">
         <div className="card-header">
           <div>
-            <span className="section-label">Canal WhatsApp</span>
-            <h2>Criar e operar a instância principal da Evolution</h2>
+            <span className="section-label">WhatsApp</span>
+            <h2>Conectar o número principal da empresa</h2>
           </div>
         </div>
 
         {evolutionMessage ? (
           <div className={evolutionOk ? "auth-hint" : "auth-hint fiscal-warning"}>
-            <strong>{evolutionOk ? "Operação concluída" : "Operação com falha"}</strong>
+            <strong>{evolutionOk ? "Tudo certo" : "Não foi possível concluir agora"}</strong>
             <span>{evolutionMessage}</span>
-            <small className="muted-text">Você continua nesta seção para validar o resultado e, se necessário, tentar de novo sem perder o contexto.</small>
+            <small className="muted-text">Você continua nesta mesma área para conferir o resultado sem perder o ponto da tela.</small>
           </div>
         ) : null}
 
         {canManage ? (
           <form action={createEvolutionInstanceAction} className="inline-form">
             <label>
-              <span>Nome da instância</span>
+              <span>Identificador da conexão</span>
               <input
                 name="instanceName"
                 type="text"
                 defaultValue={setup.slug}
-                placeholder="Ex.: gestao-facil-demo"
+                placeholder="Ex.: numero-principal"
                 required
               />
             </label>
@@ -566,14 +567,14 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               />
             </label>
             <button type="submit" className="primary-link form-submit">
-              Criar instância
+              Criar conexão
             </button>
           </form>
         ) : null}
 
         {selectedEvolutionInstanceName ? (
           <div className="auth-hint">
-            <strong>Instância alvo</strong>
+            <strong>Número principal escolhido</strong>
             <span>
               {selectedEvolutionInstanceName}
               {selectedEvolutionInstanceState?.instance?.state
@@ -582,20 +583,20 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             </span>
             <small className="muted-text">
               {isUsingWorkspaceEvolutionInstance
-                ? "O setup está priorizando a instância com o mesmo slug do workspace, que é o comportamento esperado em produção."
-                : "O setup está usando a instância padrão do ambiente porque ainda não encontrou uma instância com o slug deste workspace."}
+                ? "A tela já está usando o número principal desta empresa."
+                : "A tela está usando um número padrão porque ainda não encontrou uma conexão com o nome desta empresa."}
             </small>
           </div>
         ) : null}
 
         {workspaceEvolutionInstance && evolutionIntegration.instance && evolutionIntegration.instance !== workspaceEvolutionInstance.instanceName ? (
           <div className="auth-hint fiscal-warning">
-            <strong>Padrão do ambiente ainda aponta para a demo</strong>
+            <strong>O número padrão ainda não é o ideal</strong>
             <span>
-              O ambiente está configurado com `EVOLUTION_API_INSTANCE={evolutionIntegration.instance}`, mas este workspace já possui a instância real `{workspaceEvolutionInstance.instanceName}`.
+              O sistema ainda estava apontando para outra conexão, mas esta empresa já tem uma conexão própria pronta para uso.
             </span>
             <small className="muted-text">
-              A tela agora prioriza a instância do workspace para pareamento, mas vale atualizar a variável de produção para não deixar mensagens automáticas saírem pela instância errada.
+              A tela já prioriza a conexão certa, para evitar que mensagens saiam pelo número errado.
             </small>
           </div>
         ) : null}
@@ -604,95 +605,96 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <EvolutionPairingPanel instanceName={selectedEvolutionInstanceName} />
         ) : null}
 
-        <div className="data-table">
-          <div className="data-table-head">
-            <span>Instância</span>
-            <span>Status</span>
-            <span>Dono</span>
-            <span>Webhook</span>
-          </div>
-          {evolutionInstances.length > 0 ? evolutionInstances.map((instance) => (
-            <article key={instance.instanceName} className="data-table-row">
-              <div>
-                <strong>{instance.instanceName}</strong>
-                <small>{instance.profileName || instance.integration || "Sem perfil conectado ainda"}</small>
+        <details className="guided-flow-card">
+          <summary>
+            <div>
+              <span className="section-label">Visão detalhada</span>
+              <h3>Ver outras conexões e situação de cada uma</h3>
+              <p>Abra só quando quiser revisar conexões antigas, números em teste ou detalhes de atualização.</p>
+            </div>
+            <span className="guided-flow-badge">Opcional</span>
+          </summary>
+
+          <div className="guided-flow-body">
+            <div className="data-table">
+              <div className="data-table-head">
+                <span>Conexão</span>
+                <span>Status</span>
+                <span>Número</span>
+                <span>Atualização</span>
               </div>
-              <span>{getEvolutionStateLabel(instance.status)}</span>
-              <span>{instance.owner || "Aguardando conexão"}</span>
-              <span>{instance.webhookUrl || evolutionIntegration.webhookUrl || "Sem webhook visível"}</span>
-            </article>
-          )) : (
-            <article className="data-table-row">
-              <span>Nenhuma instância encontrada</span>
-              <span>Configure env + API</span>
-              <span>-</span>
-              <span>-</span>
-            </article>
-          )}
-        </div>
+              {evolutionInstances.length > 0 ? evolutionInstances.map((instance) => (
+                <article key={instance.instanceName} className="data-table-row">
+                  <div>
+                    <strong>{instance.instanceName}</strong>
+                    <small>{instance.profileName || instance.integration || "Sem perfil conectado ainda"}</small>
+                  </div>
+                  <span>{getEvolutionStateLabel(instance.status)}</span>
+                  <span>{instance.owner || "Aguardando conexão"}</span>
+                  <span>{instance.webhookUrl || evolutionIntegration.webhookUrl || "Atualização automática pronta"}</span>
+                </article>
+              )) : (
+                <article className="data-table-row">
+                  <span>Nenhuma conexão encontrada</span>
+                  <span>Conecte o WhatsApp da empresa</span>
+                  <span>-</span>
+                  <span>-</span>
+                </article>
+              )}
+            </div>
+          </div>
+        </details>
       </section>
 
       <section className="data-panel">
         <div className="card-header">
           <div>
-            <span className="section-label">Gateway de cobrança</span>
-            <h2>Asaas no fluxo de recebimento e baixa automática</h2>
+            <span className="section-label">Cobrança</span>
+            <h2>Recebimentos e confirmação automática</h2>
           </div>
         </div>
 
         <div className={asaasIntegration.enabled ? "auth-hint" : "auth-hint fiscal-warning"}>
-          <strong>{asaasIntegration.enabled ? "Asaas configurado" : "Asaas ainda incompleto"}</strong>
+          <strong>{asaasIntegration.enabled ? "Conta de cobrança conectada" : "Conta de cobrança ainda incompleta"}</strong>
           <span>{asaasIntegration.helper}</span>
           <small className="muted-text">
-            Ambiente: {asaasIntegration.environment === "production" ? "produção" : "sandbox"}.
-          </small>
-          <small className="muted-text">
-            Modo atual do workspace: {workspaceAsaas.mode === "workspace"
-              ? "conta própria ou subconta conectada"
+            {workspaceAsaas.mode === "workspace"
+              ? "A empresa já está usando uma conta própria para receber."
               : workspaceAsaas.mode === "root_fallback"
-                ? "fallback da conta raiz"
-                : "sem integração ativa"}.
+                ? "A empresa ainda está usando uma conta geral enquanto a conta própria não fica pronta."
+                : "Ainda não há uma conta conectada para esta empresa."}
           </small>
         </div>
 
         <div className={asaasIntegration.webhookConfigured ? "auth-hint" : "auth-hint fiscal-warning"}>
-          <strong>{asaasIntegration.webhookConfigured ? "Webhook pronto para configurar no Asaas" : "Webhook ainda incompleto"}</strong>
+          <strong>{asaasIntegration.webhookConfigured ? "Atualização automática pronta" : "Atualização automática ainda incompleta"}</strong>
           <span>
-            {asaasIntegration.webhookUrl
-              ? `URL esperada: ${asaasIntegration.webhookUrl}`
-              : "Defina APP_BASE_URL ou mantenha uma URL pública derivável para expor o endpoint do webhook."}
+            {asaasIntegration.webhookConfigured
+              ? "Quando o cliente paga, o sistema já consegue receber a confirmação sozinho."
+              : "Ainda falta concluir a ligação automática para o sistema saber sozinho quando o cliente paga."}
           </span>
-          <small className="muted-text">
-            Header validado: `asaas-access-token`.
-            {asaasIntegration.webhookTokenConfigured
-              ? " Token já configurado localmente."
-              : " Falta definir ASAAS_WEBHOOK_AUTH_TOKEN no ambiente."}
-          </small>
-          <small className="muted-text">
-            Eventos recomendados: `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_OVERDUE`, `PAYMENT_UPDATED` e `PAYMENT_DELETED`.
-          </small>
         </div>
 
         <div className="cards-grid quote-grid">
           <article className="dashboard-card">
-            <span className="dashboard-kicker">Melhor caminho</span>
-            <h3>Criar a conta de recebimento aqui dentro</h3>
-            <p>O sistema cria a conta ou subconta, guarda a credencial do workspace e já nasce pronto para cobrança e webhook.</p>
-            <small className="muted-text">Ideal para quem ainda não tem conta Asaas ou quer evitar parte técnica.</small>
+            <span className="dashboard-kicker">Mais simples</span>
+            <h3>Criar a conta de recebimento por aqui</h3>
+            <p>O sistema prepara a conta da empresa e já deixa a cobrança pronta para uso.</p>
+            <small className="muted-text">Melhor para quem quer começar rápido sem mexer em muita configuração.</small>
           </article>
 
           <article className="dashboard-card">
-            <span className="dashboard-kicker">Plano B</span>
-            <h3>Conectar uma conta que já existe</h3>
-            <p>Use quando o cliente já tem Asaas ativo e só precisa informar a API key da própria conta ou subconta.</p>
-            <small className="muted-text">A parte mais técnica fica reduzida a colar a chave certa uma vez.</small>
+            <span className="dashboard-kicker">Se já tiver conta</span>
+            <h3>Conectar uma conta existente</h3>
+            <p>Use quando a empresa já recebe por fora e só precisa ligar essa conta ao sistema.</p>
+            <small className="muted-text">Nesse caso, basta informar a chave da conta uma vez.</small>
           </article>
 
           <article className="dashboard-card">
-            <span className="dashboard-kicker">O sistema faz sozinho</span>
-            <h3>Webhook, vínculo e baixa automática</h3>
-            <p>Depois da conexão, o Gestão Fácil cria as cobranças na conta certa e recebe os eventos de pagamento automaticamente.</p>
-            <small className="muted-text">Quando vocês quiserem cobrar taxa, a base de split já fica preparada.</small>
+            <span className="dashboard-kicker">Automação</span>
+            <h3>Criação da cobrança e baixa automática</h3>
+            <p>Depois da conexão, o sistema cria a cobrança na conta certa e marca o pagamento sozinho quando o cliente paga.</p>
+            <small className="muted-text">A ideia é reduzir retrabalho e acompanhamento manual.</small>
           </article>
         </div>
 
@@ -701,15 +703,15 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <strong>Conta Asaas conectada</strong>
             <span>
               {asaasCreated
-                ? "A conta de recebimento foi criada e vinculada ao workspace. Agora finalize o onboarding documental no próprio Asaas, se houver pendências."
-                : "O workspace passa a emitir cobranças pela própria conta ou subconta configurada."}
+                ? "A conta de recebimento foi criada e ligada à empresa. Se ainda faltar algum documento, finalize isso direto na conta."
+                : "A empresa já pode emitir cobranças pela conta conectada."}
             </span>
           </div>
         ) : null}
         {asaasDisconnected ? (
           <div className="auth-hint fiscal-warning">
             <strong>Conta Asaas desconectada</strong>
-            <span>O workspace voltou ao comportamento sem conta própria configurada.</span>
+            <span>A empresa voltou a operar sem uma conta própria conectada.</span>
           </div>
         ) : null}
         {asaasError ? (
@@ -731,17 +733,17 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 <summary>
                   <div>
                     <span className="section-label">Recomendado</span>
-                    <h3>Criar conta de recebimento aqui dentro</h3>
-                    <p>Fluxo assistido para esconder a parte técnica do Asaas e sair com webhook e conta própria conectados desde o início.</p>
+                    <h3>Criar a conta da empresa por aqui</h3>
+                    <p>Fluxo guiado para deixar a cobrança pronta sem exigir configuração mais técnica.</p>
                   </div>
-                  <span className="guided-flow-badge">Fluxo guiado</span>
+                  <span className="guided-flow-badge">Mais fácil</span>
                 </summary>
 
                 <div className="guided-flow-body">
                   <div className="auth-hint">
-                    <strong>Guia rápido para criar a conta agora</strong>
-                    <span>Separe email operacional, CPF ou CNPJ, celular, CEP, endereço e uma estimativa simples de faturamento mensal. O resto o sistema já encaixa no fluxo.</span>
-                    <small className="muted-text">Se o documento for CPF, pode ser que o Asaas peça data de nascimento do titular. Se for CNPJ, normalmente o foco recai no cadastro da empresa e nas próximas etapas documentais.</small>
+                    <strong>O que você vai precisar</strong>
+                    <span>Separe email, CPF ou CNPJ, celular, CEP, endereço e uma estimativa simples de faturamento mensal. O resto o sistema organiza.</span>
+                    <small className="muted-text">Em alguns casos, a conta pode pedir dados extras depois. Se isso acontecer, você conclui direto nela.</small>
                   </div>
 
                   <form action={createWorkspaceAsaasSubaccountAction} className="inline-form">
@@ -810,52 +812,52 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 <summary>
                   <div>
                     <span className="section-label">Conta existente</span>
-                    <h3>Conectar uma conta já existente</h3>
-                    <p>Use este caminho quando o cliente já tiver conta Asaas ativa e puder informar apenas a API key da própria conta ou subconta.</p>
+                    <h3>Conectar uma conta que já existe</h3>
+                    <p>Use este caminho quando a empresa já tiver conta ativa e só precisar ligá-la ao sistema.</p>
                   </div>
-                  <span className="guided-flow-badge">Plano B</span>
+                  <span className="guided-flow-badge">Alternativa</span>
                 </summary>
 
                 <div className="guided-flow-body">
                   <div className="auth-hint">
-                    <strong>Guia rápido para conta já existente</strong>
-                    <span>Peça ao cliente apenas a API key da conta Asaas dele. O ideal é usar a chave da própria conta ou subconta que vai receber os valores.</span>
-                    <small className="muted-text">Se ele não souber o que é walletId ou split, tudo bem. O sistema detecta o walletId e o split pode continuar desligado por enquanto.</small>
+                    <strong>O que informar aqui</strong>
+                    <span>Peça apenas a chave da conta que vai receber os valores. O sistema tenta completar o resto sozinho.</span>
+                    <small className="muted-text">Se algum campo extra não estiver claro agora, tudo bem. Você pode deixar para depois.</small>
                   </div>
 
                   <form action={connectWorkspaceAsaasAccountAction} className="inline-form">
                     <label className="form-span-2">
-                      <span>API key da conta ou subconta do workspace</span>
-                      <input
-                        name="asaasApiKey"
-                        type="password"
-                        placeholder={workspaceAsaas.mode === "workspace" ? "Preencha apenas para trocar a chave atual" : "Cole a API key da conta do cliente"}
-                        required={workspaceAsaas.mode !== "workspace"}
-                      />
-                    </label>
-                    <label>
-                      <span>ID da conta Asaas</span>
-                      <input
-                        name="asaasAccountId"
-                        type="text"
+                    <span>Chave da conta de recebimento</span>
+                    <input
+                      name="asaasApiKey"
+                      type="password"
+                      placeholder={workspaceAsaas.mode === "workspace" ? "Preencha apenas para trocar a chave atual" : "Cole a chave da conta que vai receber"}
+                      required={workspaceAsaas.mode !== "workspace"}
+                    />
+                  </label>
+                  <label>
+                    <span>Referência da conta</span>
+                    <input
+                      name="asaasAccountId"
+                      type="text"
                         defaultValue={setup.asaasAccountId || ""}
                         placeholder="Opcional por enquanto"
                       />
-                    </label>
-                    <label>
-                      <span>WalletId detectado</span>
-                      <input value={setup.asaasWalletId || workspaceAsaas.walletId || ""} type="text" readOnly />
-                    </label>
-                    <label className="form-span-2">
-                      <span>Split de plataforma</span>
-                      <div className="checkbox-row">
+                  </label>
+                  <label>
+                    <span>Identificador interno</span>
+                    <input value={setup.asaasWalletId || workspaceAsaas.walletId || ""} type="text" readOnly />
+                  </label>
+                  <label className="form-span-2">
+                    <span>Repasse da plataforma</span>
+                    <div className="checkbox-row">
                         <input
                           id="asaas-split-enabled"
                           name="asaasSplitEnabled"
                           type="checkbox"
                           defaultChecked={Boolean(setup.asaasSplitEnabled)}
                         />
-                        <span>Deixar a estrutura pronta para split futuro. Por enquanto, mantenha desligado se não houver taxa.</span>
+                        <span>Deixe ligado apenas se houver repasse ou taxa da plataforma. Se não houver, pode continuar desligado.</span>
                       </div>
                     </label>
                     <button type="submit" className="secondary-link form-submit">
@@ -877,26 +879,23 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         ) : null}
 
         <div className="auth-hint">
-          <strong>Estrutura recomendada</strong>
+          <strong>Melhor formato</strong>
           <span>
-            O melhor modelo é cada workspace cobrar pela própria conta ou subconta Asaas. O fallback da conta raiz só deve ser usado enquanto a configuração individual ainda não existir.
+            O ideal é cada empresa cobrar pela própria conta. Usar uma conta geral só faz sentido enquanto a conta individual ainda não estiver pronta.
           </span>
         </div>
 
         {workspaceAsaasOnboarding ? (
           <>
             <div className="auth-hint">
-              <strong>Status da conta conectada</strong>
+              <strong>Andamento da conta conectada</strong>
               <span>
-                Aprovação geral: {workspaceAsaasOnboarding.generalApproval || "aguardando"}.
-                {` Comercial: ${workspaceAsaasOnboarding.commercialStatus || "n/d"}.`}
-                {` Documentação: ${workspaceAsaasOnboarding.documentationStatus || "n/d"}.`}
+                Situação geral: {workspaceAsaasOnboarding.generalApproval || "aguardando"}.
+                {` Cadastro: ${workspaceAsaasOnboarding.commercialStatus || "n/d"}.`}
+                {` Documentos: ${workspaceAsaasOnboarding.documentationStatus || "n/d"}.`}
                 {` Conta bancária: ${workspaceAsaasOnboarding.bankAccountStatus || "n/d"}.`}
               </span>
-              <small className="muted-text">
-                AccountId: {workspaceAsaasOnboarding.accountId || setup.asaasAccountId || "não informado"}.
-                {` WalletId: ${workspaceAsaasOnboarding.walletId || setup.asaasWalletId || "não informado"}.`}
-              </small>
+              <small className="muted-text">Se ainda houver alguma pendência, você pode concluir direto na conta conectada.</small>
             </div>
 
             {workspaceAsaasOnboarding.pendingDocuments.length > 0 ? (
@@ -972,26 +971,26 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       <section id="team-section" className="data-panel">
         <div className="card-header">
           <div>
-            <span className="section-label">Equipe do workspace</span>
-            <h2>Adicionar operador, financeiro ou apoio comercial no mesmo ambiente</h2>
+            <span className="section-label">Equipe</span>
+            <h2>Adicionar pessoas e organizar acessos</h2>
           </div>
         </div>
 
-        {teamCreated ? <p className="auth-hint">Usuário adicionado ao workspace com sucesso.</p> : null}
+        {teamCreated ? <p className="auth-hint">Usuário adicionado à empresa com sucesso.</p> : null}
         {teamUpdated ? <p className="auth-hint">Papel do usuário atualizado com sucesso.</p> : null}
-        {teamRemoved ? <p className="auth-hint">Usuário removido do workspace com sucesso.</p> : null}
+        {teamRemoved ? <p className="auth-hint">Usuário removido da empresa com sucesso.</p> : null}
         {teamPasswordReset ? <p className="auth-hint">Senha do usuário redefinida com sucesso.</p> : null}
         {teamError ? <p className="auth-error">{teamError}</p> : null}
 
         {isLocalDataMode() ? (
           <div className="auth-hint">
-            <strong>Modo local ativo</strong>
-            <span>Com `DATABASE_URL`, esta área passa a criar usuários reais no mesmo workspace.</span>
+            <strong>Ambiente de teste ativo</strong>
+            <span>Quando o sistema estiver ligado ao banco oficial, esta área cria acessos reais para a equipe.</span>
           </div>
         ) : !canManage ? (
           <div className="auth-hint">
-            <strong>Gestão restrita</strong>
-            <span>Seu papel atual permite consultar a equipe, mas não adicionar novos usuários.</span>
+            <strong>Acesso restrito</strong>
+            <span>Seu perfil atual permite consultar a equipe, mas não convidar novas pessoas.</span>
           </div>
         ) : (
           <form action={createWorkspaceMemberAction} className="inline-form">
@@ -1016,9 +1015,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <label>
               <span>Papel</span>
               <select name="memberRole" defaultValue="MEMBER">
-                <option value="MEMBER">Member</option>
-                <option value="ADMIN">Admin</option>
-                <option value="OWNER">Owner</option>
+                <option value="MEMBER">Operação</option>
+                <option value="ADMIN">Gestão</option>
+                <option value="OWNER">Responsável</option>
               </select>
             </label>
             <button type="submit" className="primary-link form-submit">
@@ -1031,7 +1030,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <div className="data-table-head">
             <span>Usuário</span>
             <span>Email</span>
-            <span>Papel</span>
+            <span>Acesso</span>
             <span>Entrou em</span>
             <span>Ações</span>
           </div>
@@ -1052,9 +1051,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                       <label>
                         <span>Papel</span>
                         <select name="memberRole" defaultValue={member.role}>
-                          <option value="MEMBER">Member</option>
-                          <option value="ADMIN">Admin</option>
-                          <option value="OWNER">Owner</option>
+                          <option value="MEMBER">Operação</option>
+                          <option value="ADMIN">Gestão</option>
+                          <option value="OWNER">Responsável</option>
                         </select>
                       </label>
                       <button type="submit" className="ghost-button">
@@ -1098,19 +1097,17 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       <section className="section-split">
         <article className="split-panel success">
           <span className="section-label">Por que isso importa</span>
-          <h2>Sem setup, o produto vira cadastro solto. Com setup, ele vira sistema.</h2>
+          <h2>Quando a base está redonda, a operação fica mais leve.</h2>
           <p>
-            Esses dados vão alimentar cobrança, templates, onboarding e o futuro módulo de
-            emissão fiscal.
+            Esses dados ajudam cobrança, atendimento, equipe e emissão a funcionarem sem retrabalho.
           </p>
         </article>
 
         <article className="split-panel">
           <span className="section-label">Próximo uso</span>
-          <h2>Base para automações e identidade comercial</h2>
+          <h2>Mais consistência no comercial e no financeiro</h2>
           <p>
-            O nome da empresa, o Pix padrão e a descrição de serviço devem aparecer nas telas
-            certas para reduzir digitação e passar mais confiança.
+            Nome da empresa, cobrança e descrição de serviço aparecem nos lugares certos para economizar tempo e passar mais confiança.
           </p>
         </article>
       </section>
@@ -1118,8 +1115,8 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       <section className="data-panel">
         <div className="card-header">
           <div>
-            <span className="section-label">Auditoria recente</span>
-            <h2>Equipe e configurações sensíveis ficam registradas no workspace</h2>
+            <span className="section-label">Histórico recente</span>
+            <h2>Últimas mudanças feitas na empresa</h2>
           </div>
         </div>
 
@@ -1148,7 +1145,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Atividade WhatsApp</span>
-            <h2>Eventos recentes recebidos da Evolution API</h2>
+            <h2>Últimos sinais recebidos do WhatsApp</h2>
           </div>
         </div>
 
@@ -1171,6 +1168,65 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             </article>
           ))}
         </div>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Detalhes avançados</span>
+            <h2>Informações técnicas só quando você precisar</h2>
+          </div>
+        </div>
+
+        <details className="guided-flow-card">
+          <summary>
+            <div>
+              <span className="section-label">Cobrança e WhatsApp</span>
+              <h3>Ver referências internas das integrações</h3>
+              <p>Use esta área apenas para suporte, implantação ou conferência mais técnica.</p>
+            </div>
+            <span className="guided-flow-badge">Avançado</span>
+          </summary>
+
+          <div className="guided-flow-body">
+            <div className="report-table">
+              <div className="report-table-head report-table-head-2">
+                <span>Item</span>
+                <span>Valor</span>
+              </div>
+              <article className="report-table-row report-table-row-2">
+                <div>
+                  <strong>Modo da conta de cobrança</strong>
+                  <span>{workspaceAsaas.mode === "workspace" ? "Conta própria conectada" : workspaceAsaas.mode === "root_fallback" ? "Conta geral temporária" : "Sem conta conectada"}</span>
+                </div>
+                <div>
+                  <strong>Ambiente</strong>
+                  <span>{asaasIntegration.environment === "production" ? "Produção" : "Sandbox"}</span>
+                </div>
+              </article>
+              <article className="report-table-row report-table-row-2">
+                <div>
+                  <strong>Referência da conta</strong>
+                  <span>{workspaceAsaasOnboarding?.accountId || setup.asaasAccountId || "Não informado"}</span>
+                </div>
+                <div>
+                  <strong>Identificador interno</strong>
+                  <span>{workspaceAsaasOnboarding?.walletId || setup.asaasWalletId || "Não informado"}</span>
+                </div>
+              </article>
+              <article className="report-table-row report-table-row-2">
+                <div>
+                  <strong>Conexão principal do WhatsApp</strong>
+                  <span>{selectedEvolutionInstanceName || "Não definida"}</span>
+                </div>
+                <div>
+                  <strong>Atualização automática</strong>
+                  <span>{asaasIntegration.webhookConfigured ? "Pronta" : "Pendente"}</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </details>
       </section>
     </DashboardShell>
   );

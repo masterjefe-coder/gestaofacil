@@ -33,7 +33,7 @@ export function EvolutionPairingPanel({ instanceName }: EvolutionPairingPanelPro
         if (!response.ok || !body?.ok) {
           setPayload({
             ok: false,
-            error: body?.error || "Não foi possível gerar o pareamento da instância.",
+            error: body?.error || "Não foi possível preparar a conexão agora.",
           });
           return;
         }
@@ -42,7 +42,7 @@ export function EvolutionPairingPanel({ instanceName }: EvolutionPairingPanelPro
       } catch (error) {
         setPayload({
           ok: false,
-          error: error instanceof Error ? error.message : "Não foi possível gerar o pareamento da instância.",
+          error: error instanceof Error ? error.message : "Não foi possível preparar a conexão agora.",
         });
       }
     });
@@ -55,18 +55,18 @@ export function EvolutionPairingPanel({ instanceName }: EvolutionPairingPanelPro
   return (
     <div className="cards-grid">
       <button type="button" className="secondary-link" onClick={requestPairing} disabled={isPending}>
-        {isPending ? "Gerando pareamento..." : "Gerar pareamento"}
+        {isPending ? "Preparando QR..." : "Mostrar QR para conectar"}
       </button>
 
       {payload ? (
         <div className={payload.ok ? "auth-hint" : "auth-hint fiscal-warning"}>
-          <strong>{payload.ok ? "Pareamento pronto" : "Operação com falha"}</strong>
+          <strong>{payload.ok ? "Conexão pronta" : "Não foi possível conectar agora"}</strong>
           <span>{payload.ok ? payload.message : payload.error}</span>
           {payload.pairingCode ? (
-            <small className="muted-text">Código numérico: {payload.pairingCode}</small>
+            <small className="muted-text">Código para conectar pelo celular: {payload.pairingCode}</small>
           ) : null}
           {payload.rawCode && !payload.qrCode ? (
-            <small className="muted-text">A API retornou o código bruto de conexão, mas não devolveu a imagem do QR nesta tentativa.</small>
+            <small className="muted-text">O sistema recebeu o código da conexão, mas não conseguiu montar a imagem do QR nesta tentativa.</small>
           ) : null}
         </div>
       ) : null}
@@ -74,10 +74,10 @@ export function EvolutionPairingPanel({ instanceName }: EvolutionPairingPanelPro
       {payload?.ok && payload.qrCode ? (
         <div className="auth-hint">
           <strong>QR para conectar o WhatsApp</strong>
-          <span>Escaneie este QR com o aparelho que será usado na operação.</span>
+          <span>Escaneie este QR com o aparelho que vai atender os clientes.</span>
           <Image
             src={payload.qrCode}
-            alt="QR code para pareamento da instância Evolution"
+            alt="QR para conectar o WhatsApp"
             width={280}
             height={280}
             unoptimized

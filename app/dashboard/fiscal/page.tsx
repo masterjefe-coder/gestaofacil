@@ -80,8 +80,8 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
     <DashboardShell
       currentPath="/dashboard/fiscal"
       eyebrow="Fiscal"
-      title="A NFS-e precisa nascer do que já foi vendido e recebido."
-      description="O bloco fiscal entra como continuação do fluxo comercial e financeiro, sem redigitar dados nem depender de memória."
+      title="A nota precisa nascer do que já foi vendido e recebido."
+      description="Aqui você organiza o que já foi pago, o que já pode virar nota e o que ainda precisa de ajuste."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
@@ -103,8 +103,8 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         module="fiscal"
         path="/dashboard/fiscal"
         currentView={queueView}
-        title="Persistir a leitura da fila fiscal"
-        helper="Bloqueadas, prontas e revisão passam a abrir no último foco usado pela equipe."
+        title="Abrir a fila no recorte certo"
+        helper="A tela lembra o último filtro usado pela equipe."
         options={[
           { value: "all", label: "Tudo", count: fiscalInsights.items.length },
           { value: "blocked", label: "Bloqueadas", count: fiscalInsights.summary.blockedCount },
@@ -121,7 +121,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
               <h2>
                 {filteredFiscalItems[0]?.customer
                   ? `${filteredFiscalItems[0].customer} lidera a fila fiscal com maior necessidade agora.`
-                  : "A fila fiscal está organizada e pronta para novos recebimentos."}
+                  : "A fila de notas está organizada e pronta para novos recebimentos."}
               </h2>
             </div>
             <span className={`dashboard-priority-badge ${fiscalInsights.summary.blockedCount > 0 ? "priority-critical" : "priority-normal"}`}>
@@ -163,11 +163,11 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
             <div className="dashboard-mini-list">
               <article>
                 <strong>Emitir sem redigitar</strong>
-                <p>A NFS-e entra como continuação da venda recebida, não como outro sistema.</p>
+                <p>A nota entra como continuação da venda recebida, não como outro sistema separado.</p>
               </article>
               <article>
-                <strong>Destravar cedo</strong>
-                <p>Setup, certificado e município precisam aparecer antes da fila acumular erro.</p>
+                <strong>Resolver cedo</strong>
+                <p>Dados da empresa e da cidade precisam aparecer antes da fila acumular erro.</p>
               </article>
             </div>
           </article>
@@ -177,7 +177,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
             <div className="dashboard-shortcuts-grid">
               <Link href="/dashboard/setup" className="dashboard-shortcut-card">
                 <strong>Setup</strong>
-                <span>Ajustar base fiscal</span>
+                <span>Ajustar empresa</span>
               </Link>
               <Link href="/dashboard/billing" className="dashboard-shortcut-card">
                 <strong>Cobranças</strong>
@@ -231,7 +231,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Leitura da fila</span>
-            <h2>Onde o fiscal deve agir primeiro</h2>
+            <h2>Onde vale agir primeiro</h2>
           </div>
         </div>
 
@@ -281,14 +281,14 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Modelos de emissão</span>
-            <h2>O cliente pode emitir com ou sem certificado</h2>
+            <h2>Formas de seguir com a emissão</h2>
           </div>
         </div>
 
         <div className="cards-grid quote-grid">
           <article className="dashboard-card">
             <span className="dashboard-kicker">Emissão assistida</span>
-            <h3>Portal oficial da NFS-e</h3>
+            <h3>Portal oficial de emissão</h3>
             <p>{emissionModes.assisted.helper}</p>
             <div className="dashboard-actions">
               <Link href={portalUrls.loginUrl} className="secondary-link" target="_blank" rel="noreferrer">
@@ -310,7 +310,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                 : "Nenhum certificado configurado ainda."}
             </small>
             <small className="muted-text">
-              Município IBGE: {setup.municipalCode || "aguardando cidade/UF"}.
+              Código da cidade: {setup.municipalCode || "aguardando cidade e UF"}.
               {` Serviço padrão: ${setup.defaultFiscalServiceCode || "definir na empresa ou na emissão"}.`}
             </small>
           </article>
@@ -321,25 +321,25 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Integração oficial</span>
-            <h2>Ambiente da NFS-e Nacional no projeto</h2>
+            <h2>Conexão da emissão no sistema</h2>
           </div>
         </div>
 
         {params?.integrationMessage ? (
           <div className={params.integrationOk === "1" ? "auth-hint" : "auth-hint fiscal-warning"}>
-            <strong>{params.integrationOk === "1" ? "Teste concluído" : "Teste com falha"}</strong>
+            <strong>{params.integrationOk === "1" ? "Teste concluído" : "Não foi possível concluir o teste"}</strong>
             <span>{params.integrationMessage}</span>
           </div>
         ) : null}
         {params?.certificateMessage ? (
           <div className={params.certificateOk === "1" ? "auth-hint" : "auth-hint fiscal-warning"}>
-            <strong>{params.certificateOk === "1" ? "Certificado verificado" : "Certificado com falha"}</strong>
+            <strong>{params.certificateOk === "1" ? "Arquivo verificado" : "Não foi possível validar o arquivo"}</strong>
             <span>{params.certificateMessage}</span>
           </div>
         ) : null}
 
         <div className={integrationStatus.ready ? "auth-hint" : "auth-hint fiscal-warning"}>
-          <strong>{integrationStatus.ready ? "Ambiente configurado" : "Ambiente ainda incompleto"}</strong>
+          <strong>{integrationStatus.ready ? "Tudo pronto para emitir" : "Ainda faltam alguns ajustes"}</strong>
           <span>{integrationStatus.helper}</span>
           <small className="muted-text">
             Ambiente: {integrationStatus.environment === "production" ? "produção" : "produção restrita"}.
@@ -409,7 +409,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Prontidão fiscal</span>
-            <h2>A empresa já tem base suficiente para emissão no fluxo?</h2>
+            <h2>A empresa já tem base suficiente para emitir no fluxo?</h2>
           </div>
         </div>
 
@@ -418,7 +418,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
           <span>{readiness.helper}</span>
           {!readiness.ready ? (
             <Link href="/dashboard/setup" className="secondary-link">
-              Ajustar setup da empresa
+              Ajustar dados da empresa
             </Link>
           ) : null}
         </div>
@@ -460,7 +460,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Fila fiscal</span>
-            <h2>Recebimentos já prontos para virar rascunho de NFS-e</h2>
+            <h2>Recebimentos já prontos para virar nota</h2>
           </div>
         </div>
 
@@ -484,7 +484,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         ) : (
           <div className="auth-hint">
             <strong>Fila fiscal limpa</strong>
-            <span>Nenhum recebimento novo está aguardando rascunho fiscal neste momento.</span>
+            <span>Nenhum pagamento novo está aguardando início de nota neste momento.</span>
           </div>
         )}
       </section>
@@ -493,7 +493,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Documentos fiscais</span>
-            <h2>Rascunhos, prontas, emitidas e itens com revisão</h2>
+            <h2>Notas em preparação, prontas, emitidas e com ajuste pendente</h2>
           </div>
         </div>
 
@@ -543,7 +543,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                 {!readiness.ready ? (
                   <div className="auth-hint fiscal-warning">
                     <strong>Emissão bloqueada</strong>
-                    <span>Complete o setup fiscal da empresa antes de marcar a NFS-e como emitida.</span>
+                    <span>Complete os dados fiscais da empresa antes de marcar a nota como emitida.</span>
                   </div>
                 ) : null}
                 {issuePreviewMap.get(document.id) && !issuePreviewMap.get(document.id)?.ready ? (
@@ -566,7 +566,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                       />
                     </label>
                     <button type="submit" className="primary-link">
-                      Emitir na NFS-e Nacional
+                      Emitir no portal oficial
                     </button>
                   </form>
                 ) : null}

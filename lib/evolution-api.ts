@@ -124,10 +124,10 @@ export function getEvolutionIntegrationStatus() {
     webhookConfigured: Boolean(config.webhookUrl && config.webhookSecret),
     timeoutMs: config.timeoutMs,
     helper: config.defaultInstanceEnabled
-      ? "Evolution API pronta para envio server-side quando o cliente tiver número cadastrado."
+      ? "WhatsApp pronto para enviar mensagens e acompanhar respostas."
       : config.enabled
-        ? "A API já está acessível. Falta só definir EVOLUTION_API_INSTANCE para ativar o envio automático padrão."
-        : "Defina EVOLUTION_API_BASE_URL e EVOLUTION_API_KEY para operar a Evolution API a partir do app.",
+        ? "O canal já responde, mas ainda falta escolher qual número será o principal."
+        : "Conecte o WhatsApp da empresa para liberar mensagens e lembretes automáticos.",
   };
 }
 

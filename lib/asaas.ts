@@ -153,8 +153,8 @@ export function getAsaasIntegrationStatus() {
     webhookUrl,
     webhookTokenConfigured: Boolean(webhookToken),
     helper: config.enabled
-      ? `Asaas configurado em ${config.environment === "production" ? "producao" : "sandbox"}.`
-      : "Asaas ainda nao configurado neste ambiente.",
+      ? "Conta de cobrança pronta para gerar links, Pix, boleto e cartão."
+      : "Conecte a conta de cobrança para liberar Pix, boleto, cartão e baixa automática.",
   };
 }
 

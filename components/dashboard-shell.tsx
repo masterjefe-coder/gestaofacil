@@ -48,9 +48,9 @@ export async function DashboardShell({
     <main className="workspace-shell">
       <aside className="workspace-sidebar">
         <div className="sidebar-brand">
-          <span className="sidebar-status-pill">Workspace online</span>
+          <span className="sidebar-status-pill">Empresa ativa</span>
           <BrandLogo className="sidebar-wordmark" />
-          <span className="eyebrow">Workspace ativo</span>
+          <span className="eyebrow">Painel da empresa</span>
           <h2>{setup.tradeName || setup.name}</h2>
           <p>{setup.niche || "Vendas, cobranças e nota fiscal no mesmo caminho."}</p>
         </div>
@@ -93,9 +93,9 @@ export async function DashboardShell({
 
         {restrictedSubscription ? (
           <div className="auth-hint fiscal-warning">
-            <strong>Assinatura com acesso restrito</strong>
+            <strong>Acesso limitado no momento</strong>
             <span>
-              Status atual: {getSubscriptionStatusLabel(subscription.status)}. Ajuste a assinatura no setup para voltar a operar normalmente.
+              Status atual: {getSubscriptionStatusLabel(subscription.status)}. Ajuste o plano na área da empresa para voltar a operar normalmente.
             </span>
           </div>
         ) : null}

@@ -146,7 +146,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
       currentPath="/dashboard/billing"
       eyebrow="Cobranças"
       title="Receber no prazo precisa ser tão simples quanto criar a venda."
-      description="A cobrança entra como parte do fluxo comercial para reduzir esquecimento, acelerar recebimento e preparar a emissão fiscal."
+      description="Aqui você acompanha quem precisa pagar, quem respondeu e o que vale fazer agora, sem planilha e sem adivinhação."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
@@ -168,8 +168,8 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         module="billing"
         path="/dashboard/billing"
         currentView={queueView}
-        title="Manter a fila financeira no recorte certo"
-        helper="A visão escolhida fica salva para este módulo e volta no próximo acesso."
+        title="Abrir a fila no recorte certo"
+        helper="A tela lembra o último filtro usado pela equipe."
         options={[
           { value: "all", label: "Tudo", count: followUpActions.length },
           { value: "overdue", label: "SLA vencido", count: followUpSummary.slaOverdueCount },
@@ -187,7 +187,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
               <h2>
                 {highlightedFollowUps[0]?.customer
                   ? `${highlightedFollowUps[0].customer} lidera a fila que mais impacta caixa agora.`
-                  : "A fila financeira está organizada e sem gargalo crítico agora."}
+                  : "A fila de recebimentos está organizada e sem trava importante agora."}
               </h2>
             </div>
             <span className={`dashboard-priority-badge ${followUpSummary.slaOverdueCount > 0 ? "priority-critical" : "priority-normal"}`}>
@@ -229,11 +229,11 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             <div className="dashboard-mini-list">
               <article>
                 <strong>Receber com previsibilidade</strong>
-                <p>Cobrança deixa de ser reação atrasada e vira rotina visível do dia.</p>
+                <p>Receber deixa de ser correria e vira rotina visível do dia.</p>
               </article>
               <article>
-                <strong>Escutar o canal antes de insistir</strong>
-                <p>Promessas, contestações e comprovantes entram na fila com leitura clara.</p>
+                <strong>Ler a resposta antes de insistir</strong>
+                <p>Promessas, dúvidas e comprovantes entram na fila com mais contexto.</p>
               </article>
             </div>
           </article>
@@ -251,7 +251,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
               </a>
               <Link href="/dashboard/fiscal" className="dashboard-shortcut-card">
                 <strong>Fiscal</strong>
-                <span>Emitir depois do pago</span>
+                <span>Seguir depois do pago</span>
               </Link>
               <Link href="/dashboard" className="dashboard-shortcut-card">
                 <strong>Dashboard</strong>
@@ -376,7 +376,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <strong>{whatsappReplyCount}</strong>
           <p>
             {whatsappSuggestedCount > 0
-              ? `${whatsappSuggestedCount} retorno(s) já sugerem leitura operacional para follow-up.`
+              ? `${whatsappSuggestedCount} retorno(s) já merecem nova leitura antes do próximo contato.`
               : "Acompanhe aqui quem respondeu pelo WhatsApp antes de insistir na cobrança."}
           </p>
         </article>
@@ -395,7 +395,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Cadência financeira</span>
-            <h2>Estados explícitos de execução da cobrança</h2>
+            <h2>Etapas claras para não perder o timing</h2>
           </div>
         </div>
 
@@ -427,7 +427,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Leituras do canal</span>
-            <h2>O que o WhatsApp já está dizendo sobre a fila de recebimentos</h2>
+            <h2>O que o WhatsApp já está dizendo sobre os recebimentos</h2>
           </div>
         </div>
 
@@ -481,7 +481,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         ) : (
           <div className="auth-hint">
             <strong>Canal ainda sem leitura pendente</strong>
-            <span>Quando clientes responderem no WhatsApp, essa área passa a separar promessa, contestação e confirmação em análise.</span>
+            <span>Quando clientes responderem no WhatsApp, essa área passa a separar promessa, dúvida e confirmação em análise.</span>
           </div>
         )}
       </section>
@@ -674,13 +674,13 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                       <div className="auth-hint">
                         <strong>Retorno recente no WhatsApp</strong>
                         <span>
-                          Cliente respondeu no canal e o texto sugere: {whatsappSignal.suggestedOutcome}.
+                          O cliente respondeu e o sistema entendeu este retorno como: {whatsappSignal.suggestedOutcome}.
                         </span>
                       </div>
                     ) : null}
                     <div className="auth-hint">
                       <strong>Próxima ação</strong>
-                      <span>A fila já foi ordenada pelo próximo contato sugerido e pelo SLA financeiro.</span>
+                      <span>A fila já foi ordenada pelo melhor próximo passo e pelo prazo mais urgente.</span>
                     </div>
                     <div className="dashboard-actions">
                       {action.urgency !== "today" ? (
@@ -785,7 +785,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                       <span>Cobrança</span>
                       <strong>
                         {charge.externalBilling
-                          ? `${charge.externalBilling.provider} ${charge.externalBilling.environment === "production" ? "produção" : "sandbox"}`
+                          ? `${charge.externalBilling.provider} ${charge.externalBilling.environment === "production" ? "produção" : "teste"}`
                           : "Controle interno"}
                       </strong>
                       <small>{charge.externalBilling?.billingType || "Sem gateway externo neste registro"}</small>
@@ -845,7 +845,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                         ) : customer?.phone ? (
                           <div className="auth-hint">
                             <strong>Sem retorno recente no canal</strong>
-                            <span>O cliente tem número cadastrado, mas ainda não houve evento recente associado pelo webhook.</span>
+                            <span>O cliente tem número cadastrado, mas ainda não houve retorno recente ligado a esta cobrança.</span>
                           </div>
                         ) : null}
 
@@ -853,7 +853,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                           <div className="auth-hint">
                             <strong>Leitura sugerida do retorno</strong>
                             <span>
-                              A última mensagem recebida sugere: {whatsappSignal.suggestedOutcome}.
+                              A última mensagem recebida indica: {whatsappSignal.suggestedOutcome}.
                             </span>
                             {whatsappSignal.lastMessagePreview ? (
                               <small className="muted-text">&quot;{whatsappSignal.lastMessagePreview}&quot;</small>
@@ -871,7 +871,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                           <div className="auth-hint">
                             <strong>Cliente respondeu no canal</strong>
                             <span>
-                              Houve mensagem recebida recentemente, mas ainda sem leitura automática confiável para classificar o retorno.
+                              Houve resposta recente, mas ainda vale olhar com calma antes de definir o próximo passo.
                             </span>
                           </div>
                         ) : null}
@@ -897,12 +897,12 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                     relatedNfse ? (
                       <div className="auth-hint">
                         <strong>Fiscal em andamento</strong>
-                        <span>NFS-e em status {relatedNfse.status.toLowerCase()} para este recebimento.</span>
+                        <span>Nota em status {relatedNfse.status.toLowerCase()} para este recebimento.</span>
                       </div>
                     ) : (
                       <div className="auth-hint">
                         <strong>Pronta para nota</strong>
-                        <span>Recebimento confirmado e sem rascunho fiscal criado ainda.</span>
+                        <span>Pagamento confirmado e nota ainda não iniciada.</span>
                       </div>
                     )
                   ) : null}

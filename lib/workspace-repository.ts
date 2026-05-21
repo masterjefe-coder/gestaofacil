@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { buildBillingWhatsappInsights } from "@/lib/billing-whatsapp-insights";
 import { listChargeWhatsappSignals } from "@/lib/charge-whatsapp-signals";
 import { buildChargeFollowUpActions, summarizeChargeFollowUp } from "@/lib/charge-follow-up";
@@ -16,6 +17,18 @@ import type { PipelineColumn, Stat } from "@/lib/types";
 type AgendaItem = {
   title: string;
   description: string;
+};
+
+type DashboardBaseData = {
+  customers: Awaited<ReturnType<typeof listCustomers>>;
+  quotes: Awaited<ReturnType<typeof listQuotes>>;
+  charges: Awaited<ReturnType<typeof listCharges>>;
+  orders: Awaited<ReturnType<typeof listOrders>>;
+  nfseDocuments: Awaited<ReturnType<typeof listNfseDocuments>>;
+  nfseReadyQueue: Awaited<ReturnType<typeof listNfseReadyQueue>>;
+  chargeWhatsappSignals: Awaited<ReturnType<typeof listChargeWhatsappSignals>>;
+  customerWhatsappActivity: Awaited<ReturnType<typeof listCustomerWhatsappActivity>>;
+  fiscalInsights: ReturnType<typeof buildFiscalInsights>;
 };
 
 export type DashboardCadenceMetric = {
@@ -161,15 +174,7 @@ function formatGeneratedAt(date = new Date()) {
   }).format(date);
 }
 
-function countQuotesWithManualCadence(quotes: Awaited<ReturnType<typeof listQuotes>>) {
-  return quotes.filter((quote) => quote.status !== "Aprovado" && !quote.cadence?.nextStepLabel).length;
-}
-
-function countChargesWithoutCadence(charges: Awaited<ReturnType<typeof listCharges>>) {
-  return charges.filter((charge) => charge.status !== "Pago" && !charge.cadence?.nextStepLabel).length;
-}
-
-export async function getDashboardStats(): Promise<Stat[]> {
+const getDashboardBaseData = cache(async (): Promise<DashboardBaseData> => {
   const [customers, quotes, charges, orders, nfseDocuments, nfseReadyQueue, chargeWhatsappSignals, customerWhatsappActivity] = await Promise.all([
     listCustomers(),
     listQuotes(),
@@ -181,6 +186,45 @@ export async function getDashboardStats(): Promise<Stat[]> {
     listCustomerWhatsappActivity().catch(() => []),
   ]);
 
+  const nfsePreviewEntries = await Promise.all(
+    nfseDocuments.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
+  );
+  const fiscalInsights = buildFiscalInsights(nfseDocuments, new Map(nfsePreviewEntries));
+
+  return {
+    customers,
+    quotes,
+    charges,
+    orders,
+    nfseDocuments,
+    nfseReadyQueue,
+    chargeWhatsappSignals,
+    customerWhatsappActivity,
+    fiscalInsights,
+  };
+});
+
+function countQuotesWithManualCadence(quotes: Awaited<ReturnType<typeof listQuotes>>) {
+  return quotes.filter((quote) => quote.status !== "Aprovado" && !quote.cadence?.nextStepLabel).length;
+}
+
+function countChargesWithoutCadence(charges: Awaited<ReturnType<typeof listCharges>>) {
+  return charges.filter((charge) => charge.status !== "Pago" && !charge.cadence?.nextStepLabel).length;
+}
+
+export async function getDashboardStats(): Promise<Stat[]> {
+  const {
+    customers,
+    quotes,
+    charges,
+    orders,
+    nfseDocuments,
+    nfseReadyQueue,
+    chargeWhatsappSignals,
+    customerWhatsappActivity,
+    fiscalInsights,
+  } = await getDashboardBaseData();
+
   const activeQuotes = quotes.filter((quote) => quote.status !== "Aprovado");
   const openCharges = charges.filter((charge) => charge.status !== "Pago");
   const overdueCharges = openCharges.filter((charge) => getChargeUrgency(charge) === "overdue");
@@ -191,10 +235,6 @@ export async function getDashboardStats(): Promise<Stat[]> {
   const fiscalPendingCount = nfseReadyQueue.length + nfseDocuments.filter((document) => document.status === "Rascunho" || document.status === "Pronta" || document.status === "Erro").length;
   const whatsappInsights = buildBillingWhatsappInsights(charges, chargeWhatsappSignals);
   const customerEngagement = buildCustomerEngagementInsights(customers, customerWhatsappActivity);
-  const nfsePreviewEntries = await Promise.all(
-    nfseDocuments.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
-  );
-  const fiscalInsights = buildFiscalInsights(nfseDocuments, new Map(nfsePreviewEntries));
 
   return [
     {
@@ -260,12 +300,7 @@ export async function getDashboardStats(): Promise<Stat[]> {
 }
 
 export async function getDashboardPipeline(): Promise<PipelineColumn[]> {
-  const [customers, quotes, orders, customerWhatsappActivity] = await Promise.all([
-    listCustomers(),
-    listQuotes(),
-    listOrders(),
-    listCustomerWhatsappActivity().catch(() => []),
-  ]);
+  const { customers, quotes, orders, customerWhatsappActivity } = await getDashboardBaseData();
 
   const newConversations = buildCustomerPipelineItems(customers, customerWhatsappActivity);
 
@@ -334,16 +369,17 @@ export async function getDashboardPipeline(): Promise<PipelineColumn[]> {
 }
 
 export async function getTodayAgenda(): Promise<AgendaItem[]> {
-  const [customers, quotes, charges, orders, nfseDocuments, nfseReadyQueue, chargeWhatsappSignals, customerWhatsappActivity] = await Promise.all([
-    listCustomers(),
-    listQuotes(),
-    listCharges(),
-    listOrders(),
-    listNfseDocuments(),
-    listNfseReadyQueue(),
-    listChargeWhatsappSignals().catch(() => []),
-    listCustomerWhatsappActivity().catch(() => []),
-  ]);
+  const {
+    customers,
+    quotes,
+    charges,
+    orders,
+    nfseDocuments,
+    nfseReadyQueue,
+    chargeWhatsappSignals,
+    customerWhatsappActivity,
+    fiscalInsights,
+  } = await getDashboardBaseData();
 
   const prioritizedCharges = sortChargesByPriority(charges.filter((charge) => charge.status !== "Pago"));
   const followUpActions = buildChargeFollowUpActions(charges);
@@ -360,10 +396,6 @@ export async function getTodayAgenda(): Promise<AgendaItem[]> {
   const fiscalErrorCount = nfseDocuments.filter((document) => document.status === "Erro").length;
   const whatsappInsights = buildBillingWhatsappInsights(charges, chargeWhatsappSignals);
   const customerEngagement = buildCustomerEngagementInsights(customers, customerWhatsappActivity);
-  const nfsePreviewEntries = await Promise.all(
-    nfseDocuments.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
-  );
-  const fiscalInsights = buildFiscalInsights(nfseDocuments, new Map(nfsePreviewEntries));
 
   const agenda: AgendaItem[] = [
     {
@@ -469,29 +501,18 @@ export async function getTodayAgenda(): Promise<AgendaItem[]> {
 }
 
 export async function getDashboardRecommendations(): Promise<DashboardRecommendation[]> {
-  const [
+  const {
     customers,
     quotes,
     charges,
-    nfseDocuments,
     chargeWhatsappSignals,
     customerWhatsappActivity,
-  ] = await Promise.all([
-    listCustomers(),
-    listQuotes(),
-    listCharges(),
-    listNfseDocuments(),
-    listChargeWhatsappSignals().catch(() => []),
-    listCustomerWhatsappActivity().catch(() => []),
-  ]);
+    fiscalInsights,
+  } = await getDashboardBaseData();
 
   const billingInsights = buildBillingWhatsappInsights(charges, chargeWhatsappSignals);
   const customerInsights = buildCustomerEngagementInsights(customers, customerWhatsappActivity);
   const quoteInsights = buildQuoteInsights(quotes, customers, customerWhatsappActivity);
-  const nfsePreviewEntries = await Promise.all(
-    nfseDocuments.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
-  );
-  const fiscalInsights = buildFiscalInsights(nfseDocuments, new Map(nfsePreviewEntries));
 
   const recommendations: DashboardRecommendation[] = [];
 
@@ -641,29 +662,18 @@ export async function getDashboardRecommendations(): Promise<DashboardRecommenda
 }
 
 export async function getDashboardCadenceLanes(): Promise<DashboardCadenceLane[]> {
-  const [
+  const {
     customers,
     quotes,
     charges,
-    nfseDocuments,
     chargeWhatsappSignals,
     customerWhatsappActivity,
-  ] = await Promise.all([
-    listCustomers(),
-    listQuotes(),
-    listCharges(),
-    listNfseDocuments(),
-    listChargeWhatsappSignals().catch(() => []),
-    listCustomerWhatsappActivity().catch(() => []),
-  ]);
+    fiscalInsights,
+  } = await getDashboardBaseData();
 
   const billingInsights = buildBillingWhatsappInsights(charges, chargeWhatsappSignals);
   const quoteInsights = buildQuoteInsights(quotes, customers, customerWhatsappActivity);
   const chargeActions = buildChargeFollowUpActions(charges);
-  const nfsePreviewEntries = await Promise.all(
-    nfseDocuments.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
-  );
-  const fiscalInsights = buildFiscalInsights(nfseDocuments, new Map(nfsePreviewEntries));
 
   const items: DashboardCadenceItem[] = [];
 
@@ -775,11 +785,7 @@ export async function getDashboardCadenceLanes(): Promise<DashboardCadenceLane[]
 }
 
 export async function getDashboardCadenceMetrics(): Promise<DashboardCadenceMetric[]> {
-  const [quotes, charges, chargeWhatsappSignals] = await Promise.all([
-    listQuotes(),
-    listCharges(),
-    listChargeWhatsappSignals().catch(() => []),
-  ]);
+  const { quotes, charges, chargeWhatsappSignals } = await getDashboardBaseData();
 
   const quoteInsights = buildQuoteInsights(quotes, [], []);
   const chargeActions = buildChargeFollowUpActions(charges);
@@ -818,12 +824,7 @@ export async function getDashboardCadenceMetrics(): Promise<DashboardCadenceMetr
 }
 
 export async function getDashboardCadenceRisks(): Promise<DashboardCadenceRisk[]> {
-  const [quotes, charges, chargeWhatsappSignals, nfseDocuments] = await Promise.all([
-    listQuotes(),
-    listCharges(),
-    listChargeWhatsappSignals().catch(() => []),
-    listNfseDocuments(),
-  ]);
+  const { quotes, charges, chargeWhatsappSignals, nfseDocuments } = await getDashboardBaseData();
 
   const quoteInsights = buildQuoteInsights(quotes, [], []);
   const chargeActions = buildChargeFollowUpActions(charges);
@@ -888,12 +889,8 @@ export async function getDashboardCadenceRisks(): Promise<DashboardCadenceRisk[]
 }
 
 export async function getDashboardReportSnapshot(): Promise<DashboardReportSnapshot> {
+  const baseData = await getDashboardBaseData();
   const [
-    customers,
-    quotes,
-    charges,
-    nfseDocuments,
-    customerWhatsappActivity,
     summary,
     cadenceMetrics,
     cadenceRisks,
@@ -901,11 +898,6 @@ export async function getDashboardReportSnapshot(): Promise<DashboardReportSnaps
     recommendations,
     agenda,
   ] = await Promise.all([
-    listCustomers(),
-    listQuotes(),
-    listCharges(),
-    listNfseDocuments(),
-    listCustomerWhatsappActivity().catch(() => []),
     getDashboardStats(),
     getDashboardCadenceMetrics(),
     getDashboardCadenceRisks(),
@@ -914,13 +906,10 @@ export async function getDashboardReportSnapshot(): Promise<DashboardReportSnaps
     getTodayAgenda(),
   ]);
 
-  const topQuotes = buildQuoteInsights(quotes, customers, customerWhatsappActivity).items.slice(0, 10);
-  const topCharges = buildChargeFollowUpActions(charges).slice(0, 10);
-  const topCustomers = buildCustomerEngagementInsights(customers, customerWhatsappActivity).items.slice(0, 10);
-  const nfsePreviewEntries = await Promise.all(
-    nfseDocuments.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
-  );
-  const fiscalItems = buildFiscalInsights(nfseDocuments, new Map(nfsePreviewEntries)).items.slice(0, 10);
+  const topQuotes = buildQuoteInsights(baseData.quotes, baseData.customers, baseData.customerWhatsappActivity).items.slice(0, 10);
+  const topCharges = buildChargeFollowUpActions(baseData.charges).slice(0, 10);
+  const topCustomers = buildCustomerEngagementInsights(baseData.customers, baseData.customerWhatsappActivity).items.slice(0, 10);
+  const fiscalItems = baseData.fiscalInsights.items.slice(0, 10);
 
   return {
     generatedAt: formatGeneratedAt(),

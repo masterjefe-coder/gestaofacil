@@ -77,8 +77,8 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
     <DashboardShell
       currentPath="/dashboard/customers"
       eyebrow="Clientes"
-      title="O cliente precisa carregar contexto comercial, financeiro e fiscal."
-      description="Esta área mostra como o Gestão Fácil deve tratar cada cliente como centro do histórico de vendas e não como cadastro morto."
+      title="Cada cliente precisa ter histórico, contexto e próximo passo claro."
+      description="Aqui você acompanha relacionamento, oportunidades, cobranças e retomadas sem tratar cliente como cadastro parado."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
@@ -100,8 +100,8 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         module="customers"
         path="/dashboard/customers"
         currentView={queueView}
-        title="Salvar o recorte operacional da base"
-        helper="Clientes, timeline e reativação passam a abrir já no foco do módulo."
+        title="Abrir a base no recorte certo"
+        helper="A tela lembra o último filtro usado pela equipe."
         options={[
           { value: "all", label: "Tudo", count: engagement.items.length },
           { value: "hot", label: "Quentes", count: engagement.summary.hotCount },
@@ -118,14 +118,14 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
               <h2>
                 {filteredEngagementItems[0]?.customerName
                   ? `${filteredEngagementItems[0].customerName} é o cliente com melhor próximo passo agora.`
-                  : "A base de clientes está pronta para ganhar mais contexto de operação."}
+                  : "A base de clientes está organizada e pronta para ganhar mais contexto."}
               </h2>
             </div>
             <span className="dashboard-priority-badge priority-normal">Base ativa</span>
           </div>
           <p>
             {filteredEngagementItems[0]?.helper ||
-              "Quando clientes acumularem sinais comerciais e financeiros, o módulo prioriza follow-up, calor e reativação aqui no topo."}
+              "Quando clientes acumularem sinais de conversa, proposta e cobrança, o módulo prioriza isso aqui no topo."}
           </p>
 
           <div className="dashboard-top-metrics">
@@ -157,12 +157,12 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
             <span className="section-label">Objetivo do módulo</span>
             <div className="dashboard-mini-list">
               <article>
-                <strong>Parar de tratar cliente como cadastro morto</strong>
-                <p>O histórico comercial, cobrança e canal precisa viver no mesmo lugar.</p>
+                <strong>Parar de tratar cliente como cadastro parado</strong>
+                <p>Histórico de conversa, proposta e cobrança precisa viver no mesmo lugar.</p>
               </article>
               <article>
                 <strong>Agir com contexto</strong>
-                <p>Follow-up e reativação entram com base em sinais reais, não memória do time.</p>
+                <p>Follow-up e retomada entram com base em sinais reais, não na memória do time.</p>
               </article>
             </div>
           </article>
@@ -250,13 +250,13 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         </div>
 
         <div className="auth-hint">
-          <strong>WhatsApp com sinal real</strong>
-          <span>
+            <strong>WhatsApp com sinal real</strong>
+            <span>
             {customersWithWhatsappHistory > 0
-              ? `${customersWithWhatsappHistory} cliente(s) já têm atividade real recebida pelo webhook da Evolution.`
+              ? `${customersWithWhatsappHistory} cliente(s) já têm atividade real registrada no WhatsApp.`
               : "Ainda não há atividade real de WhatsApp associada aos clientes cadastrados."}
-          </span>
-        </div>
+            </span>
+          </div>
 
         <section className="stats-row">
           <article className="stat-card">
@@ -305,7 +305,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
                   <span>{customer.phone || "Sem número"}</span>
                   <div>
                     <strong>{activity?.lastEventAt || "Sem evento real"}</strong>
-                    <small>{activity?.lastEventSummary || "Webhook ainda não associou mensagens a este cliente."}</small>
+                    <small>{activity?.lastEventSummary || "Ainda não houve mensagem recente ligada a este cliente."}</small>
                   </div>
                   <span>{customer.segment}</span>
                   <span>{customer.lastSale}</span>
@@ -331,7 +331,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         <div className="card-header">
           <div>
             <span className="section-label">Atenção comercial</span>
-            <h2>Quem merece ação primeiro na base de clientes</h2>
+            <h2>Quem merece ação primeiro</h2>
           </div>
         </div>
 
@@ -360,7 +360,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         <div className="card-header">
           <div>
             <span className="section-label">Reativação assistida</span>
-            <h2>Mensagens prontas para retomar clientes da base</h2>
+            <h2>Mensagens prontas para retomar contato</h2>
           </div>
         </div>
 
@@ -421,7 +421,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         <div className="card-header">
           <div>
             <span className="section-label">Timeline unificada</span>
-            <h2>Comercial, cobrança, WhatsApp e fiscal no mesmo contexto por cliente</h2>
+            <h2>Histórico completo no mesmo lugar</h2>
           </div>
         </div>
 
@@ -519,6 +519,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
           <div className="auth-hint">
             <strong>Timeline ainda vazia</strong>
             <span>Quando clientes acumularem propostas, cobranças, mensagens e fiscal, a visão 360 começa a aparecer aqui.</span>
+            <span>Quando clientes acumularem propostas, cobranças, mensagens e notas, a visão completa começa a aparecer aqui.</span>
           </div>
         )}
       </section>
@@ -526,7 +527,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
       <section className="section-grid">
         <div>
           <span className="section-label">O que essa tela precisa resolver</span>
-          <h2>Menos busca manual, mais contexto no mesmo lugar.</h2>
+          <h2>Menos busca manual, mais contexto na mesma tela.</h2>
         </div>
         <div className="cards-grid">
           {customerMoments.map((item) => (
