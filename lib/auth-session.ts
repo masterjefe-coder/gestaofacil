@@ -3,7 +3,6 @@ import type { Session } from "next-auth";
 import type { WorkspaceRole } from "@prisma/client";
 import { authOptions } from "@/lib/auth-options";
 import { DEMO_WORKSPACE_ID, isLocalDataMode } from "@/lib/data-mode";
-import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { prisma } from "@/lib/prisma";
 
 export class AuthSessionError extends Error {
@@ -52,8 +51,6 @@ export async function getCurrentWorkspaceContext(): Promise<WorkspaceContext> {
       workspaceRole: session.user?.workspaceRole || "OWNER",
     };
   }
-
-  await ensureDemoCommerceSeeded();
 
   const membership = await prisma.workspaceMembership.findFirst({
     where: {

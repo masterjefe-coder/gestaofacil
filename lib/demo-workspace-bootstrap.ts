@@ -12,11 +12,16 @@ import {
 } from "@/lib/demo-data-codecs";
 import { readDemoWorkspaceData } from "@/lib/demo-store";
 
+declare global {
+  var gestaoFacilDemoWorkspacePromise: Promise<Awaited<ReturnType<typeof ensureDemoWorkspaceRecordInternal>>> | undefined;
+  var gestaoFacilDemoCommercePromise: Promise<Awaited<ReturnType<typeof ensureDemoCommerceSeededInternal>>> | undefined;
+}
+
 function getDemoEmail() {
   return process.env.AUTH_DEMO_EMAIL || "demo@gestaofacil.local";
 }
 
-export async function ensureDemoWorkspaceRecord() {
+async function ensureDemoWorkspaceRecordInternal() {
   const data = await readDemoWorkspaceData();
 
   const workspace = await prisma.workspace.upsert({
@@ -66,7 +71,18 @@ export async function ensureDemoWorkspaceRecord() {
   };
 }
 
-export async function ensureDemoCommerceSeeded() {
+export async function ensureDemoWorkspaceRecord() {
+  if (!global.gestaoFacilDemoWorkspacePromise) {
+    global.gestaoFacilDemoWorkspacePromise = ensureDemoWorkspaceRecordInternal().catch((error) => {
+      global.gestaoFacilDemoWorkspacePromise = undefined;
+      throw error;
+    });
+  }
+
+  return global.gestaoFacilDemoWorkspacePromise;
+}
+
+async function ensureDemoCommerceSeededInternal() {
   const state = await ensureDemoWorkspaceRecord();
   const workspaceId = state.workspace.id;
 
@@ -298,4 +314,15 @@ export async function ensureDemoCommerceSeeded() {
   }
 
   return state;
+}
+
+export async function ensureDemoCommerceSeeded() {
+  if (!global.gestaoFacilDemoCommercePromise) {
+    global.gestaoFacilDemoCommercePromise = ensureDemoCommerceSeededInternal().catch((error) => {
+      global.gestaoFacilDemoCommercePromise = undefined;
+      throw error;
+    });
+  }
+
+  return global.gestaoFacilDemoCommercePromise;
 }
