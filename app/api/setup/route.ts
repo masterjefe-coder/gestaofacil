@@ -8,8 +8,13 @@ export async function GET() {
     return unauthorized;
   }
 
-  const setup = await getWorkspaceSetup();
-  return NextResponse.json({ setup });
+  try {
+    const setup = await getWorkspaceSetup();
+    return NextResponse.json({ setup });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Falha ao carregar o setup.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -37,20 +42,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 });
   }
 
-  const result = await updateWorkspaceSetup({
-    name: body.name,
-    slug: body.slug,
-    niche: body.niche || "",
-    legalName: body.legalName || "",
-    tradeName: body.tradeName,
-    document: body.document,
-    city: body.city || "",
-    state: body.state || "",
-    serviceDescription: body.serviceDescription || "",
-    defaultFiscalServiceCode: body.defaultFiscalServiceCode || "",
-    defaultPixKey: body.defaultPixKey || "",
-    defaultPaymentMessage: body.defaultPaymentMessage || "",
-  });
+  try {
+    const result = await updateWorkspaceSetup({
+      name: body.name,
+      slug: body.slug,
+      niche: body.niche || "",
+      legalName: body.legalName || "",
+      tradeName: body.tradeName,
+      document: body.document,
+      city: body.city || "",
+      state: body.state || "",
+      serviceDescription: body.serviceDescription || "",
+      defaultFiscalServiceCode: body.defaultFiscalServiceCode || "",
+      defaultPixKey: body.defaultPixKey || "",
+      defaultPaymentMessage: body.defaultPaymentMessage || "",
+    });
 
-  return NextResponse.json({ setup: result }, { status: 200 });
+    return NextResponse.json({ setup: result }, { status: 200 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Falha ao salvar o setup.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }

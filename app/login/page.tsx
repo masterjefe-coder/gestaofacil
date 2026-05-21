@@ -5,6 +5,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { MarketingFooter } from "@/components/marketing-footer";
 import { MarketingTopbar } from "@/components/marketing-topbar";
 import { authOptions } from "@/lib/auth-options";
+import { canUsePublicDemoCredentials } from "@/lib/runtime-safety";
 
 type LoginPageProps = {
   searchParams?: Promise<{
@@ -17,6 +18,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const session = await getServerSession(authOptions);
   const params = searchParams ? await searchParams : undefined;
   const callbackUrl = params?.callbackUrl || "/dashboard";
+  const showDemoCredentials = canUsePublicDemoCredentials();
 
   if (session) {
     return (
@@ -71,13 +73,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </article>
 
         <section className="auth-card">
-          <AuthSignInForm callbackUrl={callbackUrl} />
+          <AuthSignInForm callbackUrl={callbackUrl} showDemoHints={showDemoCredentials} />
 
-          <div className="auth-hint">
-            <strong>Credenciais demo padrão</strong>
-            <span>`demo@gestaofacil.local`</span>
-            <span>`gestao123`</span>
-          </div>
+          {showDemoCredentials ? (
+            <div className="auth-hint">
+              <strong>Credenciais demo locais</strong>
+              <span>`demo@gestaofacil.local`</span>
+              <span>`gestao123`</span>
+            </div>
+          ) : null}
         </section>
       </section>
       <div className="page-shell auth-page-shell">

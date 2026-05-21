@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildChargeDueLabel, decodeChargeMeta, encodeChargeMeta, inferPaymentMethod } from "@/lib/demo-data-codecs";
+import { buildChargeDueLabel, decodeChargeMeta, encodeChargeMeta, inferPaymentMethod, mapChargeStatus, mapDbChargeStatus } from "@/lib/demo-data-codecs";
 
 test("buildChargeDueLabel prioritizes explicit label", () => {
   assert.equal(buildChargeDueLabel({
@@ -39,6 +39,12 @@ test("encodeChargeMeta and decodeChargeMeta preserve external billing and follow
       paymentId: "pay_1",
       invoiceUrl: "https://example.com/pay",
     },
+    integrationWarning: {
+      provider: "Asaas",
+      stage: "charge_creation",
+      message: "Falha de teste",
+      createdAt: "2026-05-20T12:00:00.000Z",
+    },
   });
 
   const decoded = decodeChargeMeta(encoded, {
@@ -49,10 +55,16 @@ test("encodeChargeMeta and decodeChargeMeta preserve external billing and follow
   assert.equal(decoded.dueLabel, "vence hoje");
   assert.equal(decoded.followUps.length, 1);
   assert.equal(decoded.externalBilling?.paymentId, "pay_1");
+  assert.equal(decoded.integrationWarning?.message, "Falha de teste");
 });
 
 test("inferPaymentMethod maps link and boleto correctly", () => {
   assert.equal(inferPaymentMethod("Link de pagamento via pedido"), "Link de pagamento");
   assert.equal(inferPaymentMethod("Boleto manual"), "Boleto");
   assert.equal(inferPaymentMethod("Pix copia e cola"), "Pix");
+});
+
+test("charge status mapping preserves overdue charges", () => {
+  assert.equal(mapChargeStatus("Vencida"), "OVERDUE");
+  assert.equal(mapDbChargeStatus("OVERDUE"), "Vencida");
 });

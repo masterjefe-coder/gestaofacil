@@ -166,3 +166,53 @@ export async function listWorkspaceAuditEntriesByType(entityType: string, limit 
     summary: getSummary(event.payload, "Evento registrado no workspace."),
   }));
 }
+
+export async function listWorkspaceAuditEntriesByActions(actions: string[], limit = 10): Promise<AuditEntry[]> {
+  if (actions.length === 0) {
+    return [];
+  }
+
+  if (isLocalDataMode()) {
+    return [
+      {
+        id: "demo-audit-actions",
+        action: actions[0] || "workspace.demo",
+        entityType: "workspace",
+        entityId: "demo",
+        actorName: "Sistema",
+        actorEmail: "sistema@workspace.local",
+        createdAt: "Modo local",
+        summary: "Ative o banco para acompanhar eventos reais e incidentes operacionais.",
+      },
+    ];
+  }
+
+  await ensureDemoCommerceSeeded();
+  const context = await getCurrentWorkspaceContext();
+  const events = await prisma.auditEvent.findMany({
+    where: {
+      workspaceId: context.workspaceId,
+      action: {
+        in: actions,
+      },
+    },
+    include: {
+      actor: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: limit,
+  });
+
+  return events.map((event) => ({
+    id: event.id,
+    action: event.action,
+    entityType: event.entityType,
+    entityId: event.entityId,
+    actorName: event.actor?.name || event.actor?.email?.split("@")[0] || "Sistema",
+    actorEmail: event.actor?.email || "sistema@workspace.local",
+    createdAt: formatCreatedAt(event.createdAt),
+    summary: getSummary(event.payload, "Evento registrado no workspace."),
+  }));
+}

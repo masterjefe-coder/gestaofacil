@@ -1,10 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createChargeFromQuote, updateCharge } from "@/lib/charge-repository";
 import { updateCustomerStatus } from "@/lib/customer-repository";
+import { ACTIVE_WORKSPACE_COOKIE, requireSessionUser } from "@/lib/auth-session";
 import { writeDashboardQueuePreference, type DashboardQueueModule } from "@/lib/dashboard-queue-preferences";
+import { prisma } from "@/lib/prisma";
 import { updateQuote } from "@/lib/quote-repository";
 import type { Customer } from "@/lib/types";
 
@@ -60,6 +63,45 @@ export async function persistDashboardQueuePreferenceAction(formData: FormData) 
   });
 
   redirect(buildRedirectUrl(path, view, focus));
+}
+
+export async function switchActiveWorkspaceAction(formData: FormData) {
+  const workspaceId = getString(formData, "workspaceId");
+  const returnTo = getString(formData, "returnTo") || "/dashboard";
+
+  if (!workspaceId) {
+    redirect(returnTo);
+  }
+
+  const { email } = await requireSessionUser();
+  const membership = await prisma.workspaceMembership.findFirst({
+    where: {
+      workspaceId,
+      user: {
+        email,
+      },
+    },
+    select: {
+      workspaceId: true,
+    },
+  });
+
+  if (!membership) {
+    redirect(`${returnTo}?workspaceError=1`);
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(ACTIVE_WORKSPACE_COOKIE, workspaceId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirect(returnTo);
 }
 
 export async function markDashboardQuoteFollowUpAction(formData: FormData) {

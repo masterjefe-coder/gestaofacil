@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleEvolutionWebhook } from "@/lib/evolution-webhook";
+import { isWebhookSecretConfigured } from "@/lib/runtime-safety";
 
 function isAuthorized(request: NextRequest) {
   const secret = process.env.EVOLUTION_WEBHOOK_SECRET?.trim();
 
-  if (!secret) {
-    return true;
-  }
-
   const authorization = request.headers.get("authorization")?.trim();
-  return authorization === `Bearer ${secret}`;
+  return Boolean(secret) && authorization === `Bearer ${secret}`;
 }
 
 export async function GET() {
@@ -21,6 +18,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isWebhookSecretConfigured(process.env.EVOLUTION_WEBHOOK_SECRET)) {
+    return NextResponse.json({ error: "Webhook desabilitado ate configurar EVOLUTION_WEBHOOK_SECRET." }, { status: 503 });
+  }
+
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Webhook não autorizado." }, { status: 401 });
   }

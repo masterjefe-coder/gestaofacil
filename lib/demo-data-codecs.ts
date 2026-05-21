@@ -1,4 +1,12 @@
-import type { Charge, ChargeFollowUpEntry, Customer, EntityCadenceState, ExternalChargeBilling, Quote } from "@/lib/types";
+import type {
+  Charge,
+  ChargeFollowUpEntry,
+  ChargeIntegrationWarning,
+  Customer,
+  EntityCadenceState,
+  ExternalChargeBilling,
+  Quote,
+} from "@/lib/types";
 
 const CUSTOMER_META_PREFIX = "GF_CUSTOMER_META::";
 const QUOTE_META_PREFIX = "GF_QUOTE_META::";
@@ -23,6 +31,7 @@ type ChargeMeta = {
   followUps: ChargeFollowUpEntry[];
   cadence?: EntityCadenceState;
   externalBilling?: ExternalChargeBilling;
+  integrationWarning?: ChargeIntegrationWarning;
 };
 
 function sanitizeCadence(value: Partial<EntityCadenceState> | undefined): EntityCadenceState | undefined {
@@ -182,6 +191,8 @@ export function mapChargeStatus(status: Charge["status"]) {
       return "DUE_TODAY" as const;
     case "Pago":
       return "PAID" as const;
+    case "Vencida":
+      return "OVERDUE" as const;
     default:
       return "PENDING" as const;
   }
@@ -193,6 +204,8 @@ export function mapDbChargeStatus(status: "DUE_TODAY" | "PAID" | "PENDING" | "OV
       return "Hoje";
     case "PAID":
       return "Pago";
+    case "OVERDUE":
+      return "Vencida";
     default:
       return "Pendente";
   }
@@ -205,6 +218,7 @@ export function encodeChargeMeta(input: ChargeInputLike) {
     followUps: input.followUps || [],
     cadence: input.cadence,
     externalBilling: input.externalBilling,
+    integrationWarning: input.integrationWarning,
   } satisfies ChargeMeta)}`;
 }
 
@@ -216,6 +230,7 @@ export function decodeChargeMeta(
     followUps?: ChargeFollowUpEntry[];
     cadence?: EntityCadenceState;
     externalBilling?: ExternalChargeBilling;
+    integrationWarning?: ChargeIntegrationWarning;
   },
 ) {
   const parsed = parsePrefixedJson<ChargeMeta>(value, CHARGE_META_PREFIX);
@@ -227,6 +242,7 @@ export function decodeChargeMeta(
       followUps: Array.isArray(parsed.followUps) ? parsed.followUps.filter(isFollowUpEntry) : (fallback.followUps || []),
       cadence: sanitizeCadence(parsed.cadence) || fallback.cadence,
       externalBilling: isExternalBilling(parsed.externalBilling) ? parsed.externalBilling : fallback.externalBilling,
+      integrationWarning: isIntegrationWarning(parsed.integrationWarning) ? parsed.integrationWarning : fallback.integrationWarning,
     };
   }
 
@@ -236,6 +252,7 @@ export function decodeChargeMeta(
     followUps: fallback.followUps || [],
     cadence: fallback.cadence,
     externalBilling: fallback.externalBilling,
+    integrationWarning: fallback.integrationWarning,
   };
 }
 
@@ -264,6 +281,19 @@ function isExternalBilling(value: unknown): value is ExternalChargeBilling {
 
   return candidate.provider === "Asaas"
     && (candidate.environment === "sandbox" || candidate.environment === "production");
+}
+
+function isIntegrationWarning(value: unknown): value is ChargeIntegrationWarning {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  return candidate.provider === "Asaas"
+    && candidate.stage === "charge_creation"
+    && typeof candidate.message === "string"
+    && typeof candidate.createdAt === "string";
 }
 
 export function inferPaymentMethod(source: string) {
@@ -369,4 +399,4 @@ export function inferDueDateFromLabel(label: string | undefined, now = new Date(
 
 type CustomerInputLike = Pick<Customer, "segment" | "status" | "note">;
 type QuoteInputLike = Pick<Quote, "dueLabel" | "summary" | "status" | "cadence">;
-type ChargeInputLike = Pick<Charge, "dueLabel" | "source" | "cadence" | "externalBilling"> & { followUps?: ChargeFollowUpEntry[] };
+type ChargeInputLike = Pick<Charge, "dueLabel" | "source" | "cadence" | "externalBilling" | "integrationWarning"> & { followUps?: ChargeFollowUpEntry[] };

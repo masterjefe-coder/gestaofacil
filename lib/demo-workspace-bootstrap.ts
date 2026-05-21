@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { canUsePublicDemoCredentials } from "@/lib/runtime-safety";
 import { DEMO_WORKSPACE_ID } from "@/lib/data-mode";
 import {
   encodeChargeMeta,
@@ -317,6 +318,10 @@ async function ensureDemoCommerceSeededInternal() {
 }
 
 export async function ensureDemoCommerceSeeded() {
+  if (!canUsePublicDemoCredentials()) {
+    return null;
+  }
+
   if (!global.gestaoFacilDemoCommercePromise) {
     global.gestaoFacilDemoCommercePromise = ensureDemoCommerceSeededInternal().catch((error) => {
       global.gestaoFacilDemoCommercePromise = undefined;

@@ -28,6 +28,7 @@ import type {
   ChargeFollowUpChannel,
   ChargeFollowUpEntry,
   ChargeFollowUpOutcome,
+  ChargeIntegrationWarning,
   ChargeInput,
 } from "@/lib/types";
 
@@ -39,6 +40,7 @@ type ChargeUpdateInput = {
   paymentLink?: string;
   cadence?: Charge["cadence"];
   externalBilling?: Charge["externalBilling"];
+  integrationWarning?: Charge["integrationWarning"];
 };
 
 type ChargeFollowUpInput = {
@@ -54,6 +56,15 @@ function createFollowUpEntry(input: ChargeFollowUpInput): ChargeFollowUpEntry {
     channel: input.channel,
     outcome: input.outcome,
     note: input.note || "Contato financeiro registrado no painel.",
+  };
+}
+
+function createIntegrationWarning(message: string): ChargeIntegrationWarning {
+  return {
+    provider: "Asaas",
+    stage: "charge_creation",
+    message,
+    createdAt: new Date().toISOString(),
   };
 }
 
@@ -94,6 +105,7 @@ function toChargeView(charge: DbCharge & { customer: DbCustomer; order: DbOrder 
     followUps: [],
     cadence: undefined,
     externalBilling: undefined,
+    integrationWarning: undefined,
   };
   const meta = decodeChargeMeta(charge.pixCode, fallback);
 
@@ -109,6 +121,7 @@ function toChargeView(charge: DbCharge & { customer: DbCustomer; order: DbOrder 
     followUps: meta.followUps,
     cadence: meta.cadence,
     externalBilling: meta.externalBilling,
+    integrationWarning: meta.integrationWarning,
   };
 }
 
@@ -200,6 +213,7 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
     });
 
     let externalCharge;
+    let integrationWarning: ChargeIntegrationWarning | undefined;
 
     try {
       externalCharge = await buildExternalBillingForCharge({
@@ -213,26 +227,26 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
         description: `Cobranca para ${customer.name}`,
         paymentMethod: input.source,
       });
-    } catch {
+    } catch (error) {
       externalCharge = undefined;
+      integrationWarning = createIntegrationWarning(
+        error instanceof Error
+          ? error.message
+          : "Falha ao criar cobranca externa no Asaas.",
+      );
     }
 
-    const persistedCharge = externalCharge ? await prisma.charge.update({
+    const persistedCharge = await prisma.charge.update({
       where: { id: charge.id },
       data: {
-        paymentLink: externalCharge.paymentLink,
+        paymentLink: externalCharge?.paymentLink || null,
         pixCode: encodeChargeMeta({
           ...input,
           followUps: [],
-          externalBilling: externalCharge.externalBilling,
+          externalBilling: externalCharge?.externalBilling,
+          integrationWarning,
         }),
       },
-      include: {
-        customer: true,
-        order: true,
-      },
-    }) : await prisma.charge.findUniqueOrThrow({
-      where: { id: charge.id },
       include: {
         customer: true,
         order: true,
@@ -251,6 +265,7 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
       followUps: [],
       cadence: input.cadence,
       externalBilling: externalCharge?.externalBilling,
+      integrationWarning,
     };
 
     await recordAuditEvent({
@@ -269,6 +284,22 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
       },
     });
 
+    if (integrationWarning) {
+      await recordAuditEvent({
+        action: "charge.asaas.failed",
+        entityType: "charge",
+        entityId: charge.id,
+        payload: {
+          summary: `Cobranca criada para ${createdCharge.customer}, mas o Asaas nao concluiu a automacao externa.`,
+          metadata: {
+            customer: createdCharge.customer,
+            amount: createdCharge.amount,
+            detail: integrationWarning.message,
+          },
+        },
+      });
+    }
+
     return createdCharge;
   }
 
@@ -276,6 +307,7 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
   const existingCustomer = data.customers.find((customer) => customer.name === input.customer);
   const localChargeId = randomUUID();
   let externalCharge;
+  let integrationWarning: ChargeIntegrationWarning | undefined;
 
   try {
     externalCharge = await buildExternalBillingForCharge({
@@ -289,8 +321,13 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
       description: `Cobranca para ${input.customer}`,
       paymentMethod: input.source,
     });
-  } catch {
+  } catch (error) {
     externalCharge = undefined;
+    integrationWarning = createIntegrationWarning(
+      error instanceof Error
+        ? error.message
+        : "Falha ao criar cobranca externa no Asaas.",
+    );
   }
 
   const charge: Charge = {
@@ -305,6 +342,7 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
     followUps: [],
     cadence: input.cadence,
     externalBilling: externalCharge?.externalBilling || input.externalBilling,
+    integrationWarning,
   };
 
   data.charges = [charge, ...data.charges];
@@ -356,6 +394,7 @@ export async function createChargeFromQuote(
     });
 
     let externalCharge;
+    let integrationWarning: ChargeIntegrationWarning | undefined;
 
     try {
       externalCharge = await buildExternalBillingForCharge({
@@ -369,28 +408,28 @@ export async function createChargeFromQuote(
         description: `Cobranca do orcamento ${dbOrder.quote.title}`,
         paymentMethod,
       });
-    } catch {
+    } catch (error) {
       externalCharge = undefined;
+      integrationWarning = createIntegrationWarning(
+        error instanceof Error
+          ? error.message
+          : "Falha ao criar cobranca externa no Asaas.",
+      );
     }
 
-    const persistedCharge = externalCharge ? await prisma.charge.update({
+    const persistedCharge = await prisma.charge.update({
       where: { id: charge.id },
       data: {
-        paymentLink: externalCharge.paymentLink,
+        paymentLink: externalCharge?.paymentLink || null,
         pixCode: encodeChargeMeta({
           dueLabel: dueLabel || buildChargeDueLabel({ dueDate, status }),
           source: `${paymentMethod} via orcamento "${dbOrder.quote.title}"`,
           followUps: [],
           cadence: undefined,
-          externalBilling: externalCharge.externalBilling,
+          externalBilling: externalCharge?.externalBilling,
+          integrationWarning,
         }),
       },
-      include: {
-        customer: true,
-        order: true,
-      },
-    }) : await prisma.charge.findUniqueOrThrow({
-      where: { id: charge.id },
       include: {
         customer: true,
         order: true,
@@ -409,6 +448,7 @@ export async function createChargeFromQuote(
       followUps: [],
       cadence: undefined,
       externalBilling: externalCharge?.externalBilling,
+      integrationWarning,
     };
 
     await recordAuditEvent({
@@ -428,6 +468,22 @@ export async function createChargeFromQuote(
       },
     });
 
+    if (integrationWarning) {
+      await recordAuditEvent({
+        action: "charge.asaas.failed",
+        entityType: "charge",
+        entityId: charge.id,
+        payload: {
+          summary: `Cobranca do orcamento de ${createdCharge.customer} foi criada sem automacao externa do Asaas.`,
+          metadata: {
+            customer: createdCharge.customer,
+            amount: createdCharge.amount,
+            detail: integrationWarning.message,
+          },
+        },
+      });
+    }
+
     return createdCharge;
   }
 
@@ -441,6 +497,7 @@ export async function createChargeFromQuote(
   const existingCustomer = data.customers.find((customer) => customer.name === order.customer);
   const localChargeId = randomUUID();
   let externalCharge;
+  let integrationWarning: ChargeIntegrationWarning | undefined;
 
   try {
     externalCharge = await buildExternalBillingForCharge({
@@ -454,8 +511,13 @@ export async function createChargeFromQuote(
       description: `Cobranca do pedido ${order.title}`,
       paymentMethod,
     });
-  } catch {
+  } catch (error) {
     externalCharge = undefined;
+    integrationWarning = createIntegrationWarning(
+      error instanceof Error
+        ? error.message
+        : "Falha ao criar cobranca externa no Asaas.",
+    );
   }
 
   const charge: Charge = {
@@ -470,6 +532,7 @@ export async function createChargeFromQuote(
     followUps: [],
     cadence: undefined,
     externalBilling: externalCharge?.externalBilling,
+    integrationWarning,
   };
 
   data.charges = [charge, ...data.charges];
@@ -504,6 +567,9 @@ export async function updateCharge(id: string, input: ChargeUpdateInput): Promis
     const nextSource = input.source || currentView.source;
     const nextCadence = input.cadence || currentView.cadence;
     const nextExternalBilling = input.externalBilling || currentView.externalBilling;
+    const nextIntegrationWarning = Object.prototype.hasOwnProperty.call(input, "integrationWarning")
+      ? input.integrationWarning
+      : currentView.integrationWarning;
     const nextPaymentLink = input.paymentLink || currentView.paymentLink;
 
     const updated = await prisma.charge.update({
@@ -518,6 +584,7 @@ export async function updateCharge(id: string, input: ChargeUpdateInput): Promis
           followUps: currentView.followUps,
           cadence: nextCadence,
           externalBilling: nextExternalBilling,
+          integrationWarning: nextIntegrationWarning,
         }),
         paidAt: nextStatus === "Pago" ? new Date() : null,
       },
@@ -569,6 +636,9 @@ export async function updateCharge(id: string, input: ChargeUpdateInput): Promis
       followUps: current.followUps || [],
       cadence: input.cadence || current.cadence,
       externalBilling: input.externalBilling || current.externalBilling,
+      integrationWarning: Object.prototype.hasOwnProperty.call(input, "integrationWarning")
+        ? input.integrationWarning
+        : current.integrationWarning,
     };
 
   data.charges[index] = updatedCharge;

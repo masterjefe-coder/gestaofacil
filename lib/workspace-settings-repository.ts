@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { recordAuditEvent } from "@/lib/audit-repository";
 import { createAsaasSubaccount, inspectAsaasAccount } from "@/lib/asaas";
@@ -6,6 +7,7 @@ import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { resolveIbgeMunicipalityCode } from "@/lib/ibge";
 import { prisma } from "@/lib/prisma";
 import { readDemoWorkspaceData, writeDemoWorkspaceData } from "@/lib/demo-store";
+import { encryptWorkspaceSecret } from "@/lib/secret-crypto";
 import type { SetupInput } from "@/lib/types";
 
 export async function getWorkspaceSetup() {
@@ -97,66 +99,82 @@ export async function updateWorkspaceSetup(input: SetupInput) {
         : null,
     ].filter(Boolean);
 
-    await prisma.$transaction(async (tx) => {
-      await tx.workspace.update({
-        where: { id: context.workspaceId },
-        data: {
-          name: input.name,
-          slug: input.slug,
-        },
-      });
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.workspace.update({
+          where: { id: context.workspaceId },
+          data: {
+            name: input.name,
+            slug: input.slug,
+          },
+        });
 
-      await tx.company.upsert({
-        where: { workspaceId: context.workspaceId },
-        update: {
-          legalName: input.legalName,
-          tradeName: input.tradeName,
-          document: input.document,
-          city: input.city,
-          state: input.state,
-          municipalCode: resolvedMunicipality?.municipalCode || null,
-          serviceDescription: input.serviceDescription || input.niche,
-          defaultFiscalServiceCode: input.defaultFiscalServiceCode || null,
-          defaultPixKey: input.defaultPixKey,
-          defaultPaymentMessage: input.defaultPaymentMessage,
-        },
-        create: {
-          workspaceId: context.workspaceId,
-          legalName: input.legalName,
-          tradeName: input.tradeName,
-          document: input.document,
-          city: input.city,
-          state: input.state,
-          municipalCode: resolvedMunicipality?.municipalCode || null,
-          serviceDescription: input.serviceDescription || input.niche,
-          defaultFiscalServiceCode: input.defaultFiscalServiceCode || null,
-          defaultPixKey: input.defaultPixKey,
-          defaultPaymentMessage: input.defaultPaymentMessage,
-        },
-      });
+        await tx.company.upsert({
+          where: { workspaceId: context.workspaceId },
+          update: {
+            legalName: input.legalName,
+            tradeName: input.tradeName,
+            document: input.document,
+            city: input.city,
+            state: input.state,
+            municipalCode: resolvedMunicipality?.municipalCode || null,
+            serviceDescription: input.serviceDescription || input.niche,
+            defaultFiscalServiceCode: input.defaultFiscalServiceCode || null,
+            defaultPixKey: input.defaultPixKey,
+            defaultPaymentMessage: input.defaultPaymentMessage,
+          },
+          create: {
+            workspaceId: context.workspaceId,
+            legalName: input.legalName,
+            tradeName: input.tradeName,
+            document: input.document,
+            city: input.city,
+            state: input.state,
+            municipalCode: resolvedMunicipality?.municipalCode || null,
+            serviceDescription: input.serviceDescription || input.niche,
+            defaultFiscalServiceCode: input.defaultFiscalServiceCode || null,
+            defaultPixKey: input.defaultPixKey,
+            defaultPaymentMessage: input.defaultPaymentMessage,
+          },
+        });
 
-      await recordAuditEvent(
-        {
-          action: "workspace.setup.updated",
-          entityType: "workspace",
-          entityId: context.workspaceId,
-          context,
-          payload: {
-            summary: changedFields.length
-              ? `Setup atualizado: ${changedFields.join(", ")}.`
-              : "Setup salvo sem alteracoes materiais.",
-            metadata: {
-              changedFieldCount: changedFields.length,
-              tradeName: input.tradeName,
-              city: input.city || null,
-              state: input.state || null,
-              municipalCode: resolvedMunicipality?.municipalCode || null,
+        await recordAuditEvent(
+          {
+            action: "workspace.setup.updated",
+            entityType: "workspace",
+            entityId: context.workspaceId,
+            context,
+            payload: {
+              summary: changedFields.length
+                ? `Setup atualizado: ${changedFields.join(", ")}.`
+                : "Setup salvo sem alteracoes materiais.",
+              metadata: {
+                changedFieldCount: changedFields.length,
+                tradeName: input.tradeName,
+                city: input.city || null,
+                state: input.state || null,
+                municipalCode: resolvedMunicipality?.municipalCode || null,
+              },
             },
           },
-        },
-        tx,
-      );
-    });
+          tx,
+        );
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const target = Array.isArray(error.meta?.target) ? error.meta.target.join(", ") : String(error.meta?.target || "");
+
+        if (target.includes("slug")) {
+          throw new Error("Esse identificador interno ja esta em uso por outra empresa.");
+        }
+
+        if (target.includes("document")) {
+          throw new Error("Esse documento ja esta vinculado a outra empresa.");
+        }
+      }
+
+      throw error;
+    }
 
     return {
       workspace: {
@@ -231,7 +249,7 @@ export async function connectWorkspaceAsaasAccount(input: {
     await prisma.company.upsert({
       where: { workspaceId: context.workspaceId },
       update: {
-        asaasApiKey: input.apiKey,
+        asaasApiKey: encryptWorkspaceSecret(input.apiKey),
         asaasAccountId: input.accountId || null,
         asaasWalletId: walletId,
         asaasUseOwnAccount: true,
@@ -242,7 +260,7 @@ export async function connectWorkspaceAsaasAccount(input: {
         legalName: "Empresa sem razão social definida",
         tradeName: "Workspace sem setup completo",
         document: `workspace-${context.workspaceId}`,
-        asaasApiKey: input.apiKey,
+        asaasApiKey: encryptWorkspaceSecret(input.apiKey),
         asaasAccountId: input.accountId || null,
         asaasWalletId: walletId,
         asaasUseOwnAccount: true,
@@ -352,7 +370,7 @@ export async function createWorkspaceAsaasSubaccount(input: {
     await prisma.company.upsert({
       where: { workspaceId: context.workspaceId },
       update: {
-        asaasApiKey: created.apiKey,
+        asaasApiKey: encryptWorkspaceSecret(created.apiKey),
         asaasAccountId: created.accountId || null,
         asaasWalletId: created.walletId,
         asaasUseOwnAccount: true,
@@ -363,7 +381,7 @@ export async function createWorkspaceAsaasSubaccount(input: {
         legalName: input.name,
         tradeName: input.name,
         document: input.cpfCnpj,
-        asaasApiKey: created.apiKey,
+        asaasApiKey: encryptWorkspaceSecret(created.apiKey),
         asaasAccountId: created.accountId || null,
         asaasWalletId: created.walletId,
         asaasUseOwnAccount: true,

@@ -1,6 +1,6 @@
 import { WorkspaceRole } from "@prisma/client";
 import { recordAuditEvent } from "@/lib/audit-repository";
-import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
+import { canManageWorkspace, getCurrentWorkspaceContext, requireSessionUser } from "@/lib/auth-session";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { hashPassword } from "@/lib/password-auth";
@@ -28,6 +28,13 @@ type UpdateWorkspaceMemberRoleInput = {
 type ResetWorkspaceMemberPasswordInput = {
   membershipId: string;
   password: string;
+};
+
+export type UserWorkspaceOption = {
+  id: string;
+  name: string;
+  tradeName?: string;
+  role: WorkspaceMember["role"];
 };
 
 function formatJoinedAt(value: Date) {
@@ -101,6 +108,45 @@ export async function listWorkspaceMembers(): Promise<WorkspaceMember[]> {
     role: mapRole(membership.role),
     joinedAt: formatJoinedAt(membership.createdAt),
     isCurrentUser: membership.userId === userId,
+  }));
+}
+
+export async function listUserWorkspaces(): Promise<UserWorkspaceOption[]> {
+  if (isLocalDataMode()) {
+    return [
+      {
+        id: "demo-workspace",
+        name: "Workspace demo",
+        tradeName: "Workspace demo",
+        role: "OWNER",
+      },
+    ];
+  }
+
+  const { email } = await requireSessionUser();
+  const memberships = await prisma.workspaceMembership.findMany({
+    where: {
+      user: {
+        email,
+      },
+    },
+    include: {
+      workspace: {
+        include: {
+          company: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  return memberships.map((membership) => ({
+    id: membership.workspaceId,
+    name: membership.workspace.name,
+    tradeName: membership.workspace.company?.tradeName || membership.workspace.name,
+    role: mapRole(membership.role),
   }));
 }
 

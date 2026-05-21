@@ -779,7 +779,13 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                     <div className="charge-meta-item">
                       <span>Status</span>
                       <strong>{charge.status}</strong>
-                      <small>{charge.status === "Pago" ? "Recebimento confirmado" : "Aguardando baixa financeira"}</small>
+                      <small>
+                        {charge.status === "Pago"
+                          ? "Recebimento confirmado"
+                          : charge.status === "Vencida"
+                            ? "Cobrança vencida e precisando de ação"
+                            : "Aguardando baixa financeira"}
+                      </small>
                     </div>
                     <div className="charge-meta-item">
                       <span>Cobrança</span>
@@ -817,6 +823,16 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                       {charge.externalBilling.pixExpirationDate ? (
                         <small className="muted-text">Expira em {charge.externalBilling.pixExpirationDate}</small>
                       ) : null}
+                    </div>
+                  ) : null}
+
+                  {charge.integrationWarning ? (
+                    <div className="auth-hint fiscal-warning">
+                      <strong>Automação externa incompleta</strong>
+                      <span>
+                        A cobrança foi salva no Gestão Fácil, mas o Asaas não concluiu a etapa externa.
+                      </span>
+                      <small className="muted-text">{charge.integrationWarning.message}</small>
                     </div>
                   ) : null}
 

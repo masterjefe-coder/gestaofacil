@@ -15,6 +15,7 @@ import {
   updateWorkspaceSetupAction,
 } from "@/app/dashboard/setup/actions";
 import { listAuditEntries } from "@/lib/audit-repository";
+import { listWorkspaceAuditEntriesByActions } from "@/lib/audit-repository";
 import { listWorkspaceAuditEntriesByType } from "@/lib/audit-repository";
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
@@ -52,6 +53,8 @@ type SetupPageProps = {
     teamRemoved?: string;
     teamPasswordReset?: string;
     teamError?: string;
+    setupSaved?: string;
+    setupError?: string;
   }>;
 };
 
@@ -68,12 +71,39 @@ function getEvolutionStateLabel(value: string | undefined) {
   }
 }
 
+function getHealthTone(input: { ok: boolean; warning?: boolean }) {
+  if (input.ok && !input.warning) {
+    return "split-panel success";
+  }
+
+  return input.warning ? "split-panel" : "split-panel";
+}
+
 export default async function SetupPage({ searchParams }: SetupPageProps) {
-  const [setup, members, auditEntries, evolutionAuditEntries, context, params, fiscalReadiness, evolutionProbe, evolutionInstances, workspaceAsaas, workspaceAsaasOnboarding, subscription] = await Promise.all([
+  const [
+    setup,
+    members,
+    auditEntries,
+    evolutionAuditEntries,
+    asaasIncidentEntries,
+    asaasLifecycleEntries,
+    subscriptionAuditEntries,
+    context,
+    params,
+    fiscalReadiness,
+    evolutionProbe,
+    evolutionInstances,
+    workspaceAsaas,
+    workspaceAsaasOnboarding,
+    subscription,
+  ] = await Promise.all([
     getWorkspaceSetup(),
     listWorkspaceMembers(),
     listAuditEntries(8),
     listWorkspaceAuditEntriesByType("evolution", 8),
+    listWorkspaceAuditEntriesByActions(["charge.asaas.failed", "asaas.payment_overdue"], 8),
+    listWorkspaceAuditEntriesByActions(["workspace.asaas.connected", "workspace.asaas.disconnected", "workspace.asaas.subaccount_created"], 6),
+    listWorkspaceAuditEntriesByActions(["workspace.subscription.checkout_created", "workspace.subscription.checkout_synced", "subscription.asaas.payment_overdue", "subscription.asaas.payment_received", "subscription.asaas.payment_confirmed"], 6),
     getCurrentWorkspaceContext(),
     searchParams,
     getFiscalSetupReadiness(),
@@ -88,6 +118,8 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const teamRemoved = params?.teamRemoved === "1";
   const teamPasswordReset = params?.teamPasswordReset === "1";
   const teamError = params?.teamError;
+  const setupSaved = params?.setupSaved === "1";
+  const setupError = params?.setupError;
   const evolutionMessage = params?.evolutionMessage;
   const evolutionOk = params?.evolutionOk === "1";
   const asaasConnected = params?.asaasConnected === "1";
@@ -119,6 +151,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const subscriptionPlan = getSubscriptionPlanPresentation(subscription.plan);
   const trialRemainingDays = getTrialRemainingDays(subscription);
   const localMode = isLocalDataMode();
+  const hasAsaasIncidents = asaasIncidentEntries.some((entry) => entry.action === "charge.asaas.failed" || entry.action === "asaas.payment_overdue");
+  const hasSubscriptionIncident = subscription.status === "PAST_DUE" || subscription.status === "CANCELED";
+  const asaasHealthOk = workspaceAsaas.mode === "workspace" && asaasIntegration.webhookConfigured && !hasAsaasIncidents;
+  const evolutionHealthOk = evolutionIntegration.enabled && evolutionProbe.reachable && Boolean(selectedEvolutionInstanceName);
+  const fiscalHealthOk = nfseIntegration.ready && fiscalReadiness.ready;
 
   return (
     <DashboardShell
@@ -281,6 +318,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         </div>
 
+        {setupSaved ? <p className="auth-hint">Dados da empresa salvos com sucesso.</p> : null}
+        {setupError ? <p className="auth-error">{setupError}</p> : null}
+
         {!fiscalReadiness.ready ? (
           <div className="auth-hint fiscal-warning">
             <strong>Alguns dados ainda faltam</strong>
@@ -421,6 +461,63 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               : "Ainda falta concluir a ligação automática entre a conta de cobrança e o sistema."}
           </p>
         </article>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Observabilidade</span>
+            <h2>Saúde operacional das integrações</h2>
+          </div>
+        </div>
+
+        <div className="section-split">
+          <article className={getHealthTone({ ok: evolutionHealthOk, warning: evolutionIntegration.enabled && !evolutionProbe.reachable })}>
+            <span className="section-label">WhatsApp</span>
+            <h2>{evolutionHealthOk ? "Operando" : evolutionIntegration.enabled ? "Parcial" : "Pendente"}</h2>
+            <p>
+              {evolutionHealthOk
+                ? "Instância conectada, API alcançável e eventos recentes disponíveis no workspace."
+                : evolutionIntegration.enabled
+                  ? "A configuração existe, mas a API ou a instância ainda não estão estáveis o bastante."
+                  : "O canal ainda não foi ligado ao workspace."}
+            </p>
+          </article>
+
+          <article className={getHealthTone({ ok: asaasHealthOk, warning: workspaceAsaas.mode !== "disabled" })}>
+            <span className="section-label">Cobrança</span>
+            <h2>{asaasHealthOk ? "Operando" : workspaceAsaas.mode !== "disabled" ? "Parcial" : "Pendente"}</h2>
+            <p>
+              {asaasHealthOk
+                ? "Conta própria, webhook e automação externa estão sem incidente recente conhecido."
+                : workspaceAsaas.mode !== "disabled"
+                  ? "A cobrança existe, mas ainda há pendência de webhook, onboarding ou incidente recente."
+                  : "Ainda falta conectar a conta que vai receber os pagamentos."}
+            </p>
+          </article>
+
+          <article className={getHealthTone({ ok: !hasSubscriptionIncident, warning: subscription.status === "TRIALING" || subscription.status === "ACTIVE" })}>
+            <span className="section-label">Assinatura</span>
+            <h2>{hasSubscriptionIncident ? "Atenção" : "Saudável"}</h2>
+            <p>
+              {hasSubscriptionIncident
+                ? "O acesso pode ser limitado até a assinatura voltar para um estado regular."
+                : "O ciclo do workspace está em um estado que não bloqueia a operação normal."}
+            </p>
+          </article>
+
+          <article className={getHealthTone({ ok: fiscalHealthOk, warning: nfseIntegration.enabled })}>
+            <span className="section-label">Fiscal</span>
+            <h2>{fiscalHealthOk ? "Operando" : nfseIntegration.enabled ? "Parcial" : "Assistido"}</h2>
+            <p>
+              {fiscalHealthOk
+                ? "O setup fiscal já sustenta emissão com menos atrito."
+                : nfseIntegration.enabled
+                  ? "Parte do setup existe, mas ainda faltam dados ou readiness do emissor."
+                  : "O fluxo ainda depende mais da emissão assistida do que da automação."}
+            </p>
+          </article>
+        </div>
       </section>
 
       <section id="subscription-section" className="data-panel">
@@ -968,6 +1065,42 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </section>
       ) : null}
 
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Incidentes recentes</span>
+            <h2>O que merece atenção antes de confiar no automático</h2>
+          </div>
+        </div>
+
+        {asaasIncidentEntries.length > 0 ? (
+          <div className="data-table">
+            <div className="data-table-head">
+              <span>Quando</span>
+              <span>Origem</span>
+              <span>Evento</span>
+              <span>Resumo</span>
+            </div>
+            {asaasIncidentEntries.map((entry) => (
+              <article key={entry.id} className="data-table-row">
+                <span>{entry.createdAt}</span>
+                <div>
+                  <strong>{entry.actorName}</strong>
+                  <small>{entry.actorEmail}</small>
+                </div>
+                <span>{entry.action}</span>
+                <span>{entry.summary}</span>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="auth-hint">
+            <strong>Sem incidente recente registrado</strong>
+            <span>Até aqui, não houve falha recente relevante de cobrança automática registrada neste workspace.</span>
+          </div>
+        )}
+      </section>
+
       <section id="team-section" className="data-panel">
         <div className="card-header">
           <div>
@@ -1168,6 +1301,42 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             </article>
           ))}
         </div>
+      </section>
+
+      <section className="section-split">
+        <article className="split-panel">
+          <span className="section-label">Ciclo da cobrança</span>
+          <h2>Últimos eventos do Asaas no workspace</h2>
+          {asaasLifecycleEntries.length > 0 ? (
+            <div className="dashboard-mini-list">
+              {asaasLifecycleEntries.slice(0, 3).map((entry) => (
+                <article key={entry.id}>
+                  <strong>{entry.action}</strong>
+                  <p>{entry.summary}</p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p>Nenhum evento recente de conexão, troca de conta ou criação de subconta foi registrado ainda.</p>
+          )}
+        </article>
+
+        <article className="split-panel">
+          <span className="section-label">Ciclo da assinatura</span>
+          <h2>Últimos movimentos do plano do workspace</h2>
+          {subscriptionAuditEntries.length > 0 ? (
+            <div className="dashboard-mini-list">
+              {subscriptionAuditEntries.slice(0, 3).map((entry) => (
+                <article key={entry.id}>
+                  <strong>{entry.action}</strong>
+                  <p>{entry.summary}</p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p>Os próximos eventos da assinatura vão aparecer aqui quando o checkout ou a recorrência começarem a rodar.</p>
+          )}
+        </article>
       </section>
 
       <section className="data-panel">

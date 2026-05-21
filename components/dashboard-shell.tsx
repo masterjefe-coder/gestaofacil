@@ -4,9 +4,14 @@ import type { ReactNode } from "react";
 import { getServerSession } from "next-auth";
 import { BrandLogo } from "@/components/brand-logo";
 import { LogoutButton } from "@/components/logout-button";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
+import { switchActiveWorkspaceAction } from "@/app/dashboard/actions";
 import { authOptions } from "@/lib/auth-options";
+import { getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { dashboardNav } from "@/lib/mock-data";
 import { getSubscriptionStatusLabel } from "@/lib/subscription";
+import { listUserWorkspaces } from "@/lib/workspace-membership-repository";
+import { getOperationalAlerts } from "@/lib/operational-alerts";
 import { getWorkspaceSubscription } from "@/lib/workspace-subscription-repository";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 
@@ -33,9 +38,12 @@ export async function DashboardShell({
     redirect("/login");
   }
 
-  const [setup, subscription] = await Promise.all([
+  const [setup, subscription, workspaces, context, operationalAlerts] = await Promise.all([
     getWorkspaceSetup(),
     getWorkspaceSubscription(),
+    listUserWorkspaces(),
+    getCurrentWorkspaceContext(),
+    getOperationalAlerts(),
   ]);
 
   const restrictedSubscription = subscription.status === "PAST_DUE" || subscription.status === "CANCELED";
@@ -56,6 +64,14 @@ export async function DashboardShell({
               <p>{session.user.name || session.user.email || "Operador"}</p>
             </div>
           </div>
+          {workspaces.length > 1 ? (
+            <WorkspaceSwitcher
+              currentWorkspaceId={context.workspaceId}
+              options={workspaces}
+              action={switchActiveWorkspaceAction}
+              returnTo={currentPath}
+            />
+          ) : null}
         </div>
 
         <nav className="sidebar-nav" aria-label="Navegação do dashboard">
@@ -94,6 +110,22 @@ export async function DashboardShell({
               Status atual: {getSubscriptionStatusLabel(subscription.status)}. Ajuste o plano na área da empresa para voltar a operar normalmente.
             </span>
           </div>
+        ) : null}
+
+        {operationalAlerts.length > 0 ? (
+          <section className="dashboard-alert-stack">
+            {operationalAlerts.map((alert) => (
+              <div key={alert.id} className={alert.tone === "critical" ? "auth-hint fiscal-warning" : "auth-hint"}>
+                <strong>{alert.title}</strong>
+                <span>{alert.message}</span>
+                {alert.href && alert.hrefLabel ? (
+                  <Link href={alert.href} className="secondary-link">
+                    {alert.hrefLabel}
+                  </Link>
+                ) : null}
+              </div>
+            ))}
+          </section>
         ) : null}
 
         {children}

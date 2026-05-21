@@ -391,6 +391,33 @@ a {
   line-height: 1.35;
 }
 
+.workspace-switcher {
+  margin-top: 0.85rem;
+}
+
+.workspace-switcher-label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.workspace-switcher-label span {
+  color: rgba(226, 236, 255, 0.72);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-switcher select {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  padding: 0.8rem 0.95rem;
+}
+
 .sidebar-nav {
   display: grid;
   flex: 1 1 auto;
@@ -452,6 +479,12 @@ a {
 .sidebar-link small,
 .muted-text {
   color: var(--text-soft);
+}
+
+.dashboard-alert-stack {
+  display: grid;
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
 }
 
 .hero,

@@ -3,9 +3,9 @@ import { buildChargeDueLabel, decodeChargeMeta, encodeChargeMeta, formatDateInpu
 import { isLocalDataMode } from "@/lib/data-mode";
 import { prisma } from "@/lib/prisma";
 import { readDemoWorkspaceData, writeDemoWorkspaceData } from "@/lib/demo-store";
-import type { Charge, ExternalChargeBilling } from "@/lib/types";
+import type { Charge, ExternalChargeBilling, SubscriptionStatusCode } from "@/lib/types";
 
-type AsaasWebhookPayload = {
+export type AsaasWebhookPayload = {
   id?: string;
   event?: string;
   payment?: {
@@ -27,11 +27,11 @@ type AsaasWebhookPayload = {
   } | null;
 };
 
-type ChargeReference =
+export type ChargeReference =
   | { mode: "local"; chargeId: string }
   | { mode: "database"; workspaceId: string; chargeId: string };
 
-type SubscriptionReference =
+export type SubscriptionReference =
   | { mode: "local"; workspaceKey: string }
   | { mode: "database"; workspaceId: string };
 
@@ -39,7 +39,7 @@ function getString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function parseChargeReference(externalReference: string): ChargeReference | null {
+export function parseChargeReference(externalReference: string): ChargeReference | null {
   const parts = externalReference.split(":");
 
   if (parts.length !== 3 || parts[0] !== "gf_charge") {
@@ -55,7 +55,7 @@ function parseChargeReference(externalReference: string): ChargeReference | null
     : null;
 }
 
-function parseSubscriptionReference(externalReference: string): SubscriptionReference | null {
+export function parseSubscriptionReference(externalReference: string): SubscriptionReference | null {
   const parts = externalReference.split(":");
 
   if (parts.length !== 3 || parts[0] !== "gf_subscription") {
@@ -71,19 +71,19 @@ function parseSubscriptionReference(externalReference: string): SubscriptionRefe
     : null;
 }
 
-function isReceivedEvent(event: string) {
+export function isReceivedEvent(event: string) {
   return event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED";
 }
 
-function isDeletedEvent(event: string) {
+export function isDeletedEvent(event: string) {
   return event === "PAYMENT_DELETED";
 }
 
-function isRestoredEvent(event: string) {
+export function isRestoredEvent(event: string) {
   return event === "PAYMENT_RESTORED";
 }
 
-function buildWebhookSummary(event: string, charge: { customer: string; amount: string }) {
+export function buildWebhookSummary(event: string, charge: { customer: string; amount: string }) {
   switch (event) {
     case "PAYMENT_RECEIVED":
       return `Asaas informou recebimento da cobranca de ${charge.amount} para ${charge.customer}.`;
@@ -102,7 +102,7 @@ function buildWebhookSummary(event: string, charge: { customer: string; amount: 
   }
 }
 
-function buildExternalBilling(current: ExternalChargeBilling | undefined, payload: NonNullable<AsaasWebhookPayload["payment"]>): ExternalChargeBilling {
+export function buildExternalBilling(current: ExternalChargeBilling | undefined, payload: NonNullable<AsaasWebhookPayload["payment"]>): ExternalChargeBilling {
   return {
     provider: "Asaas",
     environment: current?.environment || (process.env.ASAAS_ENVIRONMENT?.trim().toLowerCase() === "production" ? "production" : "sandbox"),
@@ -117,7 +117,7 @@ function buildExternalBilling(current: ExternalChargeBilling | undefined, payloa
   };
 }
 
-function computeNextChargeState(current: Charge, payload: NonNullable<AsaasWebhookPayload["payment"]>, event: string): Pick<Charge, "status" | "dueDate" | "dueLabel" | "paymentLink" | "externalBilling"> {
+export function computeNextChargeState(current: Charge, payload: NonNullable<AsaasWebhookPayload["payment"]>, event: string): Pick<Charge, "status" | "dueDate" | "dueLabel" | "paymentLink" | "externalBilling"> {
   const externalBilling = buildExternalBilling(current.externalBilling, payload);
   const dueDate = getString(payload.dueDate) || current.dueDate;
   const paymentLink = getString(payload.invoiceUrl) || getString(payload.bankSlipUrl) || current.paymentLink;
@@ -134,7 +134,7 @@ function computeNextChargeState(current: Charge, payload: NonNullable<AsaasWebho
 
   if (event === "PAYMENT_OVERDUE") {
     return {
-      status: "Pendente",
+      status: "Vencida",
       dueDate,
       dueLabel: dueDate ? formatDueDateLabel(dueDate) : current.dueLabel,
       paymentLink,
@@ -168,6 +168,28 @@ function computeNextChargeState(current: Charge, payload: NonNullable<AsaasWebho
     dueLabel: current.dueLabel,
     paymentLink,
     externalBilling,
+  };
+}
+
+export function computeNextSubscriptionState(current: {
+  status: SubscriptionStatusCode;
+  asaasSubscriptionId?: string | null;
+  asaasPaymentLink?: string | null;
+  notes?: string | null;
+}, payload: NonNullable<AsaasWebhookPayload["payment"]>, event: string) {
+  return {
+    status: isReceivedEvent(event)
+      ? "ACTIVE"
+      : event === "PAYMENT_OVERDUE"
+        ? "PAST_DUE"
+        : current.status,
+    asaasSubscriptionId: getString(payload.subscription) || current.asaasSubscriptionId || undefined,
+    asaasPaymentLink: getString(payload.invoiceUrl) || getString(payload.bankSlipUrl) || current.asaasPaymentLink || undefined,
+    notes: (isReceivedEvent(event)
+      ? "Pagamento confirmado pelo webhook do Asaas."
+      : event === "PAYMENT_OVERDUE"
+        ? "Assinatura com pagamento pendente segundo o webhook do Asaas."
+        : current.notes) || undefined,
   };
 }
 
@@ -226,13 +248,7 @@ async function applyLocalSubscriptionWebhook(reference: Extract<SubscriptionRefe
 
   data.subscription = {
     ...current,
-    asaasSubscriptionId: getString(payload.subscription) || current.asaasSubscriptionId,
-    asaasPaymentLink: getString(payload.invoiceUrl) || getString(payload.bankSlipUrl) || current.asaasPaymentLink,
-    status: isReceivedEvent(event)
-      ? "ACTIVE"
-      : event === "PAYMENT_OVERDUE"
-        ? "PAST_DUE"
-        : current.status,
+    ...computeNextSubscriptionState(current, payload, event),
   };
 
   await writeDemoWorkspaceData(data);
@@ -301,15 +317,24 @@ async function applyDatabaseWebhook(reference: Extract<ChargeReference, { mode: 
 
   const nextState = computeNextChargeState(current, payload, event);
 
-  await prisma.charge.update({
-    where: { id: existing.id },
-    data: {
-      status: nextState.status === "Pago" ? "PAID" : existing.status,
-      dueDate: nextState.dueDate ? new Date(`${nextState.dueDate}T12:00:00`) : existing.dueDate,
-      paidAt: isReceivedEvent(event) ? new Date() : existing.paidAt,
-      paymentLink: nextState.paymentLink || null,
-      pixCode: encodeChargeMeta({
-        dueLabel: nextState.dueLabel,
+    await prisma.charge.update({
+      where: { id: existing.id },
+      data: {
+      status:
+        nextState.status === "Pago"
+          ? "PAID"
+          : nextState.status === "Vencida"
+            ? "OVERDUE"
+            : nextState.status === "Hoje"
+              ? "DUE_TODAY"
+              : nextState.status === "Pendente"
+                ? "PENDING"
+                : existing.status,
+        dueDate: nextState.dueDate ? new Date(`${nextState.dueDate}T12:00:00`) : existing.dueDate,
+        paidAt: isReceivedEvent(event) ? new Date() : null,
+        paymentLink: nextState.paymentLink || null,
+        pixCode: encodeChargeMeta({
+          dueLabel: nextState.dueLabel,
         source: current.source,
         followUps: current.followUps,
         cadence: current.cadence,
@@ -382,25 +407,16 @@ async function applyDatabaseSubscriptionWebhook(reference: Extract<SubscriptionR
     return { stored: false, reason: "subscription_not_found", mode: "database" as const, workspaceId: reference.workspaceId };
   }
 
-  const nextStatus =
-    isReceivedEvent(event)
-      ? "ACTIVE"
-      : event === "PAYMENT_OVERDUE"
-        ? "PAST_DUE"
-        : subscription.status;
+  const nextState = computeNextSubscriptionState(subscription, payload, event);
 
   await prisma.workspaceSubscription.update({
     where: { workspaceId: reference.workspaceId },
     data: {
-      status: nextStatus,
-      asaasSubscriptionId: getString(payload.subscription) || subscription.asaasSubscriptionId,
-      asaasPaymentLink: getString(payload.invoiceUrl) || getString(payload.bankSlipUrl) || subscription.asaasPaymentLink,
+      status: nextState.status,
+      asaasSubscriptionId: nextState.asaasSubscriptionId ?? null,
+      asaasPaymentLink: nextState.asaasPaymentLink ?? null,
       currentPeriodStart: isReceivedEvent(event) ? new Date() : subscription.currentPeriodStart,
-      notes: isReceivedEvent(event)
-        ? "Pagamento confirmado pelo webhook do Asaas."
-        : event === "PAYMENT_OVERDUE"
-          ? "Assinatura com pagamento pendente segundo o webhook do Asaas."
-          : subscription.notes,
+      notes: nextState.notes ?? null,
     },
   });
 

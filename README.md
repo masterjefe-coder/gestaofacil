@@ -115,9 +115,13 @@ Variaveis de ambiente minimas na Vercel:
 
 - `DATABASE_URL`
 - `AUTH_SECRET`
-- `AUTH_DEMO_EMAIL`
-- `AUTH_DEMO_PASSWORD`
+- `WORKSPACE_SECRET_KEY` para criptografar segredos salvos por workspace, como chaves de recebimento
 - `GESTAO_FACIL_DATA_MODE=database`
+
+Observacoes de seguranca:
+
+- `AUTH_DEMO_EMAIL` e `AUTH_DEMO_PASSWORD` devem ficar restritos ao modo local/demo e nao devem ser divulgados como acesso de producao
+- `ASAAS_WEBHOOK_AUTH_TOKEN` e `EVOLUTION_WEBHOOK_SECRET` precisam estar configurados para habilitar os webhooks; sem isso, as rotas ficam fechadas
 
 Variaveis para integrar a Evolution API:
 
@@ -170,3 +174,4 @@ Observacao:
 
 - sem `DATABASE_URL`, o app cai em modo local/demo
 - o campo `passwordHash` do schema precisa existir no banco de producao, entao o passo `db:push` e obrigatorio
+- configure `WORKSPACE_SECRET_KEY` antes de conectar contas externas persistidas no banco

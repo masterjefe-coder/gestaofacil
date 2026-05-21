@@ -3,6 +3,7 @@ import { getAsaasAccountStatus, listAsaasPendingDocuments } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { readDemoWorkspaceData, writeDemoWorkspaceData } from "@/lib/demo-store";
 import { prisma } from "@/lib/prisma";
+import { decryptWorkspaceSecret, encryptWorkspaceSecret } from "@/lib/secret-crypto";
 
 export type WorkspaceAsaasConnection = {
   mode: "workspace" | "root_fallback" | "disabled";
@@ -95,7 +96,7 @@ export async function getWorkspaceAsaasConnection(): Promise<WorkspaceAsaasConne
     return {
       mode: "workspace",
       environment,
-      apiKey: company.asaasApiKey,
+      apiKey: decryptWorkspaceSecret(company.asaasApiKey),
       accountId: company.asaasAccountId || undefined,
       walletId: company.asaasWalletId || undefined,
       apiKeyConfigured: true,
@@ -146,7 +147,7 @@ export async function saveWorkspaceAsaasConnection(input: {
   await prisma.company.upsert({
     where: { workspaceId },
     update: {
-      asaasApiKey: input.apiKey,
+      asaasApiKey: encryptWorkspaceSecret(input.apiKey),
       asaasAccountId: input.accountId || null,
       asaasWalletId: input.walletId || null,
       asaasUseOwnAccount: true,
@@ -157,7 +158,7 @@ export async function saveWorkspaceAsaasConnection(input: {
       legalName: "Empresa sem razão social definida",
       tradeName: "Workspace sem setup completo",
       document: `workspace-${workspaceId}`,
-      asaasApiKey: input.apiKey,
+      asaasApiKey: encryptWorkspaceSecret(input.apiKey),
       asaasAccountId: input.accountId || null,
       asaasWalletId: input.walletId || null,
       asaasUseOwnAccount: true,

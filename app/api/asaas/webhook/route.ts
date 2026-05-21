@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleAsaasWebhook } from "@/lib/asaas-webhook";
+import { isWebhookSecretConfigured } from "@/lib/runtime-safety";
 
 function isAuthorized(request: NextRequest) {
   const configuredToken = process.env.ASAAS_WEBHOOK_AUTH_TOKEN?.trim();
 
-  if (!configuredToken) {
-    return true;
-  }
-
   const receivedToken = request.headers.get("asaas-access-token")?.trim();
-  return receivedToken === configuredToken;
+  return Boolean(configuredToken) && receivedToken === configuredToken;
 }
 
 export async function GET() {
@@ -21,6 +18,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isWebhookSecretConfigured(process.env.ASAAS_WEBHOOK_AUTH_TOKEN)) {
+    return NextResponse.json({ error: "Webhook desabilitado ate configurar ASAAS_WEBHOOK_AUTH_TOKEN." }, { status: 503 });
+  }
+
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Webhook nao autorizado." }, { status: 401 });
   }

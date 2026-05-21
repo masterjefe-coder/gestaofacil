@@ -2,6 +2,7 @@ import { isLocalDataMode } from "@/lib/data-mode";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { verifyPassword } from "@/lib/password-auth";
 import { prisma } from "@/lib/prisma";
+import { canUsePublicDemoCredentials } from "@/lib/runtime-safety";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
@@ -31,19 +32,8 @@ export const authOptions: NextAuthOptions = {
         const email = String(credentials?.email || "").trim();
         const password = String(credentials?.password || "").trim();
 
-        if (email === getDemoEmail() && password === getDemoPassword()) {
-          if (!isLocalDataMode()) {
-            const { user, workspace } = await ensureDemoCommerceSeeded();
-
-            return {
-              id: user.id,
-              name: email.split("@")[0] || "Operador",
-              email,
-              workspaceId: workspace.id,
-              workspaceRole: "OWNER",
-            };
-          }
-
+        if (canUsePublicDemoCredentials() && email === getDemoEmail() && password === getDemoPassword()) {
+          await ensureDemoCommerceSeeded();
           return {
             id: "demo-user",
             name: email.split("@")[0] || "Operador",

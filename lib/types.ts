@@ -192,18 +192,26 @@ export type ExternalChargeBilling = {
   pixExpirationDate?: string;
 };
 
+export type ChargeIntegrationWarning = {
+  provider: ExternalChargeProvider;
+  stage: "charge_creation";
+  message: string;
+  createdAt: string;
+};
+
 export type Charge = {
   id: string;
   customer: string;
   amount: string;
   dueLabel: string;
   dueDate?: string;
-  status: "Pendente" | "Hoje" | "Pago";
+  status: "Pendente" | "Hoje" | "Pago" | "Vencida";
   source: string;
   paymentLink?: string;
   followUps: ChargeFollowUpEntry[];
   cadence?: EntityCadenceState;
   externalBilling?: ExternalChargeBilling;
+  integrationWarning?: ChargeIntegrationWarning;
 };
 
 export type ChargeInput = {
@@ -216,6 +224,7 @@ export type ChargeInput = {
   paymentLink?: string;
   cadence?: EntityCadenceState;
   externalBilling?: ExternalChargeBilling;
+  integrationWarning?: ChargeIntegrationWarning;
 };
 
 export type NfseDocument = {

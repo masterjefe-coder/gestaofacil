@@ -7,9 +7,10 @@ import { useState, type FormEvent } from "react";
 
 type AuthSignInFormProps = {
   callbackUrl?: string;
+  showDemoHints?: boolean;
 };
 
-export function AuthSignInForm({ callbackUrl = "/dashboard" }: AuthSignInFormProps) {
+export function AuthSignInForm({ callbackUrl = "/dashboard", showDemoHints = false }: AuthSignInFormProps) {
   const searchParams = useSearchParams();
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -59,14 +60,14 @@ export function AuthSignInForm({ callbackUrl = "/dashboard" }: AuthSignInFormPro
             <input
               name="email"
               type="email"
-              placeholder="demo@gestaofacil.local"
+              placeholder={showDemoHints ? "demo@gestaofacil.local" : "voce@empresa.com.br"}
               defaultValue={createdEmail}
               required
             />
           </label>
           <label>
             <span>Senha</span>
-            <input name="password" type="password" placeholder="gestao123" required />
+            <input name="password" type="password" placeholder={showDemoHints ? "gestao123" : "Sua senha"} required />
           </label>
         </div>
         <button type="submit" className="primary-link form-submit" disabled={isPending}>

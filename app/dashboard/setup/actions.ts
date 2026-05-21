@@ -71,12 +71,22 @@ export async function updateWorkspaceSetupAction(formData: FormData) {
   };
 
   if (!input.name || !input.slug || !input.tradeName || !input.document) {
-    return;
+    redirectToSetup({ setupError: "Preencha os campos principais da empresa antes de salvar." });
   }
 
-  await updateWorkspaceSetup(input);
+  try {
+    await updateWorkspaceSetup(input);
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Nao foi possivel salvar os dados da empresa.";
+
+    redirectToSetup({ setupError: message });
+  }
+
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
+  redirectToSetup({ setupSaved: "1" });
 }
 
 export async function createWorkspaceMemberAction(formData: FormData) {
