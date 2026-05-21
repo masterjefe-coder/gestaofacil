@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getCurrentWorkspaceContext } from "@/lib/auth-session";
 import {
   createNfseFromCharge,
   createQuickNfseDraft,
@@ -11,6 +12,7 @@ import {
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { testNfseNationalConnectivity } from "@/lib/nfse-national-provider";
 import { inspectNfseNationalCertificate } from "@/lib/nfse-national-provider";
+import { getWorkspaceModuleCapabilities } from "@/lib/workspace-access";
 
 function getString(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -22,7 +24,17 @@ function revalidateFiscalViews() {
   revalidatePath("/dashboard/fiscal");
 }
 
+async function requireFiscalAccess() {
+  const context = await getCurrentWorkspaceContext();
+  const capabilities = getWorkspaceModuleCapabilities(context.workspaceRole, "fiscal");
+
+  if (!capabilities.canManage) {
+    throw new Error("Seu perfil atual pode consultar a fila fiscal, mas não executar mudanças fiscais.");
+  }
+}
+
 export async function createNfseDraftAction(formData: FormData) {
+  await requireFiscalAccess();
   const chargeId = getString(formData, "chargeId");
 
   if (!chargeId) {
@@ -34,6 +46,7 @@ export async function createNfseDraftAction(formData: FormData) {
 }
 
 export async function createQuickNfseDraftAction(formData: FormData) {
+  await requireFiscalAccess();
   const lookup = getString(formData, "lookup");
   const amount = getString(formData, "amount");
   const serviceDescription = getString(formData, "serviceDescription");
@@ -51,6 +64,7 @@ export async function createQuickNfseDraftAction(formData: FormData) {
 }
 
 export async function markNfseReadyAction(formData: FormData) {
+  await requireFiscalAccess();
   const id = getString(formData, "id");
 
   if (!id) {
@@ -62,6 +76,7 @@ export async function markNfseReadyAction(formData: FormData) {
 }
 
 export async function markNfseIssuedAction(formData: FormData) {
+  await requireFiscalAccess();
   const id = getString(formData, "id");
 
   if (!id) {
@@ -73,6 +88,7 @@ export async function markNfseIssuedAction(formData: FormData) {
 }
 
 export async function issueNfseNationalAction(formData: FormData) {
+  await requireFiscalAccess();
   const id = getString(formData, "id");
   const serviceCode = getString(formData, "serviceCode");
 
@@ -87,6 +103,7 @@ export async function issueNfseNationalAction(formData: FormData) {
 }
 
 export async function markNfseErrorAction(formData: FormData) {
+  await requireFiscalAccess();
   const id = getString(formData, "id");
   const errorMessage = getString(formData, "errorMessage");
 
@@ -99,6 +116,7 @@ export async function markNfseErrorAction(formData: FormData) {
 }
 
 export async function testNfseNationalConnectivityAction() {
+  await requireFiscalAccess();
   const setup = await getWorkspaceSetup();
   const result = await testNfseNationalConnectivity(setup.municipalCode);
 
@@ -111,6 +129,7 @@ export async function testNfseNationalConnectivityAction() {
 }
 
 export async function inspectNfseNationalCertificateAction() {
+  await requireFiscalAccess();
   const result = await inspectNfseNationalCertificate();
   const message = result.ok
     ? `Certificado válido. Sujeito: ${result.subject}. Validade final: ${result.validTo || "não informada"}.`

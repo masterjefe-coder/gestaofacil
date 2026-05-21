@@ -1,3 +1,5 @@
+import { AuthRateLimitError, assertLoginAttemptAllowed, clearFailedLoginAttempts, registerFailedLoginAttempt } from "@/lib/auth-security";
+import { recordAuthLoginFailed, recordAuthLoginLocked, recordAuthLoginSuccess } from "@/lib/auth-event-log";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { verifyPassword } from "@/lib/password-auth";
@@ -28,9 +30,10 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Senha", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const email = String(credentials?.email || "").trim();
         const password = String(credentials?.password || "").trim();
+        const userAgent = request?.headers?.get?.("user-agent") || null;
 
         if (canUsePublicDemoCredentials() && email === getDemoEmail() && password === getDemoPassword()) {
           await ensureDemoCommerceSeeded();
@@ -44,6 +47,20 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!isLocalDataMode()) {
+          try {
+            await assertLoginAttemptAllowed(email);
+          } catch (error) {
+            if (error instanceof AuthRateLimitError) {
+              await recordAuthLoginLocked({
+                email,
+                retryAfterSeconds: error.retryAfterSeconds,
+                userAgent,
+              });
+            }
+
+            return null;
+          }
+
           const user = await prisma.user.findUnique({
             where: { email: email.toLowerCase() },
             select: {
@@ -65,6 +82,14 @@ export const authOptions: NextAuthOptions = {
           const primaryMembership = user?.memberships[0];
 
           if (user?.passwordHash && primaryMembership && verifyPassword(password, user.passwordHash)) {
+            await clearFailedLoginAttempts(email);
+            await recordAuthLoginSuccess({
+              email: user.email,
+              userId: user.id,
+              workspaceId: primaryMembership.workspaceId,
+              userAgent,
+            });
+
             return {
               id: user.id,
               name: user.name || email.split("@")[0] || "Operador",
@@ -73,6 +98,12 @@ export const authOptions: NextAuthOptions = {
               workspaceRole: primaryMembership.role,
             };
           }
+
+          await registerFailedLoginAttempt(email);
+          await recordAuthLoginFailed({
+            email,
+            userAgent,
+          });
         }
 
         return null;

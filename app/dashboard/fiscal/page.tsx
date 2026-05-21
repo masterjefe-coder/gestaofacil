@@ -11,6 +11,7 @@ import {
   markNfseReadyAction,
   testNfseNationalConnectivityAction,
 } from "@/app/dashboard/fiscal/actions";
+import { getCurrentWorkspaceContext } from "@/lib/auth-session";
 import {
   getFiscalSetupReadiness,
   getNfseNationalIssuePreview,
@@ -26,6 +27,7 @@ import {
   getNfseNationalIntegrationStatus,
   getNfseNationalPortalUrls,
 } from "@/lib/nfse-national-provider";
+import { getWorkspaceModuleCapabilities } from "@/lib/workspace-access";
 
 type FiscalPageProps = {
   searchParams?: Promise<{
@@ -41,12 +43,14 @@ type FiscalPageProps = {
 type FiscalQueueView = "all" | "blocked" | "ready" | "review" | "issued";
 
 export default async function FiscalPage({ searchParams }: FiscalPageProps) {
-  const [documents, readyQueue, readiness, setup] = await Promise.all([
+  const [documents, readyQueue, readiness, setup, context] = await Promise.all([
     listNfseDocuments(),
     listNfseReadyQueue(),
     getFiscalSetupReadiness(),
     getWorkspaceSetup(),
+    getCurrentWorkspaceContext(),
   ]);
+  const fiscalAccess = getWorkspaceModuleCapabilities(context.workspaceRole, "fiscal");
   const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
   const issuePreviews = await Promise.all(
     documents.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
@@ -97,6 +101,14 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className="auth-hint">
           <strong>Foco fiscal</strong>
           <span>{focusMessage}</span>
+        </div>
+      ) : null}
+      {!fiscalAccess.canManage ? (
+        <div className="auth-hint">
+          <strong>Modo consulta no fiscal</strong>
+          <span>
+            Seu perfil pode acompanhar a fila e o contexto dos documentos, mas emissão e mudanças fiscais ficam com gestão.
+          </span>
         </div>
       ) : null}
       <ModuleQueueFilters
@@ -391,6 +403,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
           </div>
         ) : null}
 
+        {fiscalAccess.canManage ? (
         <div className="dashboard-actions">
           <form action={inspectNfseNationalCertificateAction} className="card-action">
             <button type="submit" className="ghost-button">
@@ -403,8 +416,10 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
             </button>
           </form>
         </div>
+        ) : null}
       </section>
 
+      {fiscalAccess.canManage ? (
       <section className="data-panel">
         <div className="card-header">
           <div>
@@ -423,6 +438,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
           ) : null}
         </div>
       </section>
+      ) : null}
 
       <section className="data-panel">
         <div className="card-header">
@@ -472,12 +488,14 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                 <h3>{item.customer}</h3>
                 <strong className="quote-amount">{item.amount}</strong>
                 <p>{item.helper}</p>
+                {fiscalAccess.canManage ? (
                 <form action={createNfseDraftAction} className="card-action">
                   <input type="hidden" name="chargeId" value={item.chargeId} />
                   <button type="submit" className="primary-link">
                     Criar rascunho fiscal
                   </button>
                 </form>
+                ) : null}
               </article>
             ))}
           </div>
@@ -523,7 +541,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                   <Link href={portalUrls.issueUrl} className="ghost-button" target="_blank" rel="noreferrer">
                     Emitir via portal oficial
                   </Link>
-                  {document.status !== "Pronta" && document.status !== "Emitida" ? (
+                  {fiscalAccess.canManage && document.status !== "Pronta" && document.status !== "Emitida" ? (
                     <form action={markNfseReadyAction} className="card-action">
                       <input type="hidden" name="id" value={document.id} />
                       <button type="submit" className="secondary-link">
@@ -531,7 +549,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                       </button>
                     </form>
                   ) : null}
-                  {document.status !== "Emitida" && !integrationStatus.ready && readiness.ready ? (
+                  {fiscalAccess.canManage && document.status !== "Emitida" && !integrationStatus.ready && readiness.ready ? (
                     <form action={markNfseIssuedAction} className="card-action">
                       <input type="hidden" name="id" value={document.id} />
                       <button type="submit" className="primary-link">
@@ -552,7 +570,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                     <span>{issuePreviewMap.get(document.id)?.helper}</span>
                   </div>
                 ) : null}
-                {document.status !== "Emitida" && integrationStatus.ready && municipalityStatus?.aderenteEmissorNacional ? (
+                {fiscalAccess.canManage && document.status !== "Emitida" && integrationStatus.ready && municipalityStatus?.aderenteEmissorNacional ? (
                   <form action={issueNfseNationalAction} className="follow-up-form">
                     <input type="hidden" name="id" value={document.id} />
                     <label className="form-span-2">
@@ -576,7 +594,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                     <span>Seu município de estabelecimento ainda não possui convênio ativo para emissão pública no Emissor Nacional.</span>
                   </div>
                 ) : null}
-                {document.status !== "Erro" ? (
+                {fiscalAccess.canManage && document.status !== "Erro" ? (
                   <form action={markNfseErrorAction} className="follow-up-form">
                     <input type="hidden" name="id" value={document.id} />
                     <label className="form-span-2">

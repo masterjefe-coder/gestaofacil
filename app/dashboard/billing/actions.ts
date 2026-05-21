@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { recordAuditEvent } from "@/lib/audit-repository";
+import { getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { buildChargeReminderQueue } from "@/lib/charge-follow-up";
 import {
   addChargeFollowUp,
@@ -20,6 +21,7 @@ import {
   normalizePhone,
   normalizeRemoteJid,
 } from "@/lib/whatsapp-message-metadata";
+import { getWorkspaceModuleCapabilities } from "@/lib/workspace-access";
 import type { ChargeFollowUpChannel, ChargeFollowUpOutcome, ChargeInput } from "@/lib/types";
 
 function buildChargeCadenceState(input: {
@@ -110,7 +112,26 @@ function revalidateBillingViews() {
   revalidatePath("/dashboard/setup");
 }
 
+async function requireBillingManageAccess() {
+  const context = await getCurrentWorkspaceContext();
+  const capabilities = getWorkspaceModuleCapabilities(context.workspaceRole, "billing");
+
+  if (!capabilities.canManage) {
+    throw new Error("Seu perfil atual pode acompanhar a fila financeira, mas não executar esta alteração sensível.");
+  }
+}
+
+async function requireBillingOperateAccess() {
+  const context = await getCurrentWorkspaceContext();
+  const capabilities = getWorkspaceModuleCapabilities(context.workspaceRole, "billing");
+
+  if (!capabilities.canOperate) {
+    throw new Error("Seu perfil atual não pode operar ações financeiras neste workspace.");
+  }
+}
+
 export async function createChargeAction(formData: FormData) {
+  await requireBillingManageAccess();
   const quoteId = getString(formData, "quoteId");
   const paymentMethod = getString(formData, "paymentMethod") || "Pix";
   const dueLabel = getString(formData, "dueLabel");
@@ -142,6 +163,7 @@ export async function createChargeAction(formData: FormData) {
 }
 
 export async function markChargeAsPaidAction(formData: FormData) {
+  await requireBillingManageAccess();
   const id = getString(formData, "id");
 
   if (!id) {
@@ -157,6 +179,7 @@ export async function markChargeAsPaidAction(formData: FormData) {
 }
 
 export async function markChargeAsDueTodayAction(formData: FormData) {
+  await requireBillingOperateAccess();
   const id = getString(formData, "id");
 
   if (!id) {
@@ -174,6 +197,7 @@ export async function markChargeAsDueTodayAction(formData: FormData) {
 }
 
 export async function postponeChargeAction(formData: FormData) {
+  await requireBillingOperateAccess();
   const id = getString(formData, "id");
 
   if (!id) {
@@ -190,6 +214,7 @@ export async function postponeChargeAction(formData: FormData) {
 }
 
 export async function addChargeFollowUpAction(formData: FormData) {
+  await requireBillingOperateAccess();
   const id = getString(formData, "id");
   const channel = getString(formData, "channel") as ChargeFollowUpChannel;
   const outcome = getString(formData, "outcome") as ChargeFollowUpOutcome;
@@ -211,6 +236,7 @@ export async function addChargeFollowUpAction(formData: FormData) {
 }
 
 export async function runChargeReminderAction(formData: FormData) {
+  await requireBillingOperateAccess();
   const id = getString(formData, "id");
   const channel = getString(formData, "channel") as ChargeFollowUpChannel;
   const outcome = (getString(formData, "outcome") as ChargeFollowUpOutcome) || "Sem resposta";
@@ -235,6 +261,7 @@ export async function runChargeReminderAction(formData: FormData) {
 }
 
 export async function sendChargeReminderWhatsappAction(formData: FormData) {
+  await requireBillingOperateAccess();
   const id = getString(formData, "id");
   const customerName = getString(formData, "customer");
   const customerPhone = getString(formData, "phone");
@@ -319,6 +346,7 @@ export async function sendChargeReminderWhatsappAction(formData: FormData) {
 }
 
 export async function applyWhatsappSignalFollowUpAction(formData: FormData) {
+  await requireBillingOperateAccess();
   const id = getString(formData, "id");
   const outcome = getString(formData, "outcome") as ChargeFollowUpOutcome;
   const note = getString(formData, "note");
@@ -352,6 +380,7 @@ export async function applyWhatsappSignalFollowUpAction(formData: FormData) {
 }
 
 export async function deleteChargeAction(formData: FormData) {
+  await requireBillingManageAccess();
   const id = getString(formData, "id");
 
   if (!id) {
@@ -363,6 +392,7 @@ export async function deleteChargeAction(formData: FormData) {
 }
 
 export async function advanceChargeCadenceAction(formData: FormData) {
+  await requireBillingOperateAccess();
   const id = getString(formData, "id");
   const outcome = getString(formData, "outcome") as ChargeFollowUpOutcome;
   const note = getString(formData, "note");

@@ -1,19 +1,26 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { EvolutionPairingPanel } from "@/components/evolution-pairing-panel";
+import { InviteLinkField } from "@/components/invite-link-field";
 import {
   connectWorkspaceAsaasAccountAction,
   createWorkspaceAsaasSubaccountAction,
   createEvolutionInstanceAction,
+  createWorkspaceInviteAction,
   createWorkspaceMemberAction,
   createWorkspaceSubscriptionCheckoutAction,
   disconnectWorkspaceAsaasAccountAction,
+  renewWorkspaceInviteAction,
+  revokeWorkspaceInviteAction,
+  resendWorkspaceInviteAction,
   removeWorkspaceMemberAction,
   resetWorkspaceMemberPasswordAction,
   updateWorkspaceMemberRoleAction,
+  updateUserAlertPreferencesAction,
   updateWorkspaceSubscriptionPlanAction,
   updateWorkspaceSetupAction,
 } from "@/app/dashboard/setup/actions";
+import { getWorkspaceAccessSummary, listWorkspaceAccessEvents } from "@/lib/access-activity";
 import { listAuditEntries } from "@/lib/audit-repository";
 import { listWorkspaceAuditEntriesByActions } from "@/lib/audit-repository";
 import { listWorkspaceAuditEntriesByType } from "@/lib/audit-repository";
@@ -26,14 +33,17 @@ import {
   probeEvolutionApi,
 } from "@/lib/evolution-api";
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
+import { listWorkspaceInvites } from "@/lib/workspace-invite-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { getWorkspaceAsaasConnection, getWorkspaceAsaasOnboardingSnapshot } from "@/lib/asaas-workspace";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getFiscalSetupReadiness } from "@/lib/nfse-repository";
 import { getNfseEmissionModeSummary, getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
+import { isTransactionalEmailConfigured } from "@/lib/transactional-email";
 import { formatSubscriptionDate, getBillingCycleLabel, getSubscriptionPlanPresentation, getSubscriptionStatusLabel, getTrialRemainingDays } from "@/lib/subscription";
 import { getWorkspaceSubscription } from "@/lib/workspace-subscription-repository";
+import { getCurrentUserAlertPreferences } from "@/lib/workspace-user-preferences";
 import { pricingPlans } from "@/lib/site-data";
 
 type SetupPageProps = {
@@ -49,9 +59,16 @@ type SetupPageProps = {
     subscriptionError?: string;
     subscriptionIntent?: string;
     teamCreated?: string;
+    inviteCreated?: string;
+    inviteRevoked?: string;
+    inviteAccepted?: string;
+    inviteResent?: string;
+    inviteRenewed?: string;
     teamUpdated?: string;
     teamRemoved?: string;
     teamPasswordReset?: string;
+    alertPrefsSaved?: string;
+    alertPrefsError?: string;
     teamError?: string;
     setupSaved?: string;
     setupError?: string;
@@ -83,6 +100,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const [
     setup,
     members,
+    invites,
     auditEntries,
     evolutionAuditEntries,
     asaasIncidentEntries,
@@ -96,9 +114,13 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     workspaceAsaas,
     workspaceAsaasOnboarding,
     subscription,
+    accessEvents,
+    accessSummary,
+    alertPreferences,
   ] = await Promise.all([
     getWorkspaceSetup(),
     listWorkspaceMembers(),
+    listWorkspaceInvites(),
     listAuditEntries(8),
     listWorkspaceAuditEntriesByType("evolution", 8),
     listWorkspaceAuditEntriesByActions(["charge.asaas.failed", "asaas.payment_overdue"], 8),
@@ -112,11 +134,21 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     getWorkspaceAsaasConnection(),
     getWorkspaceAsaasOnboardingSnapshot(),
     getWorkspaceSubscription(),
+    listWorkspaceAccessEvents(),
+    getWorkspaceAccessSummary(),
+    getCurrentUserAlertPreferences(),
   ]);
   const teamCreated = params?.teamCreated === "1";
+  const inviteCreated = params?.inviteCreated === "1";
+  const inviteRevoked = params?.inviteRevoked === "1";
+  const inviteResent = params?.inviteResent === "1";
+  const inviteRenewed = params?.inviteRenewed === "1";
   const teamUpdated = params?.teamUpdated === "1";
   const teamRemoved = params?.teamRemoved === "1";
   const teamPasswordReset = params?.teamPasswordReset === "1";
+  const alertPrefsSaved = params?.alertPrefsSaved === "1";
+  const alertPrefsError = params?.alertPrefsError;
+  const inviteAccepted = params?.inviteAccepted === "1";
   const teamError = params?.teamError;
   const setupSaved = params?.setupSaved === "1";
   const setupError = params?.setupError;
@@ -135,6 +167,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const nfseIntegration = getNfseNationalIntegrationStatus();
   const evolutionIntegration = getEvolutionIntegrationStatus();
   const asaasIntegration = getAsaasIntegrationStatus();
+  const transactionalEmailReady = isTransactionalEmailConfigured();
   const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
   const workspaceEvolutionInstance = evolutionInstances.find((instance) => instance.instanceName === setup.slug);
   const fallbackEvolutionInstance = evolutionInstances.find((instance) => instance.instanceName === evolutionIntegration.instance);
@@ -1101,6 +1134,124 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         )}
       </section>
 
+      <section className="section-split">
+        <article className={transactionalEmailReady ? "split-panel success" : "split-panel"}>
+          <span className="section-label">Segurança de acesso</span>
+          <h2>Recuperação de senha e convites por email</h2>
+          <p>
+            {transactionalEmailReady
+              ? "O envio transacional está pronto para convites, recuperação de senha e notificações de acesso."
+              : "Ainda falta configurar o provider transacional para convites automáticos e recuperação de senha por email."}
+          </p>
+        </article>
+
+        <article className="split-panel">
+          <span className="section-label">Proteção de login</span>
+          <h2>Cooldown ativo para excesso de tentativas</h2>
+          <p>
+            O login agora aplica proteção persistida contra repetição excessiva de tentativas e registra eventos de acesso no workspace.
+          </p>
+        </article>
+      </section>
+
+      <section id="access-section" className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Acesso e alertas</span>
+            <h2>Controle o que aparece para você e acompanhe o que aconteceu no workspace</h2>
+          </div>
+        </div>
+
+        {alertPrefsSaved ? <p className="auth-hint">Preferências pessoais de alerta salvas com sucesso.</p> : null}
+        {alertPrefsError ? <p className="auth-error">{alertPrefsError}</p> : null}
+
+        <div className="cards-grid quote-grid">
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Entradas recentes</span>
+            <h3>{accessSummary.successCount}</h3>
+            <p>Logins concluídos nos últimos 7 dias neste workspace.</p>
+          </article>
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Falhas</span>
+            <h3>{accessSummary.failedCount}</h3>
+            <p>Tentativas de acesso sem sucesso registradas no mesmo período.</p>
+          </article>
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Bloqueios</span>
+            <h3>{accessSummary.lockedCount}</h3>
+            <p>Vezes em que a proteção de login precisou entrar em ação.</p>
+          </article>
+          <article className="dashboard-card">
+            <span className="dashboard-kicker">Redefinições</span>
+            <h3>{accessSummary.resetCount}</h3>
+            <p>Pedidos e conclusões de recuperação de senha auditados.</p>
+          </article>
+        </div>
+
+        <div className="section-split">
+          <article className="split-panel">
+            <span className="section-label">Preferências do seu usuário</span>
+            <h2>Escolha como quer receber sinais operacionais</h2>
+            <p>Essas escolhas valem só para a sua conta dentro deste workspace.</p>
+
+            <form action={updateUserAlertPreferencesAction} className="inline-form">
+              <label className="checkbox-field form-span-2">
+                <input name="showOperationalAlerts" type="checkbox" defaultChecked={alertPreferences.showOperationalAlerts} />
+                <span>Mostrar alertas operacionais no topo do dashboard</span>
+              </label>
+              <label className="checkbox-field form-span-2">
+                <input name="showNotificationCenter" type="checkbox" defaultChecked={alertPreferences.showNotificationCenter} />
+                <span>Mostrar central de notificações de acesso e convites</span>
+              </label>
+              <label className="checkbox-field form-span-2">
+                <input name="emailOnInviteAccepted" type="checkbox" defaultChecked={alertPreferences.emailOnInviteAccepted} />
+                <span>Receber email quando um convite do workspace for aceito</span>
+              </label>
+              <label className="checkbox-field form-span-2">
+                <input name="emailOnSecurityAlerts" type="checkbox" defaultChecked={alertPreferences.emailOnSecurityAlerts} />
+                <span>Receber email em eventos sensíveis de segurança, como bloqueio de login e troca de senha</span>
+              </label>
+              <button type="submit" className="primary-link form-submit">
+                Salvar preferências
+              </button>
+            </form>
+          </article>
+
+          <article className="split-panel">
+            <span className="section-label">Leitura rápida</span>
+            <h2>O que esse painel já ajuda a detectar</h2>
+            <p>
+              Picos de falha de login, excesso de recuperação de senha, convites aceitos e saídas de sessão ficam visíveis sem depender de suporte técnico.
+            </p>
+          </article>
+        </div>
+
+        <div className="data-table">
+          <div className="data-table-head">
+            <span>Quando</span>
+            <span>Evento</span>
+            <span>Responsável</span>
+            <span>Canal</span>
+            <span>Resumo</span>
+          </div>
+          {accessEvents.map((entry) => (
+            <article key={entry.id} className="data-table-row">
+              <span>{entry.createdAt}</span>
+              <div>
+                <strong>{entry.title}</strong>
+                <small>{entry.tone === "warning" ? "Atenção" : entry.tone === "positive" ? "Confirmado" : "Informativo"}</small>
+              </div>
+              <div>
+                <strong>{entry.actorName}</strong>
+                <small>{entry.actorEmail}</small>
+              </div>
+              <span>{entry.deviceLabel || "Workspace"}</span>
+              <span>{entry.summary}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section id="team-section" className="data-panel">
         <div className="card-header">
           <div>
@@ -1109,6 +1260,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         </div>
 
+        {inviteCreated ? <p className="auth-hint">Convite criado com sucesso. Compartilhe o link com a pessoa convidada.</p> : null}
+        {inviteRevoked ? <p className="auth-hint">Convite revogado com sucesso.</p> : null}
+        {inviteAccepted ? <p className="auth-hint">Convite aceito com sucesso. O acesso já está ativo neste workspace.</p> : null}
+        {inviteResent ? <p className="auth-hint">Convite reenviado com sucesso.</p> : null}
+        {inviteRenewed ? <p className="auth-hint">Convite renovado com sucesso.</p> : null}
         {teamCreated ? <p className="auth-hint">Usuário adicionado à empresa com sucesso.</p> : null}
         {teamUpdated ? <p className="auth-hint">Papel do usuário atualizado com sucesso.</p> : null}
         {teamRemoved ? <p className="auth-hint">Usuário removido da empresa com sucesso.</p> : null}
@@ -1126,38 +1282,153 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <span>Seu perfil atual permite consultar a equipe, mas não convidar novas pessoas.</span>
           </div>
         ) : (
-          <form action={createWorkspaceMemberAction} className="inline-form">
-            <label>
-              <span>Nome do usuário</span>
-              <input name="memberName" type="text" placeholder="Ex.: Julia Financeiro" required />
-            </label>
-            <label>
-              <span>Email</span>
-              <input name="memberEmail" type="email" placeholder="julia@empresa.com.br" required />
-            </label>
-            <label>
-              <span>Senha inicial</span>
-              <input
-                name="memberPassword"
-                type="password"
-                placeholder="Mínimo de 8 caracteres"
-                minLength={8}
-                required
-              />
-            </label>
-            <label>
-              <span>Papel</span>
-              <select name="memberRole" defaultValue="MEMBER">
-                <option value="MEMBER">Operação</option>
-                <option value="ADMIN">Gestão</option>
-                <option value="OWNER">Responsável</option>
-              </select>
-            </label>
-            <button type="submit" className="primary-link form-submit">
-              Adicionar usuário
-            </button>
-          </form>
+          <>
+            <form action={createWorkspaceInviteAction} className="inline-form">
+              <label>
+                <span>Nome da pessoa</span>
+                <input name="inviteName" type="text" placeholder="Ex.: Julia Financeiro" />
+              </label>
+              <label>
+                <span>Email</span>
+                <input name="inviteEmail" type="email" placeholder="julia@empresa.com.br" required />
+              </label>
+              <label>
+                <span>Papel</span>
+                <select name="inviteRole" defaultValue="MEMBER">
+                  <option value="MEMBER">Operação</option>
+                  <option value="ADMIN">Gestão</option>
+                  <option value="OWNER">Responsável</option>
+                </select>
+              </label>
+              <button type="submit" className="primary-link form-submit">
+                Gerar convite
+              </button>
+            </form>
+
+            <div className="auth-hint">
+              <strong>Fluxo recomendado</strong>
+              <span>Convites deixam a entrada rastreável, evitam senha compartilhada e funcionam melhor para multiempresa.</span>
+            </div>
+
+            <details className="guided-flow-card">
+              <summary>
+                <div>
+                  <span className="section-label">Acesso manual</span>
+                  <h3>Criar usuário direto com senha inicial</h3>
+                  <p>Use apenas quando a operação já pedir um acesso imediato sem depender do link de convite.</p>
+                </div>
+                <span className="guided-flow-badge">Avançado</span>
+              </summary>
+
+              <div className="guided-flow-body">
+                <form action={createWorkspaceMemberAction} className="inline-form">
+                  <label>
+                    <span>Nome do usuário</span>
+                    <input name="memberName" type="text" placeholder="Ex.: Julia Financeiro" required />
+                  </label>
+                  <label>
+                    <span>Email</span>
+                    <input name="memberEmail" type="email" placeholder="julia@empresa.com.br" required />
+                  </label>
+                  <label>
+                    <span>Senha inicial</span>
+                    <input
+                      name="memberPassword"
+                      type="password"
+                      placeholder="Mínimo de 8 caracteres"
+                      minLength={8}
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Papel</span>
+                    <select name="memberRole" defaultValue="MEMBER">
+                      <option value="MEMBER">Operação</option>
+                      <option value="ADMIN">Gestão</option>
+                      <option value="OWNER">Responsável</option>
+                    </select>
+                  </label>
+                  <button type="submit" className="secondary-link form-submit">
+                    Adicionar usuário direto
+                  </button>
+                </form>
+              </div>
+            </details>
+          </>
         )}
+
+        <div className="data-table">
+          <div className="data-table-head">
+            <span>Convite</span>
+            <span>Papel</span>
+            <span>Status</span>
+            <span>Entrega</span>
+            <span>Expira em</span>
+            <span>Ações</span>
+          </div>
+          {invites.length > 0 ? invites.map((invite) => (
+            <article key={invite.id} className="data-table-row">
+              <div>
+                <strong>{invite.name || invite.email}</strong>
+                <small>{invite.email}</small>
+              </div>
+              <span>{invite.role}</span>
+              <span>{invite.status}</span>
+              <div>
+                <strong>{invite.deliveryStatus}</strong>
+                <small>{invite.lastSentAt ? `Último envio: ${invite.lastSentAt}` : "Sem envio automático registrado"}</small>
+                {invite.lastDeliveryError ? <small>{invite.lastDeliveryError}</small> : null}
+              </div>
+              <span>{invite.expiresAt}</span>
+              <div className="cards-grid">
+                {invite.inviteUrl ? (
+                  <InviteLinkField inviteUrl={invite.inviteUrl} />
+                ) : (
+                  <small className="muted-text">Link indisponível neste ambiente</small>
+                )}
+                {canManage ? (
+                  <>
+                    {invite.status === "Pendente" ? (
+                      <form action={resendWorkspaceInviteAction} className="row-action">
+                        <input type="hidden" name="inviteId" value={invite.id} />
+                        <button type="submit" className="ghost-button">
+                          Reenviar email
+                        </button>
+                      </form>
+                    ) : null}
+                    {invite.status === "Expirado" || invite.status === "Revogado" ? (
+                      <form action={renewWorkspaceInviteAction} className="row-action">
+                        <input type="hidden" name="inviteId" value={invite.id} />
+                        <button type="submit" className="ghost-button">
+                          Renovar convite
+                        </button>
+                      </form>
+                    ) : null}
+                    {invite.status === "Pendente" ? (
+                      <form action={revokeWorkspaceInviteAction} className="row-action">
+                        <input type="hidden" name="inviteId" value={invite.id} />
+                        <button type="submit" className="ghost-button">
+                          Revogar convite
+                        </button>
+                      </form>
+                    ) : null}
+                  </>
+                ) : (
+                  <small className="muted-text">Sem ação disponível</small>
+                )}
+              </div>
+            </article>
+          )) : (
+            <article className="data-table-row">
+              <span>Nenhum convite recente</span>
+              <span>-</span>
+              <span>-</span>
+              <span>-</span>
+              <span>-</span>
+              <small className="muted-text">Os próximos convites aparecem aqui para copiar, acompanhar ou revogar.</small>
+            </article>
+          )}
+        </div>
 
         <div className="data-table">
           <div className="data-table-head">

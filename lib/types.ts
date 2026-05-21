@@ -59,6 +59,22 @@ export type WorkspaceMember = {
   isCurrentUser?: boolean;
 };
 
+export type WorkspaceInviteStatus = "Pendente" | "Aceito" | "Revogado" | "Expirado";
+export type WorkspaceInviteDeliveryStatus = "Enviado" | "Pendente" | "Falhou";
+
+export type WorkspaceInviteSummary = {
+  id: string;
+  email: string;
+  name?: string;
+  role: "OWNER" | "ADMIN" | "MEMBER";
+  status: WorkspaceInviteStatus;
+  deliveryStatus: WorkspaceInviteDeliveryStatus;
+  expiresAt: string;
+  inviteUrl?: string;
+  lastSentAt?: string;
+  lastDeliveryError?: string;
+};
+
 export type AuditEntry = {
   id: string;
   action: string;
@@ -68,6 +84,33 @@ export type AuditEntry = {
   actorEmail: string;
   createdAt: string;
   summary: string;
+};
+
+export type WorkspaceUserAlertPreferences = {
+  showOperationalAlerts: boolean;
+  showNotificationCenter: boolean;
+  emailOnInviteAccepted: boolean;
+  emailOnSecurityAlerts: boolean;
+};
+
+export type WorkspaceAccessEventTone = "neutral" | "warning" | "positive";
+
+export type WorkspaceAccessEvent = {
+  id: string;
+  title: string;
+  summary: string;
+  actorName: string;
+  actorEmail: string;
+  createdAt: string;
+  tone: WorkspaceAccessEventTone;
+  deviceLabel?: string;
+};
+
+export type WorkspaceAccessSummary = {
+  successCount: number;
+  failedCount: number;
+  lockedCount: number;
+  resetCount: number;
 };
 
 export type Stat = {

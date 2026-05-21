@@ -15,6 +15,7 @@ import {
 } from "@/app/dashboard/billing/actions";
 import { createNfseDraftAction } from "@/app/dashboard/fiscal/actions";
 import { buildBillingWhatsappInsights } from "@/lib/billing-whatsapp-insights";
+import { getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { buildChargeFollowUpActions, buildChargeReminderQueue, summarizeChargeFollowUp } from "@/lib/charge-follow-up";
 import { listChargeWhatsappHistory, type ChargeWhatsappHistoryEntry } from "@/lib/charge-whatsapp-history";
 import { getChargeUrgency, getChargeUrgencyLabel, sortChargesByPriority } from "@/lib/charge-priority";
@@ -27,6 +28,7 @@ import { listCustomers } from "@/lib/customer-repository";
 import { getEvolutionIntegrationStatus } from "@/lib/evolution-api";
 import { readDashboardQueuePreference } from "@/lib/dashboard-queue-preferences";
 import { listQuotes } from "@/lib/quote-repository";
+import { getWorkspaceModuleCapabilities } from "@/lib/workspace-access";
 import type { ChargeWhatsappSignal } from "@/lib/charge-whatsapp-signals";
 import type { Charge } from "@/lib/types";
 
@@ -72,14 +74,17 @@ function getHumanTriageLabel(signal: { suggestedOutcome?: string; inboundReplyDe
 }
 
 export default async function BillingPage({ searchParams }: BillingPageProps) {
-  const [quotes, loadedCharges, nfseDocuments, customers, customerWhatsappActivity, chargeWhatsappSignals] = await Promise.all([
+  const [quotes, loadedCharges, nfseDocuments, customers, customerWhatsappActivity, chargeWhatsappSignals, context] = await Promise.all([
     listQuotes(),
     listCharges(),
     listNfseDocuments(),
     listCustomers(),
     listCustomerWhatsappActivity().catch(() => []),
     listChargeWhatsappSignals().catch(() => []),
+    getCurrentWorkspaceContext(),
   ]);
+  const billingAccess = getWorkspaceModuleCapabilities(context.workspaceRole, "billing");
+  const fiscalAccess = getWorkspaceModuleCapabilities(context.workspaceRole, "fiscal");
   const charges = sortChargesByPriority(loadedCharges);
   const chargeWhatsappHistory = await listChargeWhatsappHistory(charges).catch(() => new Map());
   const customersByName = new Map(customers.map((customer) => [customer.name, customer]));
@@ -162,6 +167,14 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         <div className="auth-hint">
           <strong>Foco operacional</strong>
           <span>{focusMessage}</span>
+        </div>
+      ) : null}
+      {!billingAccess.canManage ? (
+        <div className="auth-hint">
+          <strong>Modo operação no financeiro</strong>
+          <span>
+            Seu perfil pode tocar follow-ups, respostas e rotina da fila, mas criação, baixa sensível e remoção ficam com gestão.
+          </span>
         </div>
       ) : null}
       <ModuleQueueFilters
@@ -261,6 +274,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           </article>
         </aside>
       </section>
+      {billingAccess.canManage ? (
       <section id="nova-cobranca" className="data-panel">
         <div className="card-header">
           <div>
@@ -322,6 +336,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           </button>
         </form>
       </section>
+      ) : null}
 
       {approvedQuotes.length > 0 ? (
         <section className="data-panel">
@@ -519,7 +534,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                       <small>{signal.lastMessagePreview}</small>
                     </div>
                   ) : null}
-                  {signal.suggestedOutcome && signal.suggestedNote ? (
+                  {billingAccess.canOperate && signal.suggestedOutcome && signal.suggestedNote ? (
                     <form action={applyWhatsappSignalFollowUpAction} className="card-action">
                       <input type="hidden" name="id" value={charge.id} />
                       <input type="hidden" name="outcome" value={signal.suggestedOutcome} />
@@ -697,12 +712,14 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                           Reagendar +3d
                         </button>
                       </form>
+                      {billingAccess.canManage ? (
                       <form action={markChargeAsPaidAction} className="card-action">
                         <input type="hidden" name="id" value={action.id} />
                         <button type="submit" className="primary-link">
                           Marcar pago
                         </button>
                       </form>
+                      ) : null}
                       <form action={advanceChargeCadenceAction} className="card-action">
                         <input type="hidden" name="id" value={action.id} />
                         <input type="hidden" name="outcome" value="Prometeu pagar" />
@@ -874,6 +891,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                             {whatsappSignal.lastMessagePreview ? (
                               <small className="muted-text">&quot;{whatsappSignal.lastMessagePreview}&quot;</small>
                             ) : null}
+                            {billingAccess.canOperate ? (
                             <form action={applyWhatsappSignalFollowUpAction} className="card-action">
                               <input type="hidden" name="id" value={charge.id} />
                               <input type="hidden" name="outcome" value={whatsappSignal.suggestedOutcome} />
@@ -882,6 +900,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                                 Registrar retorno sugerido
                               </button>
                             </form>
+                            ) : null}
                           </div>
                         ) : whatsappSignal?.inboundReplyDetected ? (
                           <div className="auth-hint">
@@ -939,16 +958,18 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                           +3d
                         </button>
                       </form>
+                      {billingAccess.canManage ? (
                       <form action={markChargeAsPaidAction} className="card-action">
                         <input type="hidden" name="id" value={charge.id} />
                         <button type="submit" className="primary-link">
                           Pago
                         </button>
                       </form>
+                      ) : null}
                     </div>
                   ) : null}
 
-                  {charge.status === "Pago" && !relatedNfse ? (
+                  {charge.status === "Pago" && !relatedNfse && fiscalAccess.canManage ? (
                     <form action={createNfseDraftAction} className="card-action">
                       <input type="hidden" name="chargeId" value={charge.id} />
                       <button type="submit" className="primary-link">
@@ -967,6 +988,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                     <summary>Registrar follow-up financeiro</summary>
                     <div className="details-body">
                       <div className="follow-up-block">
+                        {billingAccess.canOperate ? (
                         <form action={addChargeFollowUpAction} className="follow-up-form">
                           <input type="hidden" name="id" value={charge.id} />
                           <label>
@@ -1000,6 +1022,12 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                             Registrar contato
                           </button>
                         </form>
+                        ) : (
+                          <div className="auth-hint">
+                            <strong>Somente leitura</strong>
+                            <span>Seu perfil atual pode consultar o histórico, mas não registrar novos movimentos financeiros.</span>
+                          </div>
+                        )}
                         {charge.followUps.length > 0 ? (
                           <div className="follow-up-list">
                             {charge.followUps.slice(0, 3).map((entry) => (
@@ -1016,12 +1044,14 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                       </div>
                     </div>
                   </details>
+                  {billingAccess.canManage ? (
                   <form action={deleteChargeAction} className="card-action">
                     <input type="hidden" name="id" value={charge.id} />
                     <button type="submit" className="ghost-button">
                       Remover
                     </button>
                   </form>
+                  ) : null}
                 </article>
               );
             })()

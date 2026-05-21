@@ -16,6 +16,8 @@ export function AuthSignInForm({ callbackUrl = "/dashboard", showDemoHints = fal
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const createdEmail = searchParams.get("email") || "";
   const created = searchParams.get("created") === "1";
+  const acceptedInvite = searchParams.get("acceptedInvite") === "1";
+  const resetCompleted = searchParams.get("reset") === "1";
 
   const hasError =
     searchParams.get("error") === "CredentialsSignin" ||
@@ -79,10 +81,16 @@ export function AuthSignInForm({ callbackUrl = "/dashboard", showDemoHints = fal
         <p className="auth-error">{errorMessage || "Email ou senha inválidos."}</p>
       ) : null}
 
-      {created ? (
+      {created || resetCompleted ? (
         <div className="auth-hint">
-          <strong>Conta criada</strong>
-          <span>Seu workspace inicial foi criado. Entre com o email e a senha definidos no onboarding.</span>
+          <strong>{resetCompleted ? "Senha redefinida" : acceptedInvite ? "Convite ativado" : "Conta criada"}</strong>
+          <span>
+            {resetCompleted
+              ? "Sua nova senha já está salva. Entre normalmente para abrir o workspace."
+              : acceptedInvite
+              ? "O acesso convidado foi preparado. Entre com o email e a senha definidos para abrir a empresa."
+              : "Seu workspace inicial foi criado. Entre com o email e a senha definidos no onboarding."}
+          </span>
         </div>
       ) : null}
 
@@ -91,6 +99,11 @@ export function AuthSignInForm({ callbackUrl = "/dashboard", showDemoHints = fal
         <Link href={callbackUrl !== "/dashboard" ? `/onboarding?next=${encodeURIComponent(callbackUrl)}` : "/onboarding"}>
           Criar conta e workspace real
         </Link>
+      </div>
+
+      <div className="auth-hint">
+        <strong>Esqueceu a senha?</strong>
+        <Link href="/recuperar-senha">Receber link de redefinição</Link>
       </div>
     </>
   );

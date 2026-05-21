@@ -9,11 +9,14 @@ import { switchActiveWorkspaceAction } from "@/app/dashboard/actions";
 import { authOptions } from "@/lib/auth-options";
 import { getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { dashboardNav } from "@/lib/mock-data";
+import { getWorkspaceRoleLabel } from "@/lib/workspace-access";
+import { getDashboardNotificationCenter } from "@/lib/dashboard-notification-center";
 import { getSubscriptionStatusLabel } from "@/lib/subscription";
 import { listUserWorkspaces } from "@/lib/workspace-membership-repository";
 import { getOperationalAlerts } from "@/lib/operational-alerts";
 import { getWorkspaceSubscription } from "@/lib/workspace-subscription-repository";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
+import { getCurrentUserAlertPreferences } from "@/lib/workspace-user-preferences";
 
 type DashboardShellProps = {
   children: ReactNode;
@@ -38,12 +41,14 @@ export async function DashboardShell({
     redirect("/login");
   }
 
-  const [setup, subscription, workspaces, context, operationalAlerts] = await Promise.all([
+  const [setup, subscription, workspaces, context, operationalAlerts, notificationCenter, alertPreferences] = await Promise.all([
     getWorkspaceSetup(),
     getWorkspaceSubscription(),
     listUserWorkspaces(),
     getCurrentWorkspaceContext(),
     getOperationalAlerts(),
+    getDashboardNotificationCenter(),
+    getCurrentUserAlertPreferences(),
   ]);
 
   const restrictedSubscription = subscription.status === "PAST_DUE" || subscription.status === "CANCELED";
@@ -62,6 +67,7 @@ export async function DashboardShell({
               <span className="sidebar-status-pill">Empresa ativa</span>
               <h2>{setup.tradeName || setup.name}</h2>
               <p>{session.user.name || session.user.email || "Operador"}</p>
+              <small>{getWorkspaceRoleLabel(context.workspaceRole)}</small>
             </div>
           </div>
           {workspaces.length > 1 ? (
@@ -112,7 +118,7 @@ export async function DashboardShell({
           </div>
         ) : null}
 
-        {operationalAlerts.length > 0 ? (
+        {alertPreferences.showOperationalAlerts && operationalAlerts.length > 0 ? (
           <section className="dashboard-alert-stack">
             {operationalAlerts.map((alert) => (
               <div key={alert.id} className={alert.tone === "critical" ? "auth-hint fiscal-warning" : "auth-hint"}>
@@ -123,6 +129,17 @@ export async function DashboardShell({
                     {alert.hrefLabel}
                   </Link>
                 ) : null}
+              </div>
+            ))}
+          </section>
+        ) : null}
+
+        {notificationCenter.length > 0 ? (
+          <section className="dashboard-alert-stack">
+            {notificationCenter.map((item) => (
+              <div key={item.id} className={item.tone === "warning" ? "auth-hint fiscal-warning" : "auth-hint"}>
+                <strong>{item.title}</strong>
+                <span>{item.message}</span>
               </div>
             ))}
           </section>

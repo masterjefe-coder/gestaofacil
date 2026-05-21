@@ -11,6 +11,10 @@ type LoginPageProps = {
   searchParams?: Promise<{
     error?: string;
     callbackUrl?: string;
+    created?: string;
+    email?: string;
+    acceptedInvite?: string;
+    reset?: string;
   }>;
 };
 

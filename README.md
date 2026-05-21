@@ -141,6 +141,11 @@ Variaveis para integrar o Asaas:
 - `ASAAS_PLATFORM_SPLIT_FIXED_VALUE` opcional para split futuro
 - `APP_BASE_URL` com a URL publica do app para webhooks
 
+Variaveis para convite por email:
+
+- `RESEND_API_KEY` para envio transacional de convites
+- `EMAIL_FROM` com o remetente autenticado no provedor
+
 Variaveis para integrar a NFS-e Nacional:
 
 - `NFSE_NATIONAL_ENABLED=true`

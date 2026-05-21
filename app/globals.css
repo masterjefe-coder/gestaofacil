@@ -1666,6 +1666,44 @@ p {
   grid-column: span 2;
 }
 
+.checkbox-field {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(8, 31, 88, 0.08);
+}
+
+.inline-form .checkbox-field input {
+  width: 18px;
+  min-height: 18px;
+  margin-top: 0.2rem;
+  padding: 0;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.invite-link-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.invite-link-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0.8rem 0.9rem;
+  border-radius: 16px;
+  border: 1px solid rgba(40, 33, 24, 0.12);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--text);
+  font: inherit;
+}
+
 .form-submit {
   align-self: end;
   border: 0;

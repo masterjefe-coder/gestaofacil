@@ -23,6 +23,14 @@ import {
   updateWorkspaceMemberRole,
   WorkspaceMemberError,
 } from "@/lib/workspace-membership-repository";
+import {
+  createAndDeliverWorkspaceInvite,
+  renewWorkspaceInvite,
+  resendWorkspaceInvite,
+  revokeWorkspaceInvite,
+  WorkspaceInviteError,
+} from "@/lib/workspace-invite-repository";
+import { updateCurrentUserAlertPreferences } from "@/lib/workspace-user-preferences";
 import type { SetupInput } from "@/lib/types";
 
 function getString(formData: FormData, key: string) {
@@ -114,6 +122,106 @@ export async function createWorkspaceMemberAction(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
   redirectToSetup({ teamCreated: "1" }, "#team-section");
+}
+
+export async function createWorkspaceInviteAction(formData: FormData) {
+  const name = getString(formData, "inviteName");
+  const email = getString(formData, "inviteEmail");
+  const role = (getString(formData, "inviteRole") as WorkspaceRole) || WorkspaceRole.MEMBER;
+
+  try {
+    const result = await createAndDeliverWorkspaceInvite({
+      name,
+      email,
+      role,
+    });
+
+    if (!result.delivery.sent && !result.delivery.skipped) {
+      redirectToSetup({ inviteCreated: "1", teamError: `Convite criado, mas o email não saiu: ${result.delivery.error}` }, "#team-section");
+    }
+  } catch (error) {
+    const message =
+      error instanceof WorkspaceInviteError
+        ? error.message
+        : "Não foi possível criar o convite do workspace.";
+
+    redirectToSetup({ teamError: message }, "#team-section");
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirectToSetup({ inviteCreated: "1" }, "#team-section");
+}
+
+export async function resendWorkspaceInviteAction(formData: FormData) {
+  const inviteId = getString(formData, "inviteId");
+
+  try {
+    const delivery = await resendWorkspaceInvite(inviteId);
+
+    if (!delivery.sent) {
+      const message = delivery.skipped
+        ? "Convite pronto, mas o envio automático está sem provider configurado."
+        : `Convite reenviado sem sucesso: ${delivery.error}`;
+      redirectToSetup({ inviteResent: "1", teamError: message }, "#team-section");
+    }
+  } catch (error) {
+    const message =
+      error instanceof WorkspaceInviteError
+        ? error.message
+        : "Não foi possível reenviar o convite.";
+
+    redirectToSetup({ teamError: message }, "#team-section");
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirectToSetup({ inviteResent: "1" }, "#team-section");
+}
+
+export async function renewWorkspaceInviteAction(formData: FormData) {
+  const inviteId = getString(formData, "inviteId");
+
+  try {
+    const result = await renewWorkspaceInvite(inviteId);
+
+    if (!result.delivery.sent) {
+      const message = result.delivery.skipped
+        ? "Convite renovado, mas o envio automático está sem provider configurado."
+        : `Convite renovado, mas o email não saiu: ${result.delivery.error}`;
+      redirectToSetup({ inviteRenewed: "1", teamError: message }, "#team-section");
+    }
+  } catch (error) {
+    const message =
+      error instanceof WorkspaceInviteError
+        ? error.message
+        : "Não foi possível renovar o convite.";
+
+    redirectToSetup({ teamError: message }, "#team-section");
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirectToSetup({ inviteRenewed: "1" }, "#team-section");
+}
+
+export async function revokeWorkspaceInviteAction(formData: FormData) {
+  const inviteId = getString(formData, "inviteId");
+
+  try {
+    await revokeWorkspaceInvite(inviteId);
+  } catch (error) {
+    const message =
+      error instanceof WorkspaceInviteError
+        ? error.message
+        : "Não foi possível revogar o convite.";
+
+    redirectToSetup({ teamError: message }, "#team-section");
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirectToSetup({ inviteRevoked: "1" }, "#team-section");
 }
 
 export async function updateWorkspaceMemberRoleAction(formData: FormData) {
@@ -377,4 +485,25 @@ export async function createWorkspaceSubscriptionCheckoutAction() {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/setup");
   redirectToSetup({ subscriptionCheckoutCreated: "1" }, "#subscription-section");
+}
+
+export async function updateUserAlertPreferencesAction(formData: FormData) {
+  try {
+    await updateCurrentUserAlertPreferences({
+      showOperationalAlerts: getString(formData, "showOperationalAlerts") === "on",
+      showNotificationCenter: getString(formData, "showNotificationCenter") === "on",
+      emailOnInviteAccepted: getString(formData, "emailOnInviteAccepted") === "on",
+      emailOnSecurityAlerts: getString(formData, "emailOnSecurityAlerts") === "on",
+    });
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Nao foi possivel salvar as preferencias pessoais de alerta.";
+
+    redirectToSetup({ alertPrefsError: message }, "#access-section");
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  redirectToSetup({ alertPrefsSaved: "1" }, "#access-section");
 }
