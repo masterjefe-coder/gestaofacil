@@ -54,6 +54,7 @@ export function MarketingFooter() {
 
       <div className="marketing-footer-grid">
         <div className="marketing-footer-brand">
+          <span className="marketing-footer-badge">Operação, cobrança e fiscal no mesmo ritmo</span>
           <BrandLogo className="footer-wordmark" />
           <span className="marketing-footer-tag">
             Venda, receba e emita no mesmo fluxo.

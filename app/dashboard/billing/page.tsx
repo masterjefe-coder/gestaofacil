@@ -179,6 +179,88 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           { value: "triage", label: "Triagem", count: chargesNeedingHumanTriage.length },
         ]}
       />
+      <section className="dashboard-overview-hero module-overview-hero">
+        <article className="dashboard-spotlight-card fade-in-up">
+          <div className="dashboard-spotlight-header">
+            <div>
+              <span className="section-label">Leitura financeira</span>
+              <h2>
+                {highlightedFollowUps[0]?.customer
+                  ? `${highlightedFollowUps[0].customer} lidera a fila que mais impacta caixa agora.`
+                  : "A fila financeira está organizada e sem gargalo crítico agora."}
+              </h2>
+            </div>
+            <span className={`dashboard-priority-badge ${followUpSummary.slaOverdueCount > 0 ? "priority-critical" : "priority-normal"}`}>
+              {followUpSummary.slaOverdueCount > 0 ? "Ação imediata" : "Fluxo estável"}
+            </span>
+          </div>
+          <p>
+            {highlightedFollowUps[0]?.summary ||
+              "Quando cobrança, promessa ou contestação pedirem leitura mais urgente, o módulo vai puxar isso para o topo."}
+          </p>
+
+          <div className="dashboard-top-metrics">
+            <article className="dashboard-metric-tile">
+              <span>SLA vencido</span>
+              <strong>{followUpSummary.slaOverdueCount}</strong>
+              <small>Cobranças que já pedem ação financeira sem escorregar mais um dia.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Hoje</span>
+              <strong>{followUpSummary.slaTodayCount}</strong>
+              <small>Toques que precisam acontecer ainda hoje para manter cadência.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Triagem</span>
+              <strong>{chargesNeedingHumanTriage.length}</strong>
+              <small>Clientes que responderam e pedem leitura humana antes de insistir.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Promessas</span>
+              <strong>{whatsappInsights.summary.promisedCount}</strong>
+              <small>Respostas que indicam intenção de pagamento e merecem acompanhamento.</small>
+            </article>
+          </div>
+        </article>
+
+        <aside className="dashboard-overview-stack">
+          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
+            <span className="section-label">Objetivo do módulo</span>
+            <div className="dashboard-mini-list">
+              <article>
+                <strong>Receber com previsibilidade</strong>
+                <p>Cobrança deixa de ser reação atrasada e vira rotina visível do dia.</p>
+              </article>
+              <article>
+                <strong>Escutar o canal antes de insistir</strong>
+                <p>Promessas, contestações e comprovantes entram na fila com leitura clara.</p>
+              </article>
+            </div>
+          </article>
+
+          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
+            <span className="section-label">Atalhos rápidos</span>
+            <div className="dashboard-shortcuts-grid">
+              <a href="#nova-cobranca" className="dashboard-shortcut-card">
+                <strong>Nova cobrança</strong>
+                <span>Criar manualmente</span>
+              </a>
+              <a href="#recebimentos" className="dashboard-shortcut-card">
+                <strong>Recebimentos</strong>
+                <span>Abrir fila</span>
+              </a>
+              <Link href="/dashboard/fiscal" className="dashboard-shortcut-card">
+                <strong>Fiscal</strong>
+                <span>Emitir depois do pago</span>
+              </Link>
+              <Link href="/dashboard" className="dashboard-shortcut-card">
+                <strong>Dashboard</strong>
+                <span>Voltar ao comando</span>
+              </Link>
+            </div>
+          </article>
+        </aside>
+      </section>
       <section id="nova-cobranca" className="data-panel">
         <div className="card-header">
           <div>

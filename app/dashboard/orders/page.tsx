@@ -82,6 +82,86 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
           { value: "completed", label: "Concluídos", count: orders.filter((item) => item.status === "Concluido").length },
         ]}
       />
+      <section className="dashboard-overview-hero module-overview-hero">
+        <article className="dashboard-spotlight-card fade-in-up">
+          <div className="dashboard-spotlight-header">
+            <div>
+              <span className="section-label">Leitura operacional</span>
+              <h2>
+                {filteredOrders[0]?.customer
+                  ? `${filteredOrders[0].customer} lidera a execução que precisa de clareza agora.`
+                  : "A fila operacional está pronta para receber novos pedidos aprovados."}
+              </h2>
+            </div>
+            <span className="dashboard-priority-badge priority-high">Execução ativa</span>
+          </div>
+          <p>
+            {filteredOrders[0]?.note ||
+              "Quando orçamento aprovado virar serviço em andamento, o módulo puxa esse contexto para o topo da operação."}
+          </p>
+
+          <div className="dashboard-top-metrics">
+            <article className="dashboard-metric-tile">
+              <span>Pendentes</span>
+              <strong>{orders.filter((item) => item.status === "Pendente").length}</strong>
+              <small>Pedidos aprovados que ainda pedem agenda ou definição operacional.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Agendados</span>
+              <strong>{orders.filter((item) => item.status === "Agendado").length}</strong>
+              <small>Execuções combinadas e próximas da entrega real.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Em execução</span>
+              <strong>{orders.filter((item) => item.status === "Em execucao").length}</strong>
+              <small>Itens que pedem acompanhamento até conclusão.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Concluídos</span>
+              <strong>{orders.filter((item) => item.status === "Concluido").length}</strong>
+              <small>Pedidos já prontos para próximos passos financeiros e fiscais.</small>
+            </article>
+          </div>
+        </article>
+
+        <aside className="dashboard-overview-stack">
+          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
+            <span className="section-label">Objetivo do módulo</span>
+            <div className="dashboard-mini-list">
+              <article>
+                <strong>Tirar a execução da cabeça da equipe</strong>
+                <p>Pedido vira estado operacional explícito e visível no sistema.</p>
+              </article>
+              <article>
+                <strong>Conectar venda e entrega</strong>
+                <p>Aprovação comercial continua até conclusão e fiscal, sem buracos no fluxo.</p>
+              </article>
+            </div>
+          </article>
+
+          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
+            <span className="section-label">Atalhos rápidos</span>
+            <div className="dashboard-shortcuts-grid">
+              <a href="#novo-pedido" className="dashboard-shortcut-card">
+                <strong>Gerar pedido</strong>
+                <span>Converter aprovado</span>
+              </a>
+              <Link href="/dashboard/quotes" className="dashboard-shortcut-card">
+                <strong>Orçamentos</strong>
+                <span>Ver aprovados</span>
+              </Link>
+              <Link href="/dashboard/fiscal" className="dashboard-shortcut-card">
+                <strong>Fiscal</strong>
+                <span>Ir para emissão</span>
+              </Link>
+              <Link href="/dashboard" className="dashboard-shortcut-card">
+                <strong>Dashboard</strong>
+                <span>Voltar ao comando</span>
+              </Link>
+            </div>
+          </article>
+        </aside>
+      </section>
 
       <section id="novo-pedido" className="data-panel">
         <div className="card-header">

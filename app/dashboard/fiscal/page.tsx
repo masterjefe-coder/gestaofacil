@@ -113,6 +113,88 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
           { value: "issued", label: "Emitidas", count: fiscalInsights.summary.issuedCount },
         ]}
       />
+      <section className="dashboard-overview-hero module-overview-hero">
+        <article className="dashboard-spotlight-card fade-in-up">
+          <div className="dashboard-spotlight-header">
+            <div>
+              <span className="section-label">Leitura fiscal</span>
+              <h2>
+                {filteredFiscalItems[0]?.customer
+                  ? `${filteredFiscalItems[0].customer} lidera a fila fiscal com maior necessidade agora.`
+                  : "A fila fiscal está organizada e pronta para novos recebimentos."}
+              </h2>
+            </div>
+            <span className={`dashboard-priority-badge ${fiscalInsights.summary.blockedCount > 0 ? "priority-critical" : "priority-normal"}`}>
+              {fiscalInsights.summary.blockedCount > 0 ? "Pendência estrutural" : "Fila sob controle"}
+            </span>
+          </div>
+          <p>
+            {filteredFiscalItems[0]?.helper ||
+              "Quando houver rascunhos, prontas ou bloqueios estruturais, o módulo prioriza emissão e revisão já no topo."}
+          </p>
+
+          <div className="dashboard-top-metrics">
+            <article className="dashboard-metric-tile">
+              <span>Prontas</span>
+              <strong>{fiscalInsights.summary.readyCount}</strong>
+              <small>Documentos aptos para emissão sem novo retrabalho operacional.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Bloqueadas</span>
+              <strong>{fiscalInsights.summary.blockedCount}</strong>
+              <small>Itens travados por setup, município ou dados insuficientes.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Revisão</span>
+              <strong>{fiscalInsights.summary.reviewCount}</strong>
+              <small>Documentos com erro operacional que pedem ação humana.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Prontidão</span>
+              <strong>{readiness.ready ? "100%" : "Parcial"}</strong>
+              <small>{readiness.ready ? "Setup fiscal pronto para operar no fluxo." : readiness.helper}</small>
+            </article>
+          </div>
+        </article>
+
+        <aside className="dashboard-overview-stack">
+          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
+            <span className="section-label">Objetivo do módulo</span>
+            <div className="dashboard-mini-list">
+              <article>
+                <strong>Emitir sem redigitar</strong>
+                <p>A NFS-e entra como continuação da venda recebida, não como outro sistema.</p>
+              </article>
+              <article>
+                <strong>Destravar cedo</strong>
+                <p>Setup, certificado e município precisam aparecer antes da fila acumular erro.</p>
+              </article>
+            </div>
+          </article>
+
+          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
+            <span className="section-label">Atalhos rápidos</span>
+            <div className="dashboard-shortcuts-grid">
+              <Link href="/dashboard/setup" className="dashboard-shortcut-card">
+                <strong>Setup</strong>
+                <span>Ajustar base fiscal</span>
+              </Link>
+              <Link href="/dashboard/billing" className="dashboard-shortcut-card">
+                <strong>Cobranças</strong>
+                <span>Ver pagos</span>
+              </Link>
+              <a href="#documentos-fiscais" className="dashboard-shortcut-card">
+                <strong>Documentos</strong>
+                <span>Abrir fila</span>
+              </a>
+              <Link href="/dashboard" className="dashboard-shortcut-card">
+                <strong>Dashboard</strong>
+                <span>Voltar ao comando</span>
+              </Link>
+            </div>
+          </article>
+        </aside>
+      </section>
       <section className="stats-row">
         <article className="stat-card">
           <span>Prontas para rascunho</span>
@@ -407,7 +489,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         )}
       </section>
 
-      <section className="data-panel">
+      <section id="documentos-fiscais" className="data-panel">
         <div className="card-header">
           <div>
             <span className="section-label">Documentos fiscais</span>

@@ -81,6 +81,86 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
           { value: "waiting", label: "Aguardando", count: quoteInsights.summary.waitingCount },
         ]}
       />
+      <section className="dashboard-overview-hero module-overview-hero">
+        <article className="dashboard-spotlight-card fade-in-up">
+          <div className="dashboard-spotlight-header">
+            <div>
+              <span className="section-label">Leitura comercial</span>
+              <h2>
+                {filteredQuoteInsights[0]?.customer
+                  ? `${filteredQuoteInsights[0].customer} é a melhor proposta para agir agora.`
+                  : "A fila comercial está pronta para ganhar novas propostas."}
+              </h2>
+            </div>
+            <span className="dashboard-priority-badge priority-high">Pipeline ativo</span>
+          </div>
+          <p>
+            {filteredQuoteInsights[0]?.helper ||
+              "Quando a fila aquecer, o melhor próximo passo comercial aparece aqui com contexto e cadência."}
+          </p>
+
+          <div className="dashboard-top-metrics">
+            <article className="dashboard-metric-tile">
+              <span>Quentes</span>
+              <strong>{quoteInsights.summary.hotCount}</strong>
+              <small>Propostas com cliente ativo e melhor janela de resposta.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Follow-up</span>
+              <strong>{quoteInsights.summary.followUpCount}</strong>
+              <small>Itens que já pedem retomada explícita no pipeline.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Aprovados</span>
+              <strong>{quoteInsights.summary.approvedCount}</strong>
+              <small>Prontos para virar cobrança ou próxima etapa operacional.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Aguardando</span>
+              <strong>{quoteInsights.summary.waitingCount}</strong>
+              <small>Propostas enviadas que merecem nova cadência ou leitura.</small>
+            </article>
+          </div>
+        </article>
+
+        <aside className="dashboard-overview-stack">
+          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
+            <span className="section-label">Objetivo do módulo</span>
+            <div className="dashboard-mini-list">
+              <article>
+                <strong>Fechar mais rápido</strong>
+                <p>Dar contexto suficiente para a equipe agir sem caçar histórico.</p>
+              </article>
+              <article>
+                <strong>Evitar proposta fria</strong>
+                <p>O follow-up entra como rotina visível e não como memória do operador.</p>
+              </article>
+            </div>
+          </article>
+
+          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
+            <span className="section-label">Atalhos rápidos</span>
+            <div className="dashboard-shortcuts-grid">
+              <a href="#novo-orcamento" className="dashboard-shortcut-card">
+                <strong>Novo orçamento</strong>
+                <span>Montar proposta</span>
+              </a>
+              <Link href="/dashboard/customers" className="dashboard-shortcut-card">
+                <strong>Clientes</strong>
+                <span>Buscar contexto</span>
+              </Link>
+              <Link href="/dashboard/billing" className="dashboard-shortcut-card">
+                <strong>Cobranças</strong>
+                <span>Converter aprovados</span>
+              </Link>
+              <Link href="/dashboard" className="dashboard-shortcut-card">
+                <strong>Dashboard</strong>
+                <span>Voltar ao comando</span>
+              </Link>
+            </div>
+          </article>
+        </aside>
+      </section>
       <section id="novo-orcamento" className="data-panel">
         <div className="card-header">
           <div>

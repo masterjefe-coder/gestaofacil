@@ -25,6 +25,70 @@ export default async function ReportsPage() {
         </>
       }
     >
+      <section className="dashboard-overview-hero module-overview-hero">
+        <article className="dashboard-spotlight-card fade-in-up">
+          <div className="dashboard-spotlight-header">
+            <div>
+              <span className="section-label">Leitura executiva</span>
+              <h2>O resumo do workspace já sai pronto para bater o olho, exportar e compartilhar.</h2>
+            </div>
+            <span className="dashboard-priority-badge priority-normal">Snapshot do dia</span>
+          </div>
+          <p>
+            Gerado em {report.generatedAt}. Esta central junta comercial, financeiro, clientes e fiscal numa leitura única
+            para decisão rápida.
+          </p>
+
+          <div className="dashboard-top-metrics">
+            {report.summary.slice(0, 4).map((item) => (
+              <article key={item.label} className="dashboard-metric-tile">
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.helper}</small>
+              </article>
+            ))}
+          </div>
+        </article>
+
+        <aside className="dashboard-overview-stack">
+          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
+            <span className="section-label">Objetivo do módulo</span>
+            <div className="dashboard-mini-list">
+              <article>
+                <strong>Ler sem navegar demais</strong>
+                <p>Os sinais mais importantes aparecem reunidos em uma única tela executiva.</p>
+              </article>
+              <article>
+                <strong>Exportar sem desmontar a operação</strong>
+                <p>Excel e PDF entram como saída do painel, não como processo separado.</p>
+              </article>
+            </div>
+          </article>
+
+          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
+            <span className="section-label">Atalhos rápidos</span>
+            <div className="dashboard-shortcuts-grid">
+              <a href="/api/reports/export" className="dashboard-shortcut-card">
+                <strong>Excel</strong>
+                <span>Exportar planilha</span>
+              </a>
+              <Link href="/dashboard/reports/print?autoprint=1" className="dashboard-shortcut-card" target="_blank">
+                <strong>PDF</strong>
+                <span>Gerar impressão</span>
+              </Link>
+              <Link href="/dashboard" className="dashboard-shortcut-card">
+                <strong>Dashboard</strong>
+                <span>Voltar ao comando</span>
+              </Link>
+              <Link href="/dashboard/billing" className="dashboard-shortcut-card">
+                <strong>Cobranças</strong>
+                <span>Ver financeiro</span>
+              </Link>
+            </div>
+          </article>
+        </aside>
+      </section>
+
       <section className="auth-hint">
         <strong>Relatório operacional</strong>
         <span>Gerado em {report.generatedAt}. Use a tela para leitura rápida, o Excel para análise e o PDF para envio tradicional.</span>

@@ -48,6 +48,7 @@ export async function DashboardShell({
     <main className="workspace-shell">
       <aside className="workspace-sidebar">
         <div className="sidebar-brand">
+          <span className="sidebar-status-pill">Workspace online</span>
           <BrandLogo className="sidebar-wordmark" />
           <span className="eyebrow">Workspace ativo</span>
           <h2>{setup.tradeName || setup.name}</h2>

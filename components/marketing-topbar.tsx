@@ -21,6 +21,7 @@ export function MarketingTopbar({
   return (
     <section className="site-topbar">
       <Link href="/" aria-label="Gestão Fácil Sistemas" className="topbar-brand">
+        <span className="topbar-badge">Nova geração para serviços</span>
         <BrandLogo className="topbar-wordmark" priority />
         <span className="topbar-brand-copy">
           CRM, cobrança e NFS-e para operações de serviço.

@@ -20,16 +20,51 @@ export const metadata = buildMarketingMetadata({
   path: "/",
 });
 
-const journeySteps = [
-  "Atendimento e oportunidade no mesmo lugar",
-  "Orçamento, pedido e cobrança sem troca de contexto",
-  "Pagamento confirmado virando gatilho para emissão",
+const heroSignals = [
+  { label: "Ativação", value: "14 dias grátis", helper: "Sem cartão e sem fricção comercial" },
+  { label: "Cobrança", value: "Pix + link", helper: "Recebimento encaixado no fluxo da venda" },
+  { label: "Fiscal", value: "NFS-e integrada", helper: "Nota pronta quando a operação pede" },
 ];
 
-const heroNotes = [
-  "14 dias grátis sem cartão",
-  "Cobrança por Pix e link",
-  "NFS-e no ritmo da operação",
+const executionPillars = [
+  "WhatsApp, proposta e cobrança no mesmo contexto",
+  "Leitura executiva para o dono bater o olho e agir",
+  "Marca mais séria, com sensação de produto premium",
+];
+
+const showcaseCards = [
+  {
+    eyebrow: "Comercial",
+    title: "Entrada clara para quem ainda vende no improviso",
+    text: "Responder rápido, transformar conversa em proposta e manter o follow-up vivo sem depender de memória.",
+  },
+  {
+    eyebrow: "Financeiro",
+    title: "Cobrança no centro da operação, não escondida em outro módulo",
+    text: "Pedidos aprovados viram recebimento sem retrabalho e com status visível para a equipe toda.",
+  },
+  {
+    eyebrow: "Fiscal",
+    title: "Nota conectada ao que foi vendido e recebido",
+    text: "A emissão segue o fluxo da venda concluída, sem redigitação e sem atraso desnecessário.",
+  },
+];
+
+const conversionNotes = [
+  "Teste grátis por 14 dias sem cartão",
+  "Mensalidade fixa sem cobrar por faturamento",
+  "Implantação pensada para operação de serviço",
+];
+
+const buyingSignals = [
+  {
+    title: "Para quem quer organizar rápido",
+    text: "Entra leve, sem travar a equipe com setup pesado ou linguagem de ERP.",
+  },
+  {
+    title: "Para quem já vende e quer previsibilidade",
+    text: "O fluxo comercial, financeiro e fiscal fica mais consistente sem multiplicar planilhas e sistemas.",
+  },
 ];
 
 export default function HomePage() {
@@ -62,16 +97,18 @@ export default function HomePage() {
 
       <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Começar 14 dias grátis" />
 
-      <section className="home-hero">
-        <div className="home-hero-copy">
-          <span className="eyebrow">Sistema para empresas de serviço</span>
+      <section className="home-hero home-hero-refined fade-in-up">
+        <div className="home-hero-copy fade-in-up fade-delay-1">
+          <span className="eyebrow">Sistema premium para empresas de serviço</span>
           <BrandLogo className="hero-wordmark" priority />
-          <h1 className="home-hero-title">Menos ruído na operação. Mais clareza para vender, cobrar e emitir.</h1>
+          <h1 className="home-hero-title">
+            A sua operação pode parecer organizada, rápida e profissional desde a primeira tela.
+          </h1>
           <p className="home-hero-text">
-            O Gestão Fácil organiza o dia real da empresa em um fluxo simples:
-            conversa, orçamento, pedido, cobrança e NFS-e sem improviso e sem
-            cara de sistema pesado.
+            O Gestão Fácil conecta atendimento, proposta, cobrança e nota em uma experiência mais limpa,
+            direta e preparada para transmitir confiança comercial.
           </p>
+
           <div className="hero-actions">
             <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
               Começar 14 dias grátis
@@ -80,80 +117,132 @@ export default function HomePage() {
               Ver planos
             </Link>
           </div>
-          <div className="home-hero-notes" aria-label="Diferenciais principais">
-            {heroNotes.map((item) => (
+
+          <div className="live-activity-ribbon">
+            <span className="live-dot" />
+            <strong>Fluxo ativo</strong>
+            <small>Comercial, cobrança e fiscal no mesmo ritmo</small>
+          </div>
+
+          <div className="home-hero-notes home-hero-notes-strong" aria-label="Sinais principais do produto">
+            {trustSignals.slice(0, 3).map((item) => (
               <span key={item}>{item}</span>
+            ))}
+          </div>
+
+          <div className="home-proof-inline">
+            {proofNumbers.map((item) => (
+              <article key={item.label} className="home-proof-chip">
+                <strong>{item.value}</strong>
+                <span>{item.label}</span>
+              </article>
             ))}
           </div>
         </div>
 
-        <div className="home-hero-panel">
-          <div className="home-hero-card">
+        <div className="home-hero-panel home-hero-panel-refined fade-in-up fade-delay-2">
+          <div className="home-hero-card home-command-card">
             <div className="home-panel-header">
               <BrandLogo variant="mark" className="home-panel-mark" />
               <div>
-                <strong>Visão operacional</strong>
-                <p>O que precisa acontecer hoje, em um painel que dá para bater o olho.</p>
+                <strong>Painel executivo</strong>
+                <p>Menos poluição visual e mais direção para vender, cobrar e emitir.</p>
               </div>
             </div>
-            <div className="home-panel-stack">
-              {proofNumbers.slice(0, 3).map((item) => (
-                <article key={item.label} className="home-metric-card">
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
+
+            <div className="home-signal-grid">
+              {heroSignals.map((signal) => (
+                <article key={signal.label} className="home-signal-card">
+                  <span>{signal.label}</span>
+                  <strong>{signal.value}</strong>
+                  <small>{signal.helper}</small>
                 </article>
               ))}
             </div>
-            <ol className="home-journey-list">
-              {journeySteps.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ol>
+
+            <div className="home-spotlight-card">
+              <span className="section-label">Fluxo central</span>
+              <h2>Uma experiência que vende clareza antes mesmo da demonstração.</h2>
+              <ul className="stack-list home-execution-list">
+                {executionPillars.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="home-section home-section-soft">
+      <section className="home-section home-showcase-grid">
+        {showcaseCards.map((item) => (
+          <article key={item.title} className="home-showcase-card fade-in-up">
+            <span className="section-label">{item.eyebrow}</span>
+            <h2>{item.title}</h2>
+            <p>{item.text}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="home-section home-conversion-strip fade-in-up">
         <div className="home-section-heading">
-          <span className="section-label">Fluxo central</span>
-          <h2>O produto entra exatamente onde a operação costuma ficar quebrada.</h2>
+          <span className="section-label">Decisão mais fácil</span>
+          <h2>Menos objeção, mais clareza para começar o teste.</h2>
+        </div>
+        <div className="home-conversion-grid">
+          {buyingSignals.map((item) => (
+            <article key={item.title} className="home-conversion-card">
+              <h3>{item.title}</h3>
+              <p>{item.text}</p>
+            </article>
+          ))}
+          <article className="home-conversion-card home-conversion-card-strong">
+            <span className="section-label">Sem fricção</span>
+            <ul className="stack-list home-conversion-list">
+              {conversionNotes.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="produto" className="home-section home-product-overview">
+        <div className="home-section-heading">
+          <span className="section-label">Posicionamento</span>
+          <h2>Uma solução de operação séria, não uma vitrine de funcionalidades.</h2>
           <p>
-            Em vez de uma home tentando explicar tudo, a proposta aqui é direta:
-            conectar comercial, cobrança e fiscal em uma rotina leve.
+            A leitura fica mais rápida, os diferenciais ficam mais claros e o valor aparece sem excesso de explicação.
           </p>
         </div>
-        <div className="home-card-grid">
-          {commercialHighlights.slice(0, 3).map((item) => (
-            <article key={item.title} className="home-feature-card">
-              <span className="card-index">{item.index}</span>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
-            </article>
-          ))}
+
+        <div className="home-overview-grid">
+          <div className="home-card-grid">
+            {commercialHighlights.map((item) => (
+              <article key={item.title} className="home-feature-card home-feature-card-refined">
+                <span className="card-index">{item.index}</span>
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="home-pillars-grid home-pillars-grid-refined">
+            {brandPillars.map((item) => (
+              <article key={item.title} className="home-pillar-card">
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section id="produto" className="home-section home-section-split">
+      <section id="segmentos" className="home-section home-segment-band">
         <div className="home-section-heading">
-          <span className="section-label">Por que ele é diferente</span>
-          <h2>Não é só um emissor, nem um CRM solto. É um fluxo comercial com continuidade.</h2>
+          <span className="section-label">Segmentos ideais</span>
+          <h2>Feito para negócios de serviço que querem crescer com mais controle.</h2>
         </div>
-        <div className="home-pillars-grid">
-          {brandPillars.slice(0, 3).map((item) => (
-            <article key={item.title} className="home-pillar-card">
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="segmentos" className="home-section">
-        <div className="home-section-heading">
-          <span className="section-label">Melhor encaixe</span>
-          <h2>Feito para operações de serviço que precisam de velocidade, cobrança e organização.</h2>
-        </div>
-        <div className="chips-wrap">
+        <div className="chips-wrap chips-wrap-refined">
           {idealFor.map((item) => (
             <span key={item} className="segment-chip">
               {item}
@@ -165,11 +254,18 @@ export default function HomePage() {
       <section id="planos" className="home-section home-pricing-section">
         <div className="home-section-heading">
           <span className="section-label">Planos</span>
-          <h2>Preço fixo, teste grátis simples e uma proposta mais clara desde a primeira visita.</h2>
+          <h2>Oferta organizada para reforçar valor, clareza e decisão rápida.</h2>
+          <p>
+            Os planos entram como continuação natural da proposta, com menos ruído e mais percepção de estrutura.
+          </p>
         </div>
-        <div className="home-pricing-grid">
+
+        <div className="home-pricing-grid home-pricing-grid-refined">
           {pricingPlans.map((plan) => (
-            <article key={plan.code} className="home-pricing-card">
+            <article
+              key={plan.code}
+              className={plan.code === "PROFESSIONAL" ? "home-pricing-card home-pricing-card-featured" : "home-pricing-card"}
+            >
               <div className="home-pricing-top">
                 <span className="dashboard-kicker">{plan.badge}</span>
                 <h3>{plan.name}</h3>
@@ -177,11 +273,20 @@ export default function HomePage() {
               </div>
               <strong className="home-price">{plan.price}</strong>
               <span className="home-price-note">{plan.annualPrice}</span>
+              <div className="home-plan-audience">
+                <strong>Melhor para</strong>
+                <span>{plan.audience}</span>
+              </div>
               <ul className="stack-list home-plan-list">
                 {plan.features.slice(0, 4).map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
+              <div className="home-plan-limits">
+                {plan.limits.slice(0, 2).map((item) => (
+                  <span key={item}>{item}</span>
+                ))}
+              </div>
               <Link href={`/checkout?plan=${plan.code}`} className="primary-link">
                 {plan.cta}
               </Link>
@@ -190,20 +295,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="home-section home-closing-band">
-        <div className="home-section-heading">
-          <span className="section-label">Confiança</span>
-          <h2>Uma home mais limpa para sustentar uma marca mais séria.</h2>
+      <section className="home-section home-closing-cta fade-in-up">
+        <div className="home-closing-copy">
+          <span className="section-label">Pronto para testar</span>
+          <h2>Se a operação já está rodando, o próximo ganho é organizar melhor o mesmo volume.</h2>
           <p>
-            O objetivo é deixar claro em poucos segundos o que o produto resolve
-            e para quem ele faz sentido.
+            O plano Profissional concentra o melhor equilíbrio para equipes pequenas que querem vender,
+            cobrar e emitir com mais controle sem perder velocidade.
           </p>
         </div>
-        <ul className="stack-list home-trust-list">
-          {trustSignals.slice(0, 4).map((signal) => (
-            <li key={signal}>{signal}</li>
-          ))}
-        </ul>
+        <div className="home-closing-actions">
+          <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
+            Testar plano Profissional
+          </Link>
+          <Link href="/contato" className="secondary-link">
+            Falar com a equipe
+          </Link>
+        </div>
       </section>
 
       <MarketingFooter />

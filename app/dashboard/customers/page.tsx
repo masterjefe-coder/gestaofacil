@@ -110,6 +110,86 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
           { value: "stable", label: "Estáveis", count: engagement.summary.stableCount },
         ]}
       />
+      <section className="dashboard-overview-hero module-overview-hero">
+        <article className="dashboard-spotlight-card fade-in-up">
+          <div className="dashboard-spotlight-header">
+            <div>
+              <span className="section-label">Leitura de relacionamento</span>
+              <h2>
+                {filteredEngagementItems[0]?.customerName
+                  ? `${filteredEngagementItems[0].customerName} é o cliente com melhor próximo passo agora.`
+                  : "A base de clientes está pronta para ganhar mais contexto de operação."}
+              </h2>
+            </div>
+            <span className="dashboard-priority-badge priority-normal">Base ativa</span>
+          </div>
+          <p>
+            {filteredEngagementItems[0]?.helper ||
+              "Quando clientes acumularem sinais comerciais e financeiros, o módulo prioriza follow-up, calor e reativação aqui no topo."}
+          </p>
+
+          <div className="dashboard-top-metrics">
+            <article className="dashboard-metric-tile">
+              <span>Quentes</span>
+              <strong>{engagement.summary.hotCount}</strong>
+              <small>Clientes com sinal forte no canal e boa janela para avançar conversa.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Follow-up</span>
+              <strong>{engagement.summary.followUpCount}</strong>
+              <small>Relacionamentos que já justificam próximo toque comercial.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Reativação</span>
+              <strong>{engagement.summary.reactivationCount}</strong>
+              <small>Base com espaço claro para retomar contato e receita.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Histórico real</span>
+              <strong>{customersWithWhatsappHistory}</strong>
+              <small>Clientes já conectados a eventos reais do WhatsApp.</small>
+            </article>
+          </div>
+        </article>
+
+        <aside className="dashboard-overview-stack">
+          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
+            <span className="section-label">Objetivo do módulo</span>
+            <div className="dashboard-mini-list">
+              <article>
+                <strong>Parar de tratar cliente como cadastro morto</strong>
+                <p>O histórico comercial, cobrança e canal precisa viver no mesmo lugar.</p>
+              </article>
+              <article>
+                <strong>Agir com contexto</strong>
+                <p>Follow-up e reativação entram com base em sinais reais, não memória do time.</p>
+              </article>
+            </div>
+          </article>
+
+          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
+            <span className="section-label">Atalhos rápidos</span>
+            <div className="dashboard-shortcuts-grid">
+              <a href="#novo-cliente" className="dashboard-shortcut-card">
+                <strong>Novo cliente</strong>
+                <span>Cadastrar rápido</span>
+              </a>
+              <Link href="/dashboard/quotes" className="dashboard-shortcut-card">
+                <strong>Orçamentos</strong>
+                <span>Ver pipeline</span>
+              </Link>
+              <Link href="/dashboard/billing" className="dashboard-shortcut-card">
+                <strong>Cobranças</strong>
+                <span>Ler aberto</span>
+              </Link>
+              <Link href="/dashboard" className="dashboard-shortcut-card">
+                <strong>Dashboard</strong>
+                <span>Voltar ao comando</span>
+              </Link>
+            </div>
+          </article>
+        </aside>
+      </section>
       <section id="novo-cliente" className="data-panel">
         <div className="card-header">
           <div>

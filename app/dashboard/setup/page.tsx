@@ -128,6 +128,84 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </Link>
       }
     >
+      <section className="dashboard-overview-hero module-overview-hero">
+        <article className="dashboard-spotlight-card fade-in-up">
+          <div className="dashboard-spotlight-header">
+            <div>
+              <span className="section-label">Leitura estrutural</span>
+              <h2>O setup define se o workspace consegue vender, cobrar e emitir sem atrito.</h2>
+            </div>
+            <span className={`dashboard-priority-badge ${fiscalReadiness.ready ? "priority-normal" : "priority-critical"}`}>
+              {fiscalReadiness.ready ? "Base pronta" : "Configuração pendente"}
+            </span>
+          </div>
+          <p>
+            {fiscalReadiness.helper} Este bloco concentra identidade da empresa, assinatura, integrações e time em um mesmo comando.
+          </p>
+
+          <div className="dashboard-top-metrics">
+            <article className="dashboard-metric-tile">
+              <span>Fiscal</span>
+              <strong>{fiscalReadiness.ready ? "Pronto" : "Parcial"}</strong>
+              <small>{fiscalReadiness.ready ? "Base fiscal suficiente para operar no fluxo." : fiscalReadiness.helper}</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Assinatura</span>
+              <strong>{getSubscriptionStatusLabel(subscription.status)}</strong>
+              <small>{subscriptionPlan.name} em {getBillingCycleLabel(subscription.billingCycle).toLowerCase()}.</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>WhatsApp</span>
+              <strong>{evolutionIntegration.enabled ? "Ativo" : "Pendente"}</strong>
+              <small>{evolutionIntegration.helper}</small>
+            </article>
+            <article className="dashboard-metric-tile">
+              <span>Asaas</span>
+              <strong>{asaasIntegration.enabled ? "Ativo" : "Pendente"}</strong>
+              <small>{asaasIntegration.helper}</small>
+            </article>
+          </div>
+        </article>
+
+        <aside className="dashboard-overview-stack">
+          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
+            <span className="section-label">Objetivo do módulo</span>
+            <div className="dashboard-mini-list">
+              <article>
+                <strong>Preparar a empresa real</strong>
+                <p>O workspace precisa conhecer negócio, cobrança, fiscal e equipe para operar bem.</p>
+              </article>
+              <article>
+                <strong>Evitar bloqueio futuro</strong>
+                <p>Assinatura, webhook, certificado e município precisam aparecer antes da operação quebrar.</p>
+              </article>
+            </div>
+          </article>
+
+          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
+            <span className="section-label">Atalhos rápidos</span>
+            <div className="dashboard-shortcuts-grid">
+              <a href="#subscription-section" className="dashboard-shortcut-card">
+                <strong>Assinatura</strong>
+                <span>Ver plano</span>
+              </a>
+              <a href="#team-section" className="dashboard-shortcut-card">
+                <strong>Equipe</strong>
+                <span>Gerenciar acessos</span>
+              </a>
+              <a href="#integrations-section" className="dashboard-shortcut-card">
+                <strong>Integrações</strong>
+                <span>Conectar serviços</span>
+              </a>
+              <Link href="/dashboard" className="dashboard-shortcut-card">
+                <strong>Dashboard</strong>
+                <span>Voltar ao comando</span>
+              </Link>
+            </div>
+          </article>
+        </aside>
+      </section>
+
       <section className="data-panel">
         <div className="card-header">
           <div>
@@ -384,7 +462,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         ) : null}
       </section>
 
-      <section className="data-panel">
+      <section id="integrations-section" className="data-panel">
         <div className="card-header">
           <div>
             <span className="section-label">Canal WhatsApp</span>
@@ -829,7 +907,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </section>
       ) : null}
 
-      <section className="data-panel">
+      <section id="team-section" className="data-panel">
         <div className="card-header">
           <div>
             <span className="section-label">Equipe do workspace</span>
