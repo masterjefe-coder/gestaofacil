@@ -1,9 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { EvolutionPairingPanel } from "@/components/evolution-pairing-panel";
 import {
   connectWorkspaceAsaasAccountAction,
-  connectEvolutionInstanceAction,
   createWorkspaceAsaasSubaccountAction,
   createEvolutionInstanceAction,
   createWorkspaceMemberAction,
@@ -40,8 +39,6 @@ type SetupPageProps = {
   searchParams?: Promise<{
     evolutionMessage?: string;
     evolutionOk?: string;
-    evolutionPairingCode?: string;
-    evolutionQrCode?: string;
     asaasConnected?: string;
     asaasCreated?: string;
     asaasDisconnected?: string;
@@ -93,8 +90,6 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const teamError = params?.teamError;
   const evolutionMessage = params?.evolutionMessage;
   const evolutionOk = params?.evolutionOk === "1";
-  const evolutionPairingCode = params?.evolutionPairingCode;
-  const evolutionQrCode = params?.evolutionQrCode;
   const asaasConnected = params?.asaasConnected === "1";
   const asaasCreated = params?.asaasCreated === "1";
   const asaasDisconnected = params?.asaasDisconnected === "1";
@@ -550,29 +545,6 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         ) : null}
 
-        {evolutionPairingCode ? (
-          <div className="auth-hint">
-            <strong>Código de pareamento</strong>
-            <span>{evolutionPairingCode}</span>
-            <small className="muted-text">Use este código no aparelho se preferir pareamento numérico.</small>
-          </div>
-        ) : null}
-
-        {evolutionQrCode ? (
-          <div className="auth-hint">
-            <strong>QR para conectar o WhatsApp</strong>
-            <span>Escaneie este QR com o aparelho que será usado na operação.</span>
-            <Image
-              src={evolutionQrCode}
-              alt="QR code para pareamento da instância Evolution"
-              width={280}
-              height={280}
-              unoptimized
-              style={{ width: "100%", maxWidth: 280, height: "auto" }}
-            />
-          </div>
-        ) : null}
-
         {canManage ? (
           <form action={createEvolutionInstanceAction} className="inline-form">
             <label>
@@ -629,12 +601,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         ) : null}
 
         {canManage && selectedEvolutionInstanceName ? (
-          <form action={connectEvolutionInstanceAction} className="card-action">
-            <input type="hidden" name="instanceName" value={selectedEvolutionInstanceName} />
-            <button type="submit" className="secondary-link">
-              Gerar pareamento
-            </button>
-          </form>
+          <EvolutionPairingPanel instanceName={selectedEvolutionInstanceName} />
         ) : null}
 
         <div className="data-table">

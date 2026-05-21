@@ -54,6 +54,10 @@ type AsaasSubscription = {
   id: string;
 };
 
+type AsaasSubscriptionUpdateResponse = {
+  id: string;
+};
+
 type AsaasPixQrCode = {
   encodedImage?: string;
   payload?: string;
@@ -472,6 +476,36 @@ async function createAsaasSubscription(input: {
   });
 }
 
+async function updateAsaasSubscription(input: {
+  apiKey?: string;
+  subscriptionId: string;
+  billingType: "PIX" | "BOLETO" | "UNDEFINED" | "CREDIT_CARD";
+  value: number;
+  nextDueDate: string;
+  cycle: AsaasSubscriptionCycle;
+  description: string;
+  endDate?: string;
+  externalReference?: string;
+}): Promise<AsaasSubscriptionUpdateResponse> {
+  return asaasFetchWithApiKey<AsaasSubscriptionUpdateResponse>(
+    input.apiKey || process.env.ASAAS_API_KEY?.trim() || "",
+    `/subscriptions/${input.subscriptionId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        billingType: input.billingType,
+        value: input.value,
+        nextDueDate: input.nextDueDate,
+        cycle: input.cycle,
+        description: truncate(input.description, 500),
+        endDate: input.endDate || undefined,
+        externalReference: input.externalReference || undefined,
+        updatePendingPayments: true,
+      }),
+    },
+  );
+}
+
 async function listAsaasSubscriptionPayments(subscriptionId: string, apiKey?: string) {
   return asaasFetchWithApiKey<AsaasListResponse<AsaasPayment>>(apiKey || process.env.ASAAS_API_KEY?.trim() || "", `/subscriptions/${subscriptionId}/payments?limit=10&offset=0`, {
     method: "GET",
@@ -574,7 +608,7 @@ export async function createAsaasWorkspaceSubscription(input: {
   const subscription = await createAsaasSubscription({
     apiKey: config.apiKey,
     customerId: customer.id,
-    billingType: "PIX",
+    billingType: "UNDEFINED",
     value: input.value,
     nextDueDate: input.nextDueDate,
     cycle: input.cycle,
@@ -588,6 +622,40 @@ export async function createAsaasWorkspaceSubscription(input: {
   return {
     customerId: customer.id,
     subscriptionId: subscription.id,
+    paymentLink: firstPayment?.invoiceUrl || firstPayment?.bankSlipUrl || undefined,
+  };
+}
+
+export async function updateAsaasWorkspaceSubscription(input: {
+  subscriptionId: string;
+  value: number;
+  nextDueDate: string;
+  cycle: "MONTHLY" | "YEARLY";
+  description: string;
+  externalReference: string;
+}) {
+  const config = getAsaasConfig();
+
+  if (!config.enabled || !config.apiKey) {
+    throw new AsaasApiError("Asaas da plataforma ainda nao esta configurado para atualizar assinaturas.");
+  }
+
+  await updateAsaasSubscription({
+    apiKey: config.apiKey,
+    subscriptionId: input.subscriptionId,
+    billingType: "UNDEFINED",
+    value: input.value,
+    nextDueDate: input.nextDueDate,
+    cycle: input.cycle,
+    description: input.description,
+    externalReference: input.externalReference,
+  });
+
+  const payments = await listAsaasSubscriptionPayments(input.subscriptionId, config.apiKey).catch(() => ({ data: [] as AsaasPayment[] }));
+  const firstPayment = payments.data?.[0];
+
+  return {
+    subscriptionId: input.subscriptionId,
     paymentLink: firstPayment?.invoiceUrl || firstPayment?.bankSlipUrl || undefined,
   };
 }

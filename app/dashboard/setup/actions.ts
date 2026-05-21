@@ -199,19 +199,17 @@ export async function createEvolutionInstanceAction(formData: FormData) {
 
 export async function connectEvolutionInstanceAction(formData: FormData) {
   const instanceName = getString(formData, "instanceName");
-
-  if (!instanceName) {
-    redirectEvolution("Escolha uma instância para solicitar o pareamento.");
-  }
+  let pairingCode: string | undefined;
 
   try {
+    if (!instanceName) {
+      redirectEvolution("Escolha uma instância para solicitar o pareamento.");
+    }
+
     const result = await connectEvolutionInstance(instanceName);
+    pairingCode = result.pairingCode;
 
     revalidatePath("/dashboard/setup");
-    redirectEvolution(`Pareamento solicitado para ${instanceName}.`, true, {
-      evolutionPairingCode: result.pairingCode,
-      evolutionQrCode: result.code,
-    });
   } catch (error) {
     const message =
       error instanceof EvolutionApiError
@@ -220,6 +218,10 @@ export async function connectEvolutionInstanceAction(formData: FormData) {
 
     redirectEvolution(message);
   }
+
+  redirectEvolution(`Pareamento solicitado para ${instanceName}.`, true, {
+    evolutionPairingCode: pairingCode,
+  });
 }
 
 export async function connectWorkspaceAsaasAccountAction(formData: FormData) {

@@ -250,7 +250,7 @@ export async function createEvolutionInstance(input: { instanceName: string; num
 }
 
 export async function connectEvolutionInstance(instanceName: string) {
-  return evolutionRequest<{ pairingCode?: string; code?: string; count?: number }>(
+  return evolutionRequest<{ pairingCode?: string; code?: string; base64?: string; count?: number }>(
     `/instance/connect/${encodeURIComponent(instanceName)}`,
     { method: "GET" },
   );

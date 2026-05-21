@@ -1,7 +1,7 @@
 import type { SubscriptionBillingCycle, SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { recordAuditEvent } from "@/lib/audit-repository";
-import { createAsaasWorkspaceSubscription } from "@/lib/asaas";
+import { createAsaasWorkspaceSubscription, updateAsaasWorkspaceSubscription } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { readDemoWorkspaceData, writeDemoWorkspaceData } from "@/lib/demo-store";
@@ -215,9 +215,46 @@ export async function createWorkspaceSubscriptionCheckout() {
   const current = workspace.subscription
     ? mapPrismaSubscription(workspace.subscription)
     : buildDefaultTrialSubscription();
+  const nextDueDate = current.trialEndsAt
+    ? current.trialEndsAt.slice(0, 10)
+    : addTrialDays(new Date(), 14).toISOString().slice(0, 10);
+  const planPresentation = getSubscriptionPlanPresentation(current.plan);
+  const subscriptionDescription = `Assinatura ${planPresentation.name} - ${workspace.name}`;
 
   if (workspace.subscription?.asaasSubscriptionId) {
-    return current;
+    const updatedAsaas = await updateAsaasWorkspaceSubscription({
+      subscriptionId: workspace.subscription.asaasSubscriptionId,
+      value: getPlanChargeValue(current.plan, current.billingCycle),
+      nextDueDate,
+      cycle: current.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY",
+      description: subscriptionDescription,
+      externalReference: `gf_subscription:${context.workspaceId}`,
+    });
+
+    const updated = await prisma.workspaceSubscription.update({
+      where: { workspaceId: context.workspaceId },
+      data: {
+        asaasPaymentLink: updatedAsaas.paymentLink || workspace.subscription.asaasPaymentLink || null,
+        notes: "Assinatura SaaS sincronizada no Asaas com link de pagamento multimeios.",
+      },
+    });
+
+    await recordAuditEvent({
+      action: "workspace.subscription.checkout_synced",
+      entityType: "workspace",
+      entityId: context.workspaceId,
+      context,
+      payload: {
+        summary: `Assinatura ${current.plan} sincronizada no Asaas com pagamento multimeios.`,
+        metadata: {
+          asaasSubscriptionId: workspace.subscription.asaasSubscriptionId,
+          nextDueDate,
+          billingCycle: current.billingCycle,
+        },
+      },
+    });
+
+    return mapPrismaSubscription(updated);
   }
 
   const ownerMembership = workspace.memberships.find((item) => item.role === "OWNER") || workspace.memberships[0];
@@ -230,10 +267,6 @@ export async function createWorkspaceSubscriptionCheckout() {
     throw new Error("A assinatura precisa de email do responsavel, documento da empresa e plano cobravel definidos no workspace.");
   }
 
-  const nextDueDate = current.trialEndsAt
-    ? current.trialEndsAt.slice(0, 10)
-    : addTrialDays(new Date(), 14).toISOString().slice(0, 10);
-  const planPresentation = getSubscriptionPlanPresentation(current.plan);
   const created = await createAsaasWorkspaceSubscription({
     customerReference: `gf_workspace_customer:${context.workspaceId}`,
     customerName,
@@ -243,7 +276,7 @@ export async function createWorkspaceSubscriptionCheckout() {
     value: priceValue,
     nextDueDate,
     cycle: current.billingCycle === "YEARLY" ? "YEARLY" : "MONTHLY",
-    description: `Assinatura ${planPresentation.name} - ${workspace.name}`,
+    description: subscriptionDescription,
     externalReference: `gf_subscription:${context.workspaceId}`,
   });
 
