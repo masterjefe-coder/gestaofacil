@@ -55,17 +55,6 @@ export async function DashboardShell({
           <p>{setup.niche || "Vendas, cobranças e nota fiscal no mesmo caminho."}</p>
         </div>
 
-        <div className="sidebar-meta">
-          <strong>{setup.city && setup.state ? `${setup.city} - ${setup.state}` : setup.document}</strong>
-          <small>{setup.defaultPixKey || "Defina a chave Pix no setup"}</small>
-        </div>
-
-        <div className="sidebar-meta sidebar-session">
-          <strong>{session.user.name || "Operador"}</strong>
-          <small>{session.user.email}</small>
-          <LogoutButton />
-        </div>
-
         <nav className="sidebar-nav" aria-label="Navegação do dashboard">
           {dashboardNav.map((item) => (
             <Link
@@ -78,6 +67,14 @@ export async function DashboardShell({
             </Link>
           ))}
         </nav>
+
+        <div className="sidebar-footer">
+          <div className="sidebar-meta sidebar-session">
+            <strong>{setup.tradeName || setup.name}</strong>
+            <small>{session.user.name || session.user.email || "Operador"}</small>
+          </div>
+          <LogoutButton />
+        </div>
       </aside>
 
       <section className="workspace-content">
