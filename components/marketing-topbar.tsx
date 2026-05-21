@@ -15,7 +15,7 @@ const navItems = [
 ];
 
 export function MarketingTopbar({
-  ctaHref = "/checkout?plan=PROFESSIONAL",
+  ctaHref = "/planos",
   ctaLabel = "Começar agora",
 }: MarketingTopbarProps) {
   return (
@@ -33,6 +33,9 @@ export function MarketingTopbar({
             {item.label}
           </Link>
         ))}
+        <Link href="/login" className="topbar-link">
+          Entrar
+        </Link>
         <Link href={ctaHref} className="primary-link topbar-cta">
           {ctaLabel}
         </Link>

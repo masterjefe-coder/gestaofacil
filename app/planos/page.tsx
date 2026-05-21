@@ -5,6 +5,18 @@ import { MarketingTopbar } from "@/components/marketing-topbar";
 import { buildMarketingMetadata } from "@/lib/marketing-metadata";
 import { pricingFaqs, pricingNotes, pricingPlans, pricingPositioning } from "@/lib/site-data";
 
+const enterprisePlan = {
+  name: "Enterprise",
+  badge: "Sob consulta",
+  description: "Para operações que precisam de desenho comercial, fiscal ou multiunidade fora do padrão dos planos públicos.",
+  audience: "Estruturas maiores, cenários especiais e implantação consultiva",
+  features: [
+    "Escopo ajustado à operação",
+    "Implantação consultiva",
+    "Condições comerciais negociadas",
+  ],
+};
+
 export const metadata: Metadata = buildMarketingMetadata({
   title: "Planos",
   description: "Planos do Gestão Fácil com teste grátis de 14 dias, preço fixo e foco em empresas de serviço.",
@@ -20,7 +32,7 @@ const pricingSignals = [
 export default function PricingPage() {
   return (
     <main className="page-shell">
-      <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Começar 14 dias grátis" />
+      <MarketingTopbar ctaHref="/checkout" ctaLabel="Escolher plano e iniciar teste" />
 
       <section className="inner-hero">
         <div className="inner-hero-copy">
@@ -32,8 +44,8 @@ export default function PricingPage() {
             serviço que precisam operar com mais consistência.
           </p>
           <div className="hero-actions">
-            <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
-              Começar 14 dias grátis
+            <Link href="/checkout" className="primary-link">
+              Escolher plano e iniciar teste
             </Link>
             <Link href="/contato" className="secondary-link">
               Falar com a equipe
@@ -53,7 +65,7 @@ export default function PricingPage() {
       <section className="home-section home-pricing-section">
         <div className="home-section-heading">
           <span className="section-label">Escolha de plano</span>
-          <h2>Três faixas para tamanhos diferentes de operação, sem perder simplicidade.</h2>
+          <h2>Planos públicos para assinar online e Enterprise para operação sob desenho.</h2>
         </div>
         <div className="home-pricing-grid">
           {pricingPlans.map((plan) => (
@@ -87,6 +99,27 @@ export default function PricingPage() {
               </Link>
             </article>
           ))}
+          <article className="home-pricing-card home-pricing-card-enterprise">
+            <div className="home-pricing-top">
+              <span className="dashboard-kicker">{enterprisePlan.badge}</span>
+              <h3>{enterprisePlan.name}</h3>
+              <p>{enterprisePlan.description}</p>
+            </div>
+            <strong className="home-price">Sob consulta</strong>
+            <span className="home-price-note">Alinhamento comercial e técnico conforme o cenário</span>
+            <p className="muted-text">{enterprisePlan.audience}</p>
+            <div className="pricing-list-block">
+              <strong>Inclui</strong>
+              <ul className="stack-list pricing-stack-list">
+                {enterprisePlan.features.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+            <Link href="/contato" className="secondary-link">
+              Falar com a equipe
+            </Link>
+          </article>
         </div>
       </section>
 

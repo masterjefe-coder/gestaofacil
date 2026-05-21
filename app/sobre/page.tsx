@@ -37,8 +37,8 @@ export default function AboutPage() {
             girar rápido sem depender de improviso.
           </p>
           <div className="hero-actions">
-            <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
-              Começar 14 dias grátis
+            <Link href="/checkout" className="primary-link">
+              Escolher plano e iniciar teste
             </Link>
             <Link href="/contato" className="secondary-link">
               Falar com a equipe

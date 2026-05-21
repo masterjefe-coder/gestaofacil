@@ -130,7 +130,7 @@ export const pricingPlans = [
     annualPrice: "R$ 3.490/ano",
     badge: "Para crescer",
     description: "Para operações mais puxadas, com equipe, mais volume de cobrança e necessidade de leitura executiva melhor.",
-    cta: "Falar com a equipe",
+    cta: "Assinar plano Operação",
     audience: "Operações com mais volume, multiatendimento ou mais de uma unidade",
     limits: [
       "até 8 usuários",

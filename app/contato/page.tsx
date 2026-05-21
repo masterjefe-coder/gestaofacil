@@ -41,7 +41,7 @@ const contextItems = [
 export default function ContactPage() {
   return (
     <main className="page-shell">
-      <MarketingTopbar ctaLabel="Começar 14 dias grátis" />
+      <MarketingTopbar ctaHref="/checkout" ctaLabel="Escolher plano e iniciar teste" />
 
       <section className="inner-hero">
         <div className="inner-hero-copy">
@@ -52,8 +52,8 @@ export default function ContactPage() {
             segmento, volume, rotina de cobrança e necessidade fiscal.
           </p>
           <div className="hero-actions">
-            <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
-              Começar 14 dias grátis
+            <Link href="/checkout" className="primary-link">
+              Escolher plano e iniciar teste
             </Link>
             <Link href="/ajuda" className="secondary-link">
               Ver ajuda
@@ -98,8 +98,8 @@ export default function ContactPage() {
           </p>
         </div>
         <div className="hero-actions marketing-footer-band-actions">
-          <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
-            Começar 14 dias grátis
+          <Link href="/checkout" className="primary-link">
+            Escolher plano e iniciar teste
           </Link>
         </div>
       </section>

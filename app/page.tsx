@@ -13,6 +13,18 @@ import {
   trustSignals,
 } from "@/lib/site-data";
 
+const enterprisePlan = {
+  name: "Enterprise",
+  badge: "Sob consulta",
+  description: "Para operações com desenho comercial, fiscal ou multiunidade fora do padrão dos planos públicos.",
+  audience: "Estruturas maiores, cenários especiais e implantação consultiva",
+  features: [
+    "Escopo comercial e operacional sob desenho",
+    "Acompanhamento consultivo de implantação",
+    "Condições negociadas conforme operação",
+  ],
+};
+
 export const metadata = buildMarketingMetadata({
   title: "Gestão Fácil Sistemas",
   description:
@@ -95,7 +107,7 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
       />
 
-      <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Começar 14 dias grátis" />
+      <MarketingTopbar ctaHref="/planos" ctaLabel="Ver planos e teste grátis" />
 
       <section className="home-hero home-hero-refined fade-in-up">
         <div className="home-hero-copy fade-in-up fade-delay-1">
@@ -110,8 +122,8 @@ export default function HomePage() {
           </p>
 
           <div className="hero-actions">
-            <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
-              Começar 14 dias grátis
+            <Link href="/planos" className="primary-link">
+              Ver planos e iniciar teste
             </Link>
             <Link href="/planos" className="secondary-link">
               Ver planos
@@ -292,6 +304,27 @@ export default function HomePage() {
               </Link>
             </article>
           ))}
+          <article className="home-pricing-card home-pricing-card-enterprise">
+            <div className="home-pricing-top">
+              <span className="dashboard-kicker">{enterprisePlan.badge}</span>
+              <h3>{enterprisePlan.name}</h3>
+              <p>{enterprisePlan.description}</p>
+            </div>
+            <strong className="home-price">Sob consulta</strong>
+            <span className="home-price-note">Escopo e implantação alinhados ao cenário da operação</span>
+            <div className="home-plan-audience">
+              <strong>Melhor para</strong>
+              <span>{enterprisePlan.audience}</span>
+            </div>
+            <ul className="stack-list home-plan-list">
+              {enterprisePlan.features.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            <Link href="/contato" className="secondary-link">
+              Falar com a equipe
+            </Link>
+          </article>
         </div>
       </section>
 
@@ -305,8 +338,8 @@ export default function HomePage() {
           </p>
         </div>
         <div className="home-closing-actions">
-          <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
-            Testar plano Profissional
+          <Link href="/planos" className="primary-link">
+            Escolher plano e iniciar teste
           </Link>
           <Link href="/contato" className="secondary-link">
             Falar com a equipe

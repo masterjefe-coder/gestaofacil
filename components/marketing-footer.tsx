@@ -7,7 +7,7 @@ const footerColumns = [
     links: [
       { href: "/", label: "Visão geral" },
       { href: "/planos", label: "Planos" },
-      { href: "/checkout?plan=PROFESSIONAL", label: "Começar 14 dias grátis" },
+      { href: "/checkout", label: "Escolher plano e iniciar teste" },
       { href: "/integracoes", label: "Integrações" },
     ],
   },
@@ -43,8 +43,8 @@ export function MarketingFooter() {
           </p>
         </div>
         <div className="hero-actions marketing-footer-band-actions">
-          <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
-            Iniciar 14 dias grátis
+          <Link href="/checkout" className="primary-link">
+            Escolher plano e iniciar teste
           </Link>
           <Link href="/contato" className="secondary-link">
             Falar com a equipe

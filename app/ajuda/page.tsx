@@ -32,8 +32,8 @@ export default function HelpPage() {
             para ação. Esta central existe para reduzir fricção desde o início.
           </p>
           <div className="hero-actions">
-            <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
-              Começar 14 dias grátis
+            <Link href="/checkout" className="primary-link">
+              Escolher plano e iniciar teste
             </Link>
             <Link href="/contato" className="secondary-link">
               Pedir ajuda da equipe

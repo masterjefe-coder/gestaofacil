@@ -22,7 +22,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     return (
       <main className="auth-shell">
         <div className="page-shell auth-page-shell">
-          <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Começar 14 dias grátis" />
+          <MarketingTopbar ctaHref="/checkout" ctaLabel="Escolher plano e iniciar teste" />
         </div>
         <section className="auth-layout auth-layout-single">
           <section className="auth-card">
@@ -52,7 +52,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="auth-shell">
       <div className="page-shell auth-page-shell">
-        <MarketingTopbar ctaHref="/checkout?plan=PROFESSIONAL" ctaLabel="Começar 14 dias grátis" />
+        <MarketingTopbar ctaHref="/checkout" ctaLabel="Escolher plano e iniciar teste" />
       </div>
       <section className="auth-layout">
         <article className="auth-hero-panel">
