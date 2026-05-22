@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleEvolutionWebhook } from "@/lib/evolution-webhook";
+import { getLogger } from "@/lib/api-logger";
+import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 import { isWebhookSecretConfigured } from "@/lib/runtime-safety";
 import { timingSafeCompare, verifyWebhookTimestamp } from "@/lib/security-crypto";
 import { rateLimit } from "@/lib/rate-limit";
+
+const logger = getLogger({ route: "api/evolution/webhook" });
 
 function isAuthorized(request: NextRequest) {
   const secret = process.env.EVOLUTION_WEBHOOK_SECRET?.trim();
@@ -26,36 +30,61 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = getOrCreateRequestId(request);
+  const requestLogger = logger.child({ requestId });
+
   // Apply rate limiting for webhooks
   const rateLimitResponse = rateLimit(request, "webhook");
   if (rateLimitResponse) {
-    return rateLimitResponse;
+    requestLogger.warn("Evolution webhook rate limited");
+    return attachRequestId(rateLimitResponse, requestId);
   }
 
   if (!isWebhookSecretConfigured(process.env.EVOLUTION_WEBHOOK_SECRET)) {
-    return NextResponse.json({ error: "Webhook desabilitado ate configurar EVOLUTION_WEBHOOK_SECRET." }, { status: 503 });
+    requestLogger.warn("Evolution webhook rejected because secret is not configured");
+    return attachRequestId(
+      NextResponse.json({ error: "Webhook desabilitado ate configurar EVOLUTION_WEBHOOK_SECRET." }, { status: 503 }),
+      requestId,
+    );
   }
 
   if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Webhook não autorizado." }, { status: 401 });
+    requestLogger.warn("Evolution webhook rejected because bearer secret is invalid");
+    return attachRequestId(NextResponse.json({ error: "Webhook não autorizado." }, { status: 401 }), requestId);
   }
 
   const body = await request.json().catch(() => null);
   
   // Validate webhook timestamp to prevent replay attacks
   if (body?.date_time && !verifyWebhookTimestamp(body.date_time)) {
-    return NextResponse.json({ error: "Webhook timestamp invalido ou expirado." }, { status: 400 });
+    requestLogger.warn("Evolution webhook rejected because timestamp is expired", {
+      event: typeof body?.event === "string" ? body.event : null,
+      instance: typeof body?.instance === "string" ? body.instance : null,
+    });
+    return attachRequestId(
+      NextResponse.json({ error: "Webhook timestamp invalido ou expirado." }, { status: 400 }),
+      requestId,
+    );
   }
 
   const result = body ? await handleEvolutionWebhook(body) : null;
-
-  return NextResponse.json({
-    received: true,
-    hasBody: Boolean(body),
+  requestLogger.info("Evolution webhook processed", {
+    event: result?.event || null,
     stored: result?.stored || false,
     instance: result?.instance || null,
-    event: result?.event || null,
     linkedChargeId: result?.linkedChargeId || null,
-    timestamp: new Date().toISOString(),
   });
+
+  return attachRequestId(
+    NextResponse.json({
+      received: true,
+      hasBody: Boolean(body),
+      stored: result?.stored || false,
+      instance: result?.instance || null,
+      event: result?.event || null,
+      linkedChargeId: result?.linkedChargeId || null,
+      timestamp: new Date().toISOString(),
+    }),
+    requestId,
+  );
 }

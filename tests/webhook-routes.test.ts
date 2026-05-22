@@ -3,6 +3,7 @@ import test from "node:test";
 import { NextRequest } from "next/server";
 import { GET as getAsaasWebhook, POST as postAsaasWebhook } from "@/app/api/asaas/webhook/route";
 import { GET as getEvolutionWebhook, POST as postEvolutionWebhook } from "@/app/api/evolution/webhook/route";
+import { REQUEST_ID_HEADER } from "@/lib/request-tracing";
 
 function buildJsonRequest(url: string, headers: Record<string, string>, body?: unknown) {
   return new NextRequest(url, {
@@ -64,11 +65,13 @@ test("asaas webhook POST returns 503 when auth token is not configured", async (
 
 test("asaas webhook POST returns 401 for invalid token", async () => {
   await withEnv({ ASAAS_WEBHOOK_AUTH_TOKEN: "asaas-secret" }, async () => {
+    const requestId = "test-asaas-request-id";
     const response = await postAsaasWebhook(
       buildJsonRequest(
         "http://localhost/api/asaas/webhook",
         {
           "asaas-access-token": "wrong-secret",
+          [REQUEST_ID_HEADER]: requestId,
           "x-forwarded-for": "203.0.113.11",
         },
         { event: "PAYMENT_RECEIVED" },
@@ -78,6 +81,7 @@ test("asaas webhook POST returns 401 for invalid token", async () => {
 
     assert.equal(response.status, 401);
     assert.match(payload.error, /autorizado/i);
+    assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
   });
 });
 
@@ -123,11 +127,13 @@ test("evolution webhook POST returns 503 when secret is not configured", async (
 
 test("evolution webhook POST returns 401 for invalid bearer secret", async () => {
   await withEnv({ EVOLUTION_WEBHOOK_SECRET: "evolution-secret" }, async () => {
+    const requestId = "test-evolution-request-id";
     const response = await postEvolutionWebhook(
       buildJsonRequest(
         "http://localhost/api/evolution/webhook",
         {
           authorization: "Bearer wrong-secret",
+          [REQUEST_ID_HEADER]: requestId,
           "x-forwarded-for": "203.0.113.21",
         },
         { event: "MESSAGES_UPSERT" },
@@ -137,6 +143,7 @@ test("evolution webhook POST returns 401 for invalid bearer secret", async () =>
 
     assert.equal(response.status, 401);
     assert.match(payload.error, /autorizado/i);
+    assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
   });
 });
 

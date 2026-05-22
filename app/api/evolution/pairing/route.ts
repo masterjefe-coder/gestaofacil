@@ -1,37 +1,61 @@
 import { NextResponse } from "next/server";
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { requireApiSession } from "@/lib/api-auth";
+import { getLogger } from "@/lib/api-logger";
 import { connectEvolutionInstance, EvolutionApiError } from "@/lib/evolution-api";
+import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
+
+const logger = getLogger({ route: "api/evolution/pairing" });
 
 export async function GET(request: Request) {
+  const requestId = getOrCreateRequestId(request);
+  const requestLogger = logger.child({ requestId });
   const unauthorized = await requireApiSession();
   if (unauthorized) {
-    return unauthorized;
+    return attachRequestId(unauthorized, requestId);
   }
 
   const context = await getCurrentWorkspaceContext();
   if (!canManageWorkspace(context.workspaceRole)) {
-    return NextResponse.json({ error: "Apenas owner ou admin podem gerar o pareamento do WhatsApp." }, { status: 403 });
+    requestLogger.warn("Evolution pairing rejected because workspace role cannot manage setup", {
+      workspaceRole: context.workspaceRole,
+    });
+    return attachRequestId(
+      NextResponse.json({ error: "Apenas owner ou admin podem gerar o pareamento do WhatsApp." }, { status: 403 }),
+      requestId,
+    );
   }
 
   const { searchParams } = new URL(request.url);
   const instanceName = searchParams.get("instance")?.trim();
 
   if (!instanceName) {
-    return NextResponse.json({ error: "Informe a instância que deve gerar o pareamento." }, { status: 400 });
+    requestLogger.warn("Evolution pairing rejected because instance is missing");
+    return attachRequestId(
+      NextResponse.json({ error: "Informe a instância que deve gerar o pareamento." }, { status: 400 }),
+      requestId,
+    );
   }
 
   try {
     const result = await connectEvolutionInstance(instanceName);
-
-    return NextResponse.json({
-      ok: true,
+    requestLogger.info("Evolution pairing requested", {
       instanceName,
-      message: `Pareamento solicitado para ${instanceName}.`,
-      pairingCode: result.pairingCode || null,
-      qrCode: result.base64 || null,
-      rawCode: result.code || null,
+      hasPairingCode: Boolean(result.pairingCode),
+      hasQrCode: Boolean(result.base64),
     });
+
+    return attachRequestId(
+      NextResponse.json({
+        ok: true,
+        instanceName,
+        message: `Pareamento solicitado para ${instanceName}.`,
+        pairingCode: result.pairingCode || null,
+        qrCode: result.base64 || null,
+        rawCode: result.code || null,
+      }),
+      requestId,
+    );
   } catch (error) {
     const message =
       error instanceof EvolutionApiError
@@ -39,7 +63,10 @@ export async function GET(request: Request) {
         : error instanceof Error
           ? error.message
           : "Não foi possível gerar o pareamento da instância.";
+    requestLogger.error("Evolution pairing failed", error instanceof Error ? error : undefined, {
+      instanceName,
+    });
 
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return attachRequestId(NextResponse.json({ ok: false, error: message }, { status: 500 }), requestId);
   }
 }
