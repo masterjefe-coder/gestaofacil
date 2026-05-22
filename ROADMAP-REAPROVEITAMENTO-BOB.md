@@ -117,3 +117,17 @@ Condicoes para voltar:
 4. Avaliar fila de jobs para webhooks e tarefas assincronas.
 5. Tratar soft delete e locking apenas junto de uma revisao de schema.
 6. Endurecer governanca de merge com branch protection e checks obrigatorios.
+
+## Status atual das frentes mais recentes
+
+- CI unico: concluido
+- Testes aderentes de webhook: concluido na primeira camada
+- Correlacao basica com `x-request-id`: concluido nas rotas criticas
+- Governanca de PR no repositorio: concluido com `CODEOWNERS`, template de PR e guia de branch protection
+
+## Proxima melhor leva
+
+- Expandir observabilidade util para operacao
+  - padronizar `x-request-id` tambem em outras rotas sensiveis
+  - melhorar logs de erro nas integracoes sem expor dado sensivel
+  - avaliar um endpoint/admin view simples para diagnostico operacional antes de pensar em OpenTelemetry

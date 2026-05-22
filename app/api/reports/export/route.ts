@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
+import { getLogger } from "@/lib/api-logger";
 import { requireApiModuleAccess } from "@/lib/api-auth";
+import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 import { getDashboardReportSnapshot } from "@/lib/workspace-repository";
+
+const logger = getLogger({ route: "api/reports/export" });
 
 function createSheet(rows: Array<Record<string, string | number>>) {
   return XLSX.utils.json_to_sheet(rows);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const requestId = getOrCreateRequestId(request);
+  const requestLogger = logger.child({ requestId });
   const unauthorized = await requireApiModuleAccess("reports", "canView");
   if (unauthorized) {
-    return unauthorized;
+    return attachRequestId(unauthorized, requestId);
   }
 
   const report = await getDashboardReportSnapshot();
@@ -87,12 +93,22 @@ export async function GET() {
     type: "buffer",
     bookType: "xlsx",
   });
-
-  return new NextResponse(buffer, {
-    status: 200,
-    headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": 'attachment; filename="gestao-facil-relatorio.xlsx"',
-    },
+  requestLogger.info("Dashboard report exported", {
+    summaryRows: report.summary.length,
+    topQuoteRows: report.topQuotes.length,
+    topChargeRows: report.topCharges.length,
+    topCustomerRows: report.topCustomers.length,
+    fiscalRows: report.fiscalItems.length,
   });
+
+  return attachRequestId(
+    new NextResponse(buffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": 'attachment; filename="gestao-facil-relatorio.xlsx"',
+      },
+    }),
+    requestId,
+  );
 }

@@ -1,0 +1,7 @@
+* @masterjefe-coder
+
+# Critical operational surfaces
+/app/api/ @masterjefe-coder
+/lib/ @masterjefe-coder
+/prisma/ @masterjefe-coder
+/next.config.ts @masterjefe-coder
