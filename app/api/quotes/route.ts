@@ -1,21 +1,30 @@
 import { NextResponse } from "next/server";
+import { getLogger } from "@/lib/api-logger";
 import { requireApiModuleAccess } from "@/lib/api-auth";
+import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 import { createQuote, listQuotes } from "@/lib/quote-repository";
 
-export async function GET() {
+const logger = getLogger({ route: "api/quotes" });
+
+export async function GET(request: Request) {
+  const requestId = getOrCreateRequestId(request);
+  const requestLogger = logger.child({ requestId });
   const unauthorized = await requireApiModuleAccess("quotes", "canView");
   if (unauthorized) {
-    return unauthorized;
+    return attachRequestId(unauthorized, requestId);
   }
 
   const quotes = await listQuotes();
-  return NextResponse.json({ quotes });
+  requestLogger.info("Quotes listed", { count: quotes.length });
+  return attachRequestId(NextResponse.json({ quotes }), requestId);
 }
 
 export async function POST(request: Request) {
+  const requestId = getOrCreateRequestId(request);
+  const requestLogger = logger.child({ requestId });
   const unauthorized = await requireApiModuleAccess("quotes", "canManage");
   if (unauthorized) {
-    return unauthorized;
+    return attachRequestId(unauthorized, requestId);
   }
 
   const body = (await request.json()) as {
@@ -28,7 +37,8 @@ export async function POST(request: Request) {
   };
 
   if (!body.customer || !body.title || !body.amount) {
-    return NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 });
+    requestLogger.warn("Quote creation rejected — missing required fields");
+    return attachRequestId(NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 }), requestId);
   }
 
   const quote = await createQuote({
@@ -40,5 +50,6 @@ export async function POST(request: Request) {
     summary: body.summary || "",
   });
 
-  return NextResponse.json({ quote }, { status: 201 });
+  requestLogger.info("Quote created", { quoteId: quote.id, customer: body.customer, amount: quote.amount });
+  return attachRequestId(NextResponse.json({ quote }, { status: 201 }), requestId);
 }

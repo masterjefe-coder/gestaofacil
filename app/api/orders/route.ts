@@ -1,21 +1,30 @@
 import { NextResponse } from "next/server";
+import { getLogger } from "@/lib/api-logger";
 import { requireApiModuleAccess } from "@/lib/api-auth";
+import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 import { ensureOrderFromQuote, listOrders, updateOrderStatus } from "@/lib/order-repository";
 
-export async function GET() {
+const logger = getLogger({ route: "api/orders" });
+
+export async function GET(request: Request) {
+  const requestId = getOrCreateRequestId(request);
+  const requestLogger = logger.child({ requestId });
   const unauthorized = await requireApiModuleAccess("orders", "canView");
   if (unauthorized) {
-    return unauthorized;
+    return attachRequestId(unauthorized, requestId);
   }
 
   const orders = await listOrders();
-  return NextResponse.json({ orders });
+  requestLogger.info("Orders listed", { count: orders.length });
+  return attachRequestId(NextResponse.json({ orders }), requestId);
 }
 
 export async function POST(request: Request) {
+  const requestId = getOrCreateRequestId(request);
+  const requestLogger = logger.child({ requestId });
   const unauthorized = await requireApiModuleAccess("orders", "canManage");
   if (unauthorized) {
-    return unauthorized;
+    return attachRequestId(unauthorized, requestId);
   }
 
   const body = (await request.json()) as {
@@ -29,14 +38,17 @@ export async function POST(request: Request) {
     const order = await ensureOrderFromQuote(body.quoteId);
 
     if (!order) {
-      return NextResponse.json({ error: "Orcamento nao encontrado." }, { status: 404 });
+      requestLogger.warn("Order creation from quote failed — quote not found", { quoteId: body.quoteId });
+      return attachRequestId(NextResponse.json({ error: "Orcamento nao encontrado." }, { status: 404 }), requestId);
     }
 
-    return NextResponse.json({ order }, { status: 201 });
+    requestLogger.info("Order created from quote", { orderId: order.id, quoteId: body.quoteId });
+    return attachRequestId(NextResponse.json({ order }, { status: 201 }), requestId);
   }
 
   if (!body.id || !body.status) {
-    return NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 });
+    requestLogger.warn("Order update rejected — missing required fields");
+    return attachRequestId(NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 }), requestId);
   }
 
   const order = await updateOrderStatus(body.id, {
@@ -45,8 +57,10 @@ export async function POST(request: Request) {
   });
 
   if (!order) {
-    return NextResponse.json({ error: "Pedido nao encontrado." }, { status: 404 });
+    requestLogger.warn("Order update failed — order not found", { orderId: body.id });
+    return attachRequestId(NextResponse.json({ error: "Pedido nao encontrado." }, { status: 404 }), requestId);
   }
 
-  return NextResponse.json({ order }, { status: 200 });
+  requestLogger.info("Order status updated", { orderId: order.id, status: body.status });
+  return attachRequestId(NextResponse.json({ order }, { status: 200 }), requestId);
 }
