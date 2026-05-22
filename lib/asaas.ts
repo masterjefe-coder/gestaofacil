@@ -1,6 +1,11 @@
 import { resolveAppBaseUrl } from "@/lib/app-url";
 import { parseCurrencyToNumber } from "@/lib/demo-data-codecs";
 import type { ExternalChargeBilling } from "@/lib/types";
+import { withRetryAndCircuitBreaker } from "@/lib/api-retry";
+import { getLogger } from "@/lib/api-logger";
+import { generateIdempotencyKey } from "@/lib/idempotency";
+
+const logger = getLogger({ service: "asaas-api" });
 
 type AsaasEnvironment = "sandbox" | "production";
 type AsaasBillingType = "PIX" | "UNDEFINED" | "BOLETO";
@@ -206,17 +211,60 @@ async function asaasFetchWithApiKey<T>(apiKey: string, path: string, init?: Requ
     throw new AsaasApiError("ASAAS_API_KEY nao configurada.");
   }
 
-  const response = await fetch(`${config.baseUrl}${path}`, {
-    ...init,
-    headers: {
-      "access_token": config.apiKey,
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
-    cache: "no-store",
-  });
+  const requestId = generateIdempotencyKey("asaas");
+  const apiKeyValue = String(config.apiKey);
 
-  return parseAsaasResponse<T>(response);
+  return withRetryAndCircuitBreaker(
+    "asaas-api",
+    async () => {
+      logger.info("Asaas API request", {
+        requestId,
+        method: init?.method || "GET",
+        path,
+        environment: config.environment,
+      });
+
+      const startTime = Date.now();
+
+      const response = await fetch(`${config.baseUrl}${path}`, {
+        ...init,
+        headers: {
+          "access_token": apiKeyValue,
+          "Content-Type": "application/json",
+          "x-request-id": requestId,
+          ...(init?.headers || {}),
+        },
+        cache: "no-store",
+      });
+
+      const duration = Date.now() - startTime;
+
+      if (!response.ok) {
+        logger.error("Asaas API request failed", undefined, {
+          requestId,
+          status: response.status,
+          duration,
+        });
+      } else {
+        logger.info("Asaas API request successful", {
+          requestId,
+          status: response.status,
+          duration,
+        });
+      }
+
+      return parseAsaasResponse<T>(response);
+    },
+    {
+      maxAttempts: 3,
+      initialDelayMs: 1000,
+      retryableStatuses: [408, 429, 500, 502, 503, 504],
+    },
+    {
+      failureThreshold: 5,
+      resetTimeoutMs: 60000,
+    }
+  );
 }
 
 function resolvePlatformSplitConfig() {
@@ -404,7 +452,17 @@ async function createAsaasPayment(input: {
   description: string;
   externalReference: string;
   split?: AsaasPaymentSplit[];
+  idempotencyKey?: string;
 }): Promise<AsaasPayment> {
+  const idempotencyKey = input.idempotencyKey || generateIdempotencyKey("asaas-payment");
+
+  logger.info("Creating Asaas payment", {
+    idempotencyKey,
+    customerId: input.customerId,
+    billingType: input.billingType,
+    value: input.value,
+  });
+
   return asaasFetchWithApiKey<AsaasPayment>(input.apiKey || process.env.ASAAS_API_KEY?.trim() || "", "/payments", {
     method: "POST",
     body: JSON.stringify({
@@ -416,6 +474,9 @@ async function createAsaasPayment(input: {
       externalReference: input.externalReference,
       split: input.split,
     }),
+    headers: {
+      "x-idempotency-key": idempotencyKey,
+    },
   });
 }
 

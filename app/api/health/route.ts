@@ -5,12 +5,13 @@ import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { getEvolutionIntegrationStatus } from "@/lib/evolution-api";
 import { getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
+import { timingSafeCompare } from "@/lib/security-crypto";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   const configuredHealthToken = process.env.HEALTHCHECK_TOKEN?.trim();
   const receivedHealthToken = request.headers.get("x-health-token")?.trim();
-  const canSeeDetails = Boolean(session?.user?.email) || Boolean(configuredHealthToken && receivedHealthToken === configuredHealthToken);
+  const canSeeDetails = Boolean(session?.user?.email) || timingSafeCompare(receivedHealthToken, configuredHealthToken);
 
   if (!canSeeDetails) {
     return NextResponse.json({

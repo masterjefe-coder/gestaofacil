@@ -45,6 +45,8 @@ import { getWorkspaceSubscription } from "@/lib/workspace-subscription-repositor
 import { getCurrentUserAlertPreferences } from "@/lib/workspace-user-preferences";
 import { pricingPlans } from "@/lib/site-data";
 
+export const dynamic = "force-dynamic";
+
 type SetupPageProps = {
   searchParams?: Promise<SetupSearchParams>;
 };

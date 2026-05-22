@@ -1,5 +1,9 @@
 import https from "node:https";
 import { gunzipSync, gzipSync } from "node:zlib";
+import { withRetry } from "@/lib/api-retry";
+import { getLogger } from "@/lib/api-logger";
+
+const logger = getLogger({ service: "nfse-national" });
 
 export type NfseNationalEnvironment = "production" | "restricted";
 
@@ -75,46 +79,81 @@ export function createNfseNationalClient(config: NfseNationalClientConfig) {
   async function request(input: NfseNationalRequestInput): Promise<NfseNationalResponse> {
     const requestUrl = toRequestUrl(getBaseUrl(config.environment, input.service), input.path);
 
-    return new Promise((resolve, reject) => {
-      const req = https.request(
-        requestUrl,
-        {
+    return withRetry(
+      () => {
+        logger.info("NFS-e National API request", {
           method: input.method,
-          agent,
-          headers: input.headers,
-          timeout: config.requestTimeoutMs,
-        },
-        (res) => {
-          const chunks: Buffer[] = [];
+          service: input.service,
+          path: input.path,
+          environment: config.environment,
+        });
 
-          res.on("data", (chunk) => {
-            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        const startTime = Date.now();
+
+        return new Promise<NfseNationalResponse>((resolve, reject) => {
+          const req = https.request(
+            requestUrl,
+            {
+              method: input.method,
+              agent,
+              headers: input.headers,
+              timeout: config.requestTimeoutMs,
+            },
+            (res) => {
+              const chunks: Buffer[] = [];
+
+              res.on("data", (chunk) => {
+                chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+              });
+
+              res.on("end", () => {
+                const duration = Date.now() - startTime;
+                const response = {
+                  status: res.statusCode || 0,
+                  headers: res.headers,
+                  body: Buffer.concat(chunks).toString("utf8"),
+                };
+
+                if (res.statusCode && res.statusCode >= 400) {
+                  logger.error("NFS-e National API request failed", undefined, {
+                    status: res.statusCode,
+                    duration,
+                  });
+                } else {
+                  logger.info("NFS-e National API request successful", {
+                    status: res.statusCode,
+                    duration,
+                  });
+                }
+
+                resolve(response);
+              });
+            },
+          );
+
+          req.on("timeout", () => {
+            req.destroy(new Error("Tempo esgotado ao chamar a API nacional da NFS-e."));
           });
 
-          res.on("end", () => {
-            resolve({
-              status: res.statusCode || 0,
-              headers: res.headers,
-              body: Buffer.concat(chunks).toString("utf8"),
-            });
+          req.on("error", (error) => {
+            const duration = Date.now() - startTime;
+            logger.error("NFS-e National API request error", error, { duration });
+            reject(error);
           });
-        },
-      );
 
-      req.on("timeout", () => {
-        req.destroy(new Error("Tempo esgotado ao chamar a API nacional da NFS-e."));
-      });
+          if (input.body) {
+            req.write(input.body);
+          }
 
-      req.on("error", (error) => {
-        reject(error);
-      });
-
-      if (input.body) {
-        req.write(input.body);
+          req.end();
+        });
+      },
+      {
+        maxAttempts: 3,
+        initialDelayMs: 2000,
+        retryableStatuses: [408, 429, 500, 502, 503, 504],
       }
-
-      req.end();
-    });
+    );
   }
 
   return {

@@ -1,3 +1,9 @@
+import { withRetryAndCircuitBreaker } from "@/lib/api-retry";
+import { getLogger } from "@/lib/api-logger";
+import { generateIdempotencyKey } from "@/lib/idempotency";
+
+const logger = getLogger({ service: "evolution-api" });
+
 type EvolutionConfig = {
   enabled: boolean;
   defaultInstanceEnabled: boolean;
@@ -9,7 +15,12 @@ type EvolutionConfig = {
   timeoutMs: number;
 };
 
-export class EvolutionApiError extends Error {}
+export class EvolutionApiError extends Error {
+  constructor(message: string, public readonly statusCode?: number) {
+    super(message);
+    this.name = "EvolutionApiError";
+  }
+}
 
 export type EvolutionInstanceSummary = {
   instanceName: string;
@@ -140,27 +151,68 @@ async function evolutionRequest<T>(path: string, init?: RequestInit): Promise<T>
 
   const baseUrl = String(config.baseUrl);
   const apiKey = String(config.apiKey);
+  const requestId = generateIdempotencyKey("evolution");
 
-  const headers = new Headers(init?.headers);
-  headers.set("apikey", apiKey);
+  return withRetryAndCircuitBreaker(
+    "evolution-api",
+    async () => {
+      const headers = new Headers(init?.headers);
+      headers.set("apikey", apiKey);
+      headers.set("x-request-id", requestId);
 
-  if (init?.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
+      if (init?.body && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
 
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...init,
-    headers,
-    signal: AbortSignal.timeout(config.timeoutMs),
-    cache: "no-store",
-  });
+      logger.info("Evolution API request", {
+        requestId,
+        method: init?.method || "GET",
+        path,
+      });
 
-  if (!response.ok) {
-    const details = await response.text();
-    throw new EvolutionApiError(`Evolution API recusou a operação (${response.status}): ${details || "sem detalhe"}`);
-  }
+      const startTime = Date.now();
 
-  return response.json() as Promise<T>;
+      const response = await fetch(`${baseUrl}${path}`, {
+        ...init,
+        headers,
+        signal: AbortSignal.timeout(config.timeoutMs),
+        cache: "no-store",
+      });
+
+      const duration = Date.now() - startTime;
+
+      if (!response.ok) {
+        const details = await response.text();
+        logger.error("Evolution API request failed", undefined, {
+          requestId,
+          status: response.status,
+          duration,
+          details,
+        });
+        throw new EvolutionApiError(
+          `Evolution API recusou a operação (${response.status}): ${details || "sem detalhe"}`,
+          response.status
+        );
+      }
+
+      logger.info("Evolution API request successful", {
+        requestId,
+        status: response.status,
+        duration,
+      });
+
+      return response.json() as Promise<T>;
+    },
+    {
+      maxAttempts: 3,
+      initialDelayMs: 1000,
+      retryableStatuses: [408, 429, 500, 502, 503, 504],
+    },
+    {
+      failureThreshold: 5,
+      resetTimeoutMs: 60000,
+    }
+  );
 }
 
 function getWebhookConfig() {
@@ -297,7 +349,11 @@ export async function probeEvolutionApi() {
   }
 }
 
-export async function sendEvolutionTextMessage(input: { number: string; text: string }) {
+export async function sendEvolutionTextMessage(input: {
+  number: string;
+  text: string;
+  idempotencyKey?: string;
+}) {
   const config = ensureConfig();
   const instance = String(config.instance);
   const normalizedNumber = normalizeWhatsappNumber(input.number);
@@ -306,11 +362,22 @@ export async function sendEvolutionTextMessage(input: { number: string; text: st
     throw new EvolutionApiError("Cliente sem número de WhatsApp válido para envio.");
   }
 
+  const idempotencyKey = input.idempotencyKey || generateIdempotencyKey("evolution-msg");
+
+  logger.info("Sending Evolution text message", {
+    idempotencyKey,
+    number: normalizedNumber,
+    textLength: input.text.length,
+  });
+
   return evolutionRequest(`/message/sendText/${instance}`, {
     method: "POST",
     body: JSON.stringify({
       number: normalizedNumber,
       text: input.text,
     }),
+    headers: {
+      "x-idempotency-key": idempotencyKey,
+    },
   });
 }

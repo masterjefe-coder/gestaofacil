@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      NODE_ENV: "production"
+      DATABASE_URL: "file:./ci.db"
+      APP_BASE_URL: "http://127.0.0.1:3000"
+      NEXTAUTH_URL: "http://127.0.0.1:3000"
+      NEXTAUTH_SECRET: "ci-nextauth-secret"
+      AUTH_SECRET: "ci-auth-secret"
+      WORKSPACE_SECRET_KEY: "ci-workspace-secret-key"
+      HEALTHCHECK_TOKEN: "ci-health-token"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
