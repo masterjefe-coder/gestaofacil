@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireApiModuleAccess } from "@/lib/api-auth";
 import { createCharge, createChargeFromQuote, listCharges } from "@/lib/charge-repository";
 
 export async function GET() {
-  const unauthorized = await requireApiSession();
+  const unauthorized = await requireApiModuleAccess("billing", "canView");
   if (unauthorized) {
     return unauthorized;
   }
@@ -13,7 +13,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const unauthorized = await requireApiSession();
+  const unauthorized = await requireApiModuleAccess(
+    "billing",
+    "canManage",
+    "Seu perfil atual pode acompanhar a fila financeira, mas nao criar ou alterar cobrancas.",
+  );
   if (unauthorized) {
     return unauthorized;
   }

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireApiModuleAccess } from "@/lib/api-auth";
 import { createCustomer, listCustomers } from "@/lib/customer-repository";
 
 export async function GET() {
-  const unauthorized = await requireApiSession();
+  const unauthorized = await requireApiModuleAccess("customers", "canView");
   if (unauthorized) {
     return unauthorized;
   }
@@ -13,7 +13,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const unauthorized = await requireApiSession();
+  const unauthorized = await requireApiModuleAccess("customers", "canManage");
   if (unauthorized) {
     return unauthorized;
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireApiModuleAccess } from "@/lib/api-auth";
 import { getDashboardReportSnapshot } from "@/lib/workspace-repository";
 
 function createSheet(rows: Array<Record<string, string | number>>) {
@@ -8,7 +8,7 @@ function createSheet(rows: Array<Record<string, string | number>>) {
 }
 
 export async function GET() {
-  const unauthorized = await requireApiSession();
+  const unauthorized = await requireApiModuleAccess("reports", "canView");
   if (unauthorized) {
     return unauthorized;
   }

@@ -3,21 +3,30 @@ import crypto from "node:crypto";
 const ENCRYPTED_PREFIX = "enc:v1:";
 const IV_LENGTH = 12;
 
-function getKeyMaterial() {
-  return process.env.WORKSPACE_SECRET_KEY?.trim()
-    || process.env.AUTH_SECRET?.trim()
-    || process.env.NEXTAUTH_SECRET?.trim()
-    || "";
+function getPrimaryKeyMaterial() {
+  return process.env.WORKSPACE_SECRET_KEY?.trim() || "";
 }
 
-function getEncryptionKey() {
-  const material = getKeyMaterial();
+function listKeyMaterials() {
+  return [
+    process.env.WORKSPACE_SECRET_KEY?.trim(),
+    process.env.AUTH_SECRET?.trim(),
+    process.env.NEXTAUTH_SECRET?.trim(),
+  ].filter((value, index, list): value is string => Boolean(value) && list.indexOf(value) === index);
+}
+
+function getEncryptionKey(material: string) {
+  return crypto.createHash("sha256").update(material).digest();
+}
+
+function getPrimaryEncryptionKey() {
+  const material = getPrimaryKeyMaterial();
 
   if (!material) {
-    throw new Error("Defina WORKSPACE_SECRET_KEY ou AUTH_SECRET para proteger segredos do workspace.");
+    throw new Error("Defina WORKSPACE_SECRET_KEY para proteger segredos persistidos do workspace.");
   }
 
-  return crypto.createHash("sha256").update(material).digest();
+  return getEncryptionKey(material);
 }
 
 export function isEncryptedSecret(value: string | null | undefined) {
@@ -35,7 +44,7 @@ export function encryptWorkspaceSecret(value: string) {
     return normalized;
   }
 
-  const key = getEncryptionKey();
+  const key = getPrimaryEncryptionKey();
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
   const encrypted = Buffer.concat([cipher.update(normalized, "utf8"), cipher.final()]);
@@ -66,14 +75,21 @@ export function decryptWorkspaceSecret(value: string | null | undefined) {
     throw new Error("Segredo criptografado do workspace está em formato inválido.");
   }
 
-  const key = getEncryptionKey();
-  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(ivBase64, "base64"));
-  decipher.setAuthTag(Buffer.from(authTagBase64, "base64"));
+  for (const material of listKeyMaterials()) {
+    try {
+      const decipher = crypto.createDecipheriv("aes-256-gcm", getEncryptionKey(material), Buffer.from(ivBase64, "base64"));
+      decipher.setAuthTag(Buffer.from(authTagBase64, "base64"));
 
-  const decrypted = Buffer.concat([
-    decipher.update(Buffer.from(encryptedBase64, "base64")),
-    decipher.final(),
-  ]);
+      const decrypted = Buffer.concat([
+        decipher.update(Buffer.from(encryptedBase64, "base64")),
+        decipher.final(),
+      ]);
 
-  return decrypted.toString("utf8");
+      return decrypted.toString("utf8");
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error("Nao foi possivel descriptografar o segredo do workspace com as chaves configuradas.");
 }

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 const LOCK_WINDOW_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_WINDOW_MS = 60 * 60 * 1000;
+const PASSWORD_RESET_MAX_ATTEMPTS = 3;
 
 export class AuthRateLimitError extends Error {
   retryAfterSeconds: number;
@@ -16,6 +18,11 @@ export class AuthRateLimitError extends Error {
 
 function normalizeIdentifier(value: string) {
   return value.trim().toLowerCase();
+}
+
+function toScopedIdentifier(scope: string, identifierInput: string) {
+  const normalized = normalizeIdentifier(identifierInput);
+  return normalized ? `${scope}:${normalized}` : "";
 }
 
 export function describeRetryAfter(seconds: number) {
@@ -111,5 +118,94 @@ export async function clearFailedLoginAttempts(identifierInput: string) {
 
   await prisma.authThrottle.deleteMany({
     where: { identifier },
+  });
+}
+
+async function assertThrottleAllowed(identifier: string) {
+  if (!identifier) {
+    return;
+  }
+
+  const record = await prisma.authThrottle.findUnique({
+    where: { identifier },
+  });
+
+  if (!record?.lockedUntil) {
+    return;
+  }
+
+  const now = Date.now();
+  const lockedUntil = record.lockedUntil.getTime();
+
+  if (lockedUntil <= now) {
+    await prisma.authThrottle.update({
+      where: { id: record.id },
+      data: {
+        attemptCount: 0,
+        lockedUntil: null,
+        firstAttemptAt: new Date(),
+        lastAttemptAt: new Date(),
+      },
+    });
+    return;
+  }
+
+  throw new AuthRateLimitError(
+    "Muitas tentativas seguidas. Aguarde antes de tentar novamente.",
+    Math.ceil((lockedUntil - now) / 1000),
+  );
+}
+
+async function registerThrottleAttempt(input: {
+  identifier: string;
+  windowMs: number;
+  maxAttempts: number;
+  lockWindowMs: number;
+}) {
+  if (!input.identifier) {
+    return null;
+  }
+
+  const now = new Date();
+  const existing = await prisma.authThrottle.findUnique({
+    where: { identifier: input.identifier },
+  });
+
+  if (!existing) {
+    return prisma.authThrottle.create({
+      data: {
+        identifier: input.identifier,
+        attemptCount: 1,
+        firstAttemptAt: now,
+        lastAttemptAt: now,
+      },
+    });
+  }
+
+  const withinWindow = now.getTime() - existing.firstAttemptAt.getTime() <= input.windowMs;
+  const attemptCount = withinWindow ? existing.attemptCount + 1 : 1;
+  const shouldLock = attemptCount >= input.maxAttempts;
+
+  return prisma.authThrottle.update({
+    where: { id: existing.id },
+    data: {
+      attemptCount,
+      firstAttemptAt: withinWindow ? existing.firstAttemptAt : now,
+      lastAttemptAt: now,
+      lockedUntil: shouldLock ? new Date(now.getTime() + input.lockWindowMs) : existing.lockedUntil,
+    },
+  });
+}
+
+export async function assertPasswordResetAllowed(identifierInput: string) {
+  return assertThrottleAllowed(toScopedIdentifier("password-reset", identifierInput));
+}
+
+export async function registerPasswordResetAttempt(identifierInput: string) {
+  return registerThrottleAttempt({
+    identifier: toScopedIdentifier("password-reset", identifierInput),
+    windowMs: PASSWORD_RESET_WINDOW_MS,
+    maxAttempts: PASSWORD_RESET_MAX_ATTEMPTS,
+    lockWindowMs: PASSWORD_RESET_WINDOW_MS,
   });
 }

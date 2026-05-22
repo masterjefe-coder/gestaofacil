@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/api-auth";
+import { requireApiModuleAccess } from "@/lib/api-auth";
 import { getWorkspaceSetup, updateWorkspaceSetup } from "@/lib/workspace-settings-repository";
 
 export async function GET() {
-  const unauthorized = await requireApiSession();
+  const unauthorized = await requireApiModuleAccess("setup", "canView");
   if (unauthorized) {
     return unauthorized;
   }
@@ -18,7 +18,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const unauthorized = await requireApiSession();
+  const unauthorized = await requireApiModuleAccess(
+    "setup",
+    "canConfigure",
+    "Seu perfil atual nao pode alterar a configuracao da empresa.",
+  );
   if (unauthorized) {
     return unauthorized;
   }

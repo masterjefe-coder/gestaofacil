@@ -117,10 +117,12 @@ Variaveis de ambiente minimas na Vercel:
 - `AUTH_SECRET`
 - `WORKSPACE_SECRET_KEY` para criptografar segredos salvos por workspace, como chaves de recebimento
 - `GESTAO_FACIL_DATA_MODE=database`
+- `HEALTHCHECK_TOKEN` opcional para expor diagnostico detalhado em `/api/health` sem sessao autenticada
 
 Observacoes de seguranca:
 
 - `AUTH_DEMO_EMAIL` e `AUTH_DEMO_PASSWORD` devem ficar restritos ao modo local/demo e nao devem ser divulgados como acesso de producao
+- `GESTAO_FACIL_ENABLE_PUBLIC_DEMO=true` deve ser usado apenas quando voce quiser liberar o login demo de forma intencional
 - `ASAAS_WEBHOOK_AUTH_TOKEN` e `EVOLUTION_WEBHOOK_SECRET` precisam estar configurados para habilitar os webhooks; sem isso, as rotas ficam fechadas
 
 Variaveis para integrar a Evolution API:
@@ -172,11 +174,12 @@ Checklist de deploy:
 3. deixar `Output Directory` vazio
 4. cadastrar as variaveis de ambiente
 5. criar o banco no `Neon`
-6. rodar `npm run db:push` com a `DATABASE_URL` de producao
+6. preferir `npm run db:deploy` com as migrations versionadas; usar `npm run db:push` apenas em ambiente de desenvolvimento controlado
 7. abrir `/onboarding` para criar o primeiro usuario real do workspace
 
 Observacao:
 
 - sem `DATABASE_URL`, o app cai em modo local/demo
-- o campo `passwordHash` do schema precisa existir no banco de producao, entao o passo `db:push` e obrigatorio
+- mesmo no modo local, o login demo publico agora exige `GESTAO_FACIL_ENABLE_PUBLIC_DEMO=true`
+- o banco agora deve evoluir por migrations versionadas em `prisma/migrations`
 - configure `WORKSPACE_SECRET_KEY` antes de conectar contas externas persistidas no banco

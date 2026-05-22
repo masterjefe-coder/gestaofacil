@@ -1,208 +1,29 @@
-import { cache } from "react";
 import { buildBillingWhatsappInsights } from "@/lib/billing-whatsapp-insights";
-import { listChargeWhatsappSignals } from "@/lib/charge-whatsapp-signals";
 import { buildChargeFollowUpActions, summarizeChargeFollowUp } from "@/lib/charge-follow-up";
 import { getChargeUrgency, sortChargesByPriority } from "@/lib/charge-priority";
-import { buildCustomerEngagementInsights, buildCustomerPipelineItems } from "@/lib/customer-engagement-insights";
-import { listCustomerWhatsappActivity } from "@/lib/customer-whatsapp-activity";
-import { buildFiscalInsights } from "@/lib/fiscal-insights";
 import { listCharges } from "@/lib/charge-repository";
-import { listCustomers } from "@/lib/customer-repository";
-import { getNfseNationalIssuePreview, listNfseDocuments, listNfseReadyQueue } from "@/lib/nfse-repository";
-import { listOrders } from "@/lib/order-repository";
+import { buildCustomerEngagementInsights, buildCustomerPipelineItems } from "@/lib/customer-engagement-insights";
+import { getDashboardBaseData } from "@/lib/dashboard-base-data";
+import {
+  formatCountLabel,
+  formatCurrency,
+  formatGeneratedAt,
+  getRecommendationWeight,
+  parseCurrencyToNumber,
+  toCadenceLanes,
+} from "@/lib/dashboard-repository-helpers";
+import type {
+  AgendaItem,
+  DashboardCadenceItem,
+  DashboardCadenceLane,
+  DashboardCadenceMetric,
+  DashboardCadenceRisk,
+  DashboardRecommendation,
+  DashboardReportSnapshot,
+} from "@/lib/dashboard-repository-types";
 import { buildQuoteInsights } from "@/lib/quote-insights";
 import { listQuotes } from "@/lib/quote-repository";
 import type { PipelineColumn, Stat } from "@/lib/types";
-
-type AgendaItem = {
-  title: string;
-  description: string;
-};
-
-type DashboardBaseData = {
-  customers: Awaited<ReturnType<typeof listCustomers>>;
-  quotes: Awaited<ReturnType<typeof listQuotes>>;
-  charges: Awaited<ReturnType<typeof listCharges>>;
-  orders: Awaited<ReturnType<typeof listOrders>>;
-  nfseDocuments: Awaited<ReturnType<typeof listNfseDocuments>>;
-  nfseReadyQueue: Awaited<ReturnType<typeof listNfseReadyQueue>>;
-  chargeWhatsappSignals: Awaited<ReturnType<typeof listChargeWhatsappSignals>>;
-  customerWhatsappActivity: Awaited<ReturnType<typeof listCustomerWhatsappActivity>>;
-  fiscalInsights: ReturnType<typeof buildFiscalInsights>;
-};
-
-export type DashboardCadenceMetric = {
-  label: string;
-  value: string;
-  helper: string;
-};
-
-export type DashboardCadenceRisk = {
-  id: string;
-  title: string;
-  description: string;
-  href: string;
-  hrefLabel: string;
-};
-
-export type DashboardReportSnapshot = {
-  generatedAt: string;
-  summary: Stat[];
-  cadenceMetrics: DashboardCadenceMetric[];
-  cadenceRisks: DashboardCadenceRisk[];
-  cadenceLanes: DashboardCadenceLane[];
-  recommendations: DashboardRecommendation[];
-  agenda: AgendaItem[];
-  topQuotes: ReturnType<typeof buildQuoteInsights>["items"];
-  topCharges: ReturnType<typeof buildChargeFollowUpActions>;
-  topCustomers: ReturnType<typeof buildCustomerEngagementInsights>["items"];
-  fiscalItems: ReturnType<typeof buildFiscalInsights>["items"];
-};
-
-export type DashboardCadenceItem = {
-  id: string;
-  lane: "blocked" | "conversion" | "commitment";
-  kicker: string;
-  title: string;
-  description: string;
-  helper: string;
-  href: string;
-  hrefLabel: string;
-  action?: {
-    label: string;
-    kind: "quote_followup" | "quote_approved" | "quote_to_charge" | "customer_status" | "charge_today";
-    targetId: string;
-    status?: string;
-    note?: string;
-    dueLabel?: string;
-  };
-};
-
-export type DashboardCadenceLane = {
-  id: DashboardCadenceItem["lane"];
-  title: string;
-  helper: string;
-  items: DashboardCadenceItem[];
-};
-
-export type DashboardRecommendation = {
-  title: string;
-  description: string;
-  href: string;
-  hrefLabel: string;
-  priority: "critical" | "high" | "normal";
-  kicker: string;
-  action?: {
-    label: string;
-    kind: "quote_followup" | "quote_approved" | "quote_to_charge" | "customer_status" | "charge_today";
-    targetId: string;
-    status?: string;
-    note?: string;
-    dueLabel?: string;
-  };
-};
-
-function parseCurrencyToNumber(value: string) {
-  return Number(
-    value
-      .replace("R$", "")
-      .replace(/\./g, "")
-      .replace(",", ".")
-      .trim(),
-  );
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatCountLabel(value: number, singular: string, plural: string) {
-  return `${value} ${value === 1 ? singular : plural}`;
-}
-
-function getRecommendationWeight(priority: DashboardRecommendation["priority"]) {
-  switch (priority) {
-    case "critical":
-      return 0;
-    case "high":
-      return 1;
-    case "normal":
-      return 2;
-  }
-}
-
-function toCadenceLanes(items: DashboardCadenceItem[]): DashboardCadenceLane[] {
-  const grouped = {
-    blocked: items.filter((item) => item.lane === "blocked"),
-    conversion: items.filter((item) => item.lane === "conversion"),
-    commitment: items.filter((item) => item.lane === "commitment"),
-  };
-
-  return [
-    {
-      id: "blocked",
-      title: "Travados",
-      helper: "Itens que impedem insistir ou avançar sem leitura humana.",
-      items: grouped.blocked.slice(0, 4),
-    },
-    {
-      id: "conversion",
-      title: "Próximas conversões",
-      helper: "O que já pode virar cobrança, pedido ou resposta comercial.",
-      items: grouped.conversion.slice(0, 4),
-    },
-    {
-      id: "commitment",
-      title: "Compromissos em acompanhamento",
-      helper: "Promessas e prazos assumidos que pedem confirmação pontual.",
-      items: grouped.commitment.slice(0, 4),
-    },
-  ];
-}
-
-function formatGeneratedAt(date = new Date()) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-const getDashboardBaseData = cache(async (): Promise<DashboardBaseData> => {
-  const [customers, quotes, charges, orders, nfseDocuments, nfseReadyQueue, chargeWhatsappSignals, customerWhatsappActivity] = await Promise.all([
-    listCustomers(),
-    listQuotes(),
-    listCharges(),
-    listOrders(),
-    listNfseDocuments(),
-    listNfseReadyQueue(),
-    listChargeWhatsappSignals().catch(() => []),
-    listCustomerWhatsappActivity().catch(() => []),
-  ]);
-
-  const nfsePreviewEntries = await Promise.all(
-    nfseDocuments.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
-  );
-  const fiscalInsights = buildFiscalInsights(nfseDocuments, new Map(nfsePreviewEntries));
-
-  return {
-    customers,
-    quotes,
-    charges,
-    orders,
-    nfseDocuments,
-    nfseReadyQueue,
-    chargeWhatsappSignals,
-    customerWhatsappActivity,
-    fiscalInsights,
-  };
-});
 
 function countQuotesWithManualCadence(quotes: Awaited<ReturnType<typeof listQuotes>>) {
   return quotes.filter((quote) => quote.status !== "Aprovado" && !quote.cadence?.nextStepLabel).length;

@@ -1,10 +1,25 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { getEvolutionIntegrationStatus } from "@/lib/evolution-api";
 import { getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
 
-export function GET() {
+export async function GET(request: Request) {
+  const session = await getServerSession(authOptions);
+  const configuredHealthToken = process.env.HEALTHCHECK_TOKEN?.trim();
+  const receivedHealthToken = request.headers.get("x-health-token")?.trim();
+  const canSeeDetails = Boolean(session?.user?.email) || Boolean(configuredHealthToken && receivedHealthToken === configuredHealthToken);
+
+  if (!canSeeDetails) {
+    return NextResponse.json({
+      status: "ok",
+      service: "gestao-facil",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   const localMode = isLocalDataMode();
   const evolution = getEvolutionIntegrationStatus();
   const asaas = getAsaasIntegrationStatus();

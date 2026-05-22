@@ -47,7 +47,9 @@ export async function getWorkspaceAsaasConnection(): Promise<WorkspaceAsaasConne
 
   if (isLocalDataMode()) {
     const data = await readDemoWorkspaceData();
-    const ownApiKey = data.company.asaasUseOwnAccount && data.company.asaasApiKey ? data.company.asaasApiKey : null;
+    const ownApiKey = data.company.asaasUseOwnAccount && data.company.asaasApiKey
+      ? decryptWorkspaceSecret(data.company.asaasApiKey)
+      : null;
 
     if (ownApiKey) {
       return {
@@ -132,7 +134,7 @@ export async function saveWorkspaceAsaasConnection(input: {
   if (isLocalDataMode()) {
     const data = await readDemoWorkspaceData();
 
-    data.company.asaasApiKey = input.apiKey;
+    data.company.asaasApiKey = encryptWorkspaceSecret(input.apiKey);
     data.company.asaasAccountId = input.accountId || "";
     data.company.asaasWalletId = input.walletId || "";
     data.company.asaasUseOwnAccount = true;

@@ -287,7 +287,7 @@ export async function connectWorkspaceAsaasAccount(input: {
   }
 
   const data = await readDemoWorkspaceData();
-  data.company.asaasApiKey = input.apiKey;
+  data.company.asaasApiKey = encryptWorkspaceSecret(input.apiKey);
   data.company.asaasAccountId = input.accountId || "";
   data.company.asaasWalletId = walletId;
   data.company.asaasUseOwnAccount = true;
@@ -408,7 +408,7 @@ export async function createWorkspaceAsaasSubaccount(input: {
   }
 
   const data = await readDemoWorkspaceData();
-  data.company.asaasApiKey = created.apiKey;
+  data.company.asaasApiKey = encryptWorkspaceSecret(created.apiKey);
   data.company.asaasAccountId = created.accountId || "";
   data.company.asaasWalletId = created.walletId;
   data.company.asaasUseOwnAccount = true;

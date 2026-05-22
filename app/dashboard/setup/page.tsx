@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SetupAsaasFlashMessages, SetupSubscriptionFlashMessages, SetupTeamFlashMessages } from "@/components/setup-flash-messages";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { EvolutionPairingPanel } from "@/components/evolution-pairing-panel";
 import { InviteLinkField } from "@/components/invite-link-field";
@@ -24,77 +25,29 @@ import { getWorkspaceAccessSummary, listWorkspaceAccessEvents } from "@/lib/acce
 import { listAuditEntries } from "@/lib/audit-repository";
 import { listWorkspaceAuditEntriesByActions } from "@/lib/audit-repository";
 import { listWorkspaceAuditEntriesByType } from "@/lib/audit-repository";
-import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
+import { getCurrentWorkspaceContext } from "@/lib/auth-session";
+import { buildSetupPageViewModel } from "@/lib/setup-page-data";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import {
   fetchEvolutionInstances,
   getEvolutionConnectionState,
-  getEvolutionIntegrationStatus,
   probeEvolutionApi,
 } from "@/lib/evolution-api";
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
 import { listWorkspaceInvites } from "@/lib/workspace-invite-repository";
-import { isLocalDataMode } from "@/lib/data-mode";
-import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { getWorkspaceAsaasConnection, getWorkspaceAsaasOnboardingSnapshot } from "@/lib/asaas-workspace";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getFiscalSetupReadiness } from "@/lib/nfse-repository";
-import { getNfseEmissionModeSummary, getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
-import { isTransactionalEmailConfigured } from "@/lib/transactional-email";
-import { formatSubscriptionDate, getBillingCycleLabel, getSubscriptionPlanPresentation, getSubscriptionStatusLabel, getTrialRemainingDays } from "@/lib/subscription";
+import { getEvolutionStateLabel, getSetupHealthTone } from "@/lib/setup-page-helpers";
+import { readSetupPageFlashState, type SetupSearchParams } from "@/lib/setup-page-state";
+import { formatSubscriptionDate, getSubscriptionStatusLabel } from "@/lib/subscription";
 import { getWorkspaceSubscription } from "@/lib/workspace-subscription-repository";
 import { getCurrentUserAlertPreferences } from "@/lib/workspace-user-preferences";
 import { pricingPlans } from "@/lib/site-data";
 
 type SetupPageProps = {
-  searchParams?: Promise<{
-    evolutionMessage?: string;
-    evolutionOk?: string;
-    asaasConnected?: string;
-    asaasCreated?: string;
-    asaasDisconnected?: string;
-    asaasError?: string;
-    subscriptionUpdated?: string;
-    subscriptionCheckoutCreated?: string;
-    subscriptionError?: string;
-    subscriptionIntent?: string;
-    teamCreated?: string;
-    inviteCreated?: string;
-    inviteRevoked?: string;
-    inviteAccepted?: string;
-    inviteResent?: string;
-    inviteRenewed?: string;
-    teamUpdated?: string;
-    teamRemoved?: string;
-    teamPasswordReset?: string;
-    alertPrefsSaved?: string;
-    alertPrefsError?: string;
-    teamError?: string;
-    setupSaved?: string;
-    setupError?: string;
-  }>;
+  searchParams?: Promise<SetupSearchParams>;
 };
-
-function getEvolutionStateLabel(value: string | undefined) {
-  switch (value) {
-    case "open":
-      return "conectada";
-    case "connecting":
-      return "aguardando pareamento";
-    case "close":
-      return "desconectada";
-    default:
-      return value || "desconhecido";
-  }
-}
-
-function getHealthTone(input: { ok: boolean; warning?: boolean }) {
-  if (input.ok && !input.warning) {
-    return "split-panel success";
-  }
-
-  return input.warning ? "split-panel" : "split-panel";
-}
 
 export default async function SetupPage({ searchParams }: SetupPageProps) {
   const [
@@ -138,57 +91,22 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     getWorkspaceAccessSummary(),
     getCurrentUserAlertPreferences(),
   ]);
-  const teamCreated = params?.teamCreated === "1";
-  const inviteCreated = params?.inviteCreated === "1";
-  const inviteRevoked = params?.inviteRevoked === "1";
-  const inviteResent = params?.inviteResent === "1";
-  const inviteRenewed = params?.inviteRenewed === "1";
-  const teamUpdated = params?.teamUpdated === "1";
-  const teamRemoved = params?.teamRemoved === "1";
-  const teamPasswordReset = params?.teamPasswordReset === "1";
-  const alertPrefsSaved = params?.alertPrefsSaved === "1";
-  const alertPrefsError = params?.alertPrefsError;
-  const inviteAccepted = params?.inviteAccepted === "1";
-  const teamError = params?.teamError;
-  const setupSaved = params?.setupSaved === "1";
-  const setupError = params?.setupError;
-  const evolutionMessage = params?.evolutionMessage;
-  const evolutionOk = params?.evolutionOk === "1";
-  const asaasConnected = params?.asaasConnected === "1";
-  const asaasCreated = params?.asaasCreated === "1";
-  const asaasDisconnected = params?.asaasDisconnected === "1";
-  const asaasError = params?.asaasError;
-  const subscriptionUpdated = params?.subscriptionUpdated === "1";
-  const subscriptionCheckoutCreated = params?.subscriptionCheckoutCreated === "1";
-  const subscriptionError = params?.subscriptionError;
-  const subscriptionIntent = params?.subscriptionIntent === "1";
-  const canManage = isLocalDataMode() || canManageWorkspace(context.workspaceRole);
-  const emissionModes = getNfseEmissionModeSummary();
-  const nfseIntegration = getNfseNationalIntegrationStatus();
-  const evolutionIntegration = getEvolutionIntegrationStatus();
-  const asaasIntegration = getAsaasIntegrationStatus();
-  const transactionalEmailReady = isTransactionalEmailConfigured();
+  const flash = readSetupPageFlashState(params);
   const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
-  const workspaceEvolutionInstance = evolutionInstances.find((instance) => instance.instanceName === setup.slug);
-  const fallbackEvolutionInstance = evolutionInstances.find((instance) => instance.instanceName === evolutionIntegration.instance);
-  const selectedEvolutionInstanceName =
-    workspaceEvolutionInstance?.instanceName
-    || fallbackEvolutionInstance?.instanceName
-    || evolutionIntegration.instance
-    || evolutionInstances[0]?.instanceName
-    || "";
+  const view = buildSetupPageViewModel({
+    workspaceRole: context.workspaceRole,
+    setupSlug: setup.slug,
+    subscription,
+    fiscalReady: fiscalReadiness.ready,
+    evolutionReachable: evolutionProbe.reachable,
+    evolutionInstances,
+    workspaceAsaasMode: workspaceAsaas.mode,
+    asaasIncidentEntries,
+  });
+  const selectedEvolutionInstanceName = view.selectedEvolutionInstanceName;
   const selectedEvolutionInstanceState = selectedEvolutionInstanceName
     ? await getEvolutionConnectionState(selectedEvolutionInstanceName).catch(() => null)
     : null;
-  const isUsingWorkspaceEvolutionInstance = selectedEvolutionInstanceName === setup.slug;
-  const subscriptionPlan = getSubscriptionPlanPresentation(subscription.plan);
-  const trialRemainingDays = getTrialRemainingDays(subscription);
-  const localMode = isLocalDataMode();
-  const hasAsaasIncidents = asaasIncidentEntries.some((entry) => entry.action === "charge.asaas.failed" || entry.action === "asaas.payment_overdue");
-  const hasSubscriptionIncident = subscription.status === "PAST_DUE" || subscription.status === "CANCELED";
-  const asaasHealthOk = workspaceAsaas.mode === "workspace" && asaasIntegration.webhookConfigured && !hasAsaasIncidents;
-  const evolutionHealthOk = evolutionIntegration.enabled && evolutionProbe.reachable && Boolean(selectedEvolutionInstanceName);
-  const fiscalHealthOk = nfseIntegration.ready && fiscalReadiness.ready;
 
   return (
     <DashboardShell
@@ -226,17 +144,17 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <article className="dashboard-metric-tile">
               <span>Assinatura</span>
               <strong>{getSubscriptionStatusLabel(subscription.status)}</strong>
-              <small>{subscriptionPlan.name} em {getBillingCycleLabel(subscription.billingCycle).toLowerCase()}.</small>
+              <small>{view.subscriptionPlan.name} em {view.billingCycleLabel.toLowerCase()}.</small>
             </article>
             <article className="dashboard-metric-tile">
               <span>WhatsApp</span>
-              <strong>{evolutionIntegration.enabled ? "Ativo" : "Pendente"}</strong>
-              <small>{evolutionIntegration.helper}</small>
+              <strong>{view.evolutionIntegration.enabled ? "Ativo" : "Pendente"}</strong>
+              <small>{view.evolutionIntegration.helper}</small>
             </article>
             <article className="dashboard-metric-tile">
               <span>Cobrança</span>
-              <strong>{asaasIntegration.enabled ? "Ativo" : "Pendente"}</strong>
-              <small>{asaasIntegration.helper}</small>
+              <strong>{view.asaasIntegration.enabled ? "Ativo" : "Pendente"}</strong>
+              <small>{view.asaasIntegration.helper}</small>
             </article>
           </div>
         </article>
@@ -280,7 +198,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </aside>
       </section>
 
-      {localMode ? (
+      {view.localMode ? (
         <div className="auth-hint fiscal-warning">
           <strong>Ambiente de teste</strong>
           <span>
@@ -303,9 +221,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <div className="cards-grid quote-grid">
           <article className="dashboard-card">
             <span className="dashboard-kicker">Ambiente</span>
-            <h3>{localMode ? "Teste local" : "Dados reais"}</h3>
+            <h3>{view.localMode ? "Teste local" : "Dados reais"}</h3>
             <p>
-              {localMode
+              {view.localMode
                 ? "Bom para testar a interface, mas não confirma clientes e empresas reais."
                 : "Ligado ao banco oficial e pronto para refletir o que acontece no produto real."}
             </p>
@@ -333,9 +251,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
 
           <article className="dashboard-card">
             <span className="dashboard-kicker">Emissão</span>
-            <h3>{nfseIntegration.ready ? "Base pronta" : "Base incompleta"}</h3>
+            <h3>{view.nfseIntegration.ready ? "Base pronta" : "Base incompleta"}</h3>
             <p>
-              {nfseIntegration.ready
+              {view.nfseIntegration.ready
                 ? "A empresa já está mais perto de emitir sem retrabalho."
                 : "Ainda faltam alguns dados antes de deixar a emissão pronta no fluxo."}
             </p>
@@ -351,8 +269,8 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         </div>
 
-        {setupSaved ? <p className="auth-hint">Dados da empresa salvos com sucesso.</p> : null}
-        {setupError ? <p className="auth-error">{setupError}</p> : null}
+        {flash.setupSaved ? <p className="auth-hint">Dados da empresa salvos com sucesso.</p> : null}
+        {flash.setupError ? <p className="auth-error">{flash.setupError}</p> : null}
 
         {!fiscalReadiness.ready ? (
           <div className="auth-hint fiscal-warning">
@@ -361,7 +279,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         ) : null}
 
-        {canManage ? (
+        {view.canManage ? (
           <form action={updateWorkspaceSetupAction} className="inline-form">
             <label>
               <span>Nome interno da empresa</span>
@@ -444,13 +362,13 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <article className="split-panel">
           <span className="section-label">Emissão assistida</span>
           <h2>Mesmo sem certificado, dá para seguir com apoio manual</h2>
-          <p>{emissionModes.assisted.helper}</p>
+          <p>{view.emissionModes.assisted.helper}</p>
         </article>
 
-        <article className={nfseIntegration.ready ? "split-panel success" : "split-panel"}>
+        <article className={view.nfseIntegration.ready ? "split-panel success" : "split-panel"}>
           <span className="section-label">Emissão automática</span>
           <h2>Com certificado, a emissão fica mais automática</h2>
-          <p>{emissionModes.automatic.helper}</p>
+          <p>{view.emissionModes.automatic.helper}</p>
         </article>
       </section>
 
@@ -458,23 +376,23 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <article className={subscription.status === "TRIALING" ? "split-panel success" : "split-panel"}>
           <span className="section-label">Assinatura da empresa</span>
           
-          <h2>{subscriptionPlan.name} em {getBillingCycleLabel(subscription.billingCycle).toLowerCase()}</h2>
+          <h2>{view.subscriptionPlan.name} em {view.billingCycleLabel.toLowerCase()}</h2>
           <p>
             Status atual: {getSubscriptionStatusLabel(subscription.status)}.
-            {trialRemainingDays !== null ? ` Restam ${trialRemainingDays} dia(s) no trial.` : ""}
+            {view.trialRemainingDays !== null ? ` Restam ${view.trialRemainingDays} dia(s) no trial.` : ""}
           </p>
         </article>
 
-        <article className={evolutionIntegration.enabled ? "split-panel success" : "split-panel"}>
+        <article className={view.evolutionIntegration.enabled ? "split-panel success" : "split-panel"}>
           <span className="section-label">WhatsApp da empresa</span>
           <h2>Canal pronto para mensagens, lembretes e respostas</h2>
-          <p>{evolutionIntegration.helper}</p>
+          <p>{view.evolutionIntegration.helper}</p>
         </article>
 
-        <article className={asaasIntegration.enabled ? "split-panel success" : "split-panel"}>
+        <article className={view.asaasIntegration.enabled ? "split-panel success" : "split-panel"}>
           <span className="section-label">Recebimentos</span>
           <h2>Conta pronta para Pix, boleto, cartão e links de pagamento</h2>
-          <p>{asaasIntegration.helper}</p>
+          <p>{view.asaasIntegration.helper}</p>
         </article>
       </section>
 
@@ -485,11 +403,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <p>{evolutionProbe.summary}</p>
         </article>
 
-        <article className={asaasIntegration.webhookConfigured ? "split-panel success" : "split-panel"}>
+        <article className={view.asaasIntegration.webhookConfigured ? "split-panel success" : "split-panel"}>
           <span className="section-label">Atualização de pagamentos</span>
           <h2>Confirmação automática quando o cliente paga</h2>
           <p>
-            {asaasIntegration.webhookConfigured
+            {view.asaasIntegration.webhookConfigured
               ? "O sistema já consegue receber a confirmação de pagamento automaticamente."
               : "Ainda falta concluir a ligação automática entre a conta de cobrança e o sistema."}
           </p>
@@ -505,23 +423,23 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </div>
 
         <div className="section-split">
-          <article className={getHealthTone({ ok: evolutionHealthOk, warning: evolutionIntegration.enabled && !evolutionProbe.reachable })}>
+          <article className={getSetupHealthTone({ ok: view.evolutionHealthOk, warning: view.evolutionIntegration.enabled && !evolutionProbe.reachable })}>
             <span className="section-label">WhatsApp</span>
-            <h2>{evolutionHealthOk ? "Operando" : evolutionIntegration.enabled ? "Parcial" : "Pendente"}</h2>
+            <h2>{view.evolutionHealthOk ? "Operando" : view.evolutionIntegration.enabled ? "Parcial" : "Pendente"}</h2>
             <p>
-              {evolutionHealthOk
+              {view.evolutionHealthOk
                 ? "Instância conectada, API alcançável e eventos recentes disponíveis no workspace."
-                : evolutionIntegration.enabled
+                : view.evolutionIntegration.enabled
                   ? "A configuração existe, mas a API ou a instância ainda não estão estáveis o bastante."
                   : "O canal ainda não foi ligado ao workspace."}
             </p>
           </article>
 
-          <article className={getHealthTone({ ok: asaasHealthOk, warning: workspaceAsaas.mode !== "disabled" })}>
+          <article className={getSetupHealthTone({ ok: view.asaasHealthOk, warning: workspaceAsaas.mode !== "disabled" })}>
             <span className="section-label">Cobrança</span>
-            <h2>{asaasHealthOk ? "Operando" : workspaceAsaas.mode !== "disabled" ? "Parcial" : "Pendente"}</h2>
+            <h2>{view.asaasHealthOk ? "Operando" : workspaceAsaas.mode !== "disabled" ? "Parcial" : "Pendente"}</h2>
             <p>
-              {asaasHealthOk
+              {view.asaasHealthOk
                 ? "Conta própria, webhook e automação externa estão sem incidente recente conhecido."
                 : workspaceAsaas.mode !== "disabled"
                   ? "A cobrança existe, mas ainda há pendência de webhook, onboarding ou incidente recente."
@@ -529,23 +447,23 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             </p>
           </article>
 
-          <article className={getHealthTone({ ok: !hasSubscriptionIncident, warning: subscription.status === "TRIALING" || subscription.status === "ACTIVE" })}>
+          <article className={getSetupHealthTone({ ok: !view.hasSubscriptionIncident, warning: subscription.status === "TRIALING" || subscription.status === "ACTIVE" })}>
             <span className="section-label">Assinatura</span>
-            <h2>{hasSubscriptionIncident ? "Atenção" : "Saudável"}</h2>
+            <h2>{view.hasSubscriptionIncident ? "Atenção" : "Saudável"}</h2>
             <p>
-              {hasSubscriptionIncident
+              {view.hasSubscriptionIncident
                 ? "O acesso pode ser limitado até a assinatura voltar para um estado regular."
                 : "O ciclo do workspace está em um estado que não bloqueia a operação normal."}
             </p>
           </article>
 
-          <article className={getHealthTone({ ok: fiscalHealthOk, warning: nfseIntegration.enabled })}>
+          <article className={getSetupHealthTone({ ok: view.fiscalHealthOk, warning: view.nfseIntegration.enabled })}>
             <span className="section-label">Fiscal</span>
-            <h2>{fiscalHealthOk ? "Operando" : nfseIntegration.enabled ? "Parcial" : "Assistido"}</h2>
+            <h2>{view.fiscalHealthOk ? "Operando" : view.nfseIntegration.enabled ? "Parcial" : "Assistido"}</h2>
             <p>
-              {fiscalHealthOk
+              {view.fiscalHealthOk
                 ? "O setup fiscal já sustenta emissão com menos atrito."
-                : nfseIntegration.enabled
+                : view.nfseIntegration.enabled
                   ? "Parte do setup existe, mas ainda faltam dados ou readiness do emissor."
                   : "O fluxo ainda depende mais da emissão assistida do que da automação."}
             </p>
@@ -564,40 +482,16 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <div className={subscription.status === "TRIALING" ? "auth-hint" : "auth-hint fiscal-warning"}>
           <strong>{getSubscriptionStatusLabel(subscription.status)}</strong>
           <span>
-            Plano atual: {subscriptionPlan.name} ({subscriptionPlan.price}).
+            Plano atual: {view.subscriptionPlan.name} ({view.subscriptionPlan.price}).
             {subscription.trialEndsAt ? ` Trial até ${formatSubscriptionDate(subscription.trialEndsAt)}.` : ""}
           </span>
           <small className="muted-text">
-            Ciclo escolhido: {getBillingCycleLabel(subscription.billingCycle)}.
+            Ciclo escolhido: {view.billingCycleLabel}.
             {subscription.notes ? ` ${subscription.notes}` : ""}
           </small>
         </div>
 
-        {subscriptionIntent ? (
-          <div className="auth-hint">
-            <strong>Próximo passo</strong>
-            <span>A empresa já está em teste. Se quiser deixar a cobrança automática pronta, faça isso aqui embaixo.</span>
-          </div>
-        ) : null}
-
-        {subscriptionUpdated ? (
-          <div className="auth-hint">
-            <strong>Plano atualizado</strong>
-            <span>O plano da empresa foi ajustado com sucesso.</span>
-          </div>
-        ) : null}
-        {subscriptionCheckoutCreated ? (
-          <div className="auth-hint">
-            <strong>Cobrança automática criada</strong>
-            <span>O plano da empresa já está ligado à cobrança automática.</span>
-          </div>
-        ) : null}
-        {subscriptionError ? (
-          <div className="auth-hint fiscal-warning">
-            <strong>Não foi possível concluir essa etapa</strong>
-            <span>{subscriptionError}</span>
-          </div>
-        ) : null}
+        <SetupSubscriptionFlashMessages state={flash} />
 
         <div className="cards-grid pricing-grid">
           {pricingPlans.map((plan) => (
@@ -642,7 +536,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </small>
         </div>
 
-        {canManage ? (
+        {view.canManage ? (
           <div className="hero-actions">
             {!subscription.asaasSubscriptionId ? (
               <form action={createWorkspaceSubscriptionCheckoutAction}>
@@ -668,15 +562,15 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         </div>
 
-        {evolutionMessage ? (
-          <div className={evolutionOk ? "auth-hint" : "auth-hint fiscal-warning"}>
-            <strong>{evolutionOk ? "Tudo certo" : "Não foi possível concluir agora"}</strong>
-            <span>{evolutionMessage}</span>
+        {flash.evolutionMessage ? (
+          <div className={flash.evolutionOk ? "auth-hint" : "auth-hint fiscal-warning"}>
+            <strong>{flash.evolutionOk ? "Tudo certo" : "Não foi possível concluir agora"}</strong>
+            <span>{flash.evolutionMessage}</span>
             <small className="muted-text">Você continua nesta mesma área para conferir o resultado sem perder o ponto da tela.</small>
           </div>
         ) : null}
 
-        {canManage ? (
+        {view.canManage ? (
           <form action={createEvolutionInstanceAction} className="inline-form">
             <label>
               <span>Identificador da conexão</span>
@@ -712,14 +606,14 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 : ""}
             </span>
             <small className="muted-text">
-              {isUsingWorkspaceEvolutionInstance
+              {view.isUsingWorkspaceEvolutionInstance
                 ? "A tela já está usando o número principal desta empresa."
                 : "A tela está usando um número padrão porque ainda não encontrou uma conexão com o nome desta empresa."}
             </small>
           </div>
         ) : null}
 
-        {workspaceEvolutionInstance && evolutionIntegration.instance && evolutionIntegration.instance !== workspaceEvolutionInstance.instanceName ? (
+        {view.workspaceEvolutionInstance && view.evolutionIntegration.instance && view.evolutionIntegration.instance !== view.workspaceEvolutionInstance.instanceName ? (
           <div className="auth-hint fiscal-warning">
             <strong>O número padrão ainda não é o ideal</strong>
             <span>
@@ -731,7 +625,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         ) : null}
 
-        {canManage && selectedEvolutionInstanceName ? (
+        {view.canManage && selectedEvolutionInstanceName ? (
           <EvolutionPairingPanel instanceName={selectedEvolutionInstanceName} />
         ) : null}
 
@@ -761,7 +655,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                   </div>
                   <span>{getEvolutionStateLabel(instance.status)}</span>
                   <span>{instance.owner || "Aguardando conexão"}</span>
-                  <span>{instance.webhookUrl || evolutionIntegration.webhookUrl || "Atualização automática pronta"}</span>
+                  <span>{instance.webhookUrl || view.evolutionIntegration.webhookUrl || "Atualização automática pronta"}</span>
                 </article>
               )) : (
                 <article className="data-table-row">
@@ -784,9 +678,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         </div>
 
-        <div className={asaasIntegration.enabled ? "auth-hint" : "auth-hint fiscal-warning"}>
-          <strong>{asaasIntegration.enabled ? "Conta de cobrança conectada" : "Conta de cobrança ainda incompleta"}</strong>
-          <span>{asaasIntegration.helper}</span>
+        <div className={view.asaasIntegration.enabled ? "auth-hint" : "auth-hint fiscal-warning"}>
+          <strong>{view.asaasIntegration.enabled ? "Conta de cobrança conectada" : "Conta de cobrança ainda incompleta"}</strong>
+          <span>{view.asaasIntegration.helper}</span>
           <small className="muted-text">
             {workspaceAsaas.mode === "workspace"
               ? "A empresa já está usando uma conta própria para receber."
@@ -796,10 +690,10 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </small>
         </div>
 
-        <div className={asaasIntegration.webhookConfigured ? "auth-hint" : "auth-hint fiscal-warning"}>
-          <strong>{asaasIntegration.webhookConfigured ? "Atualização automática pronta" : "Atualização automática ainda incompleta"}</strong>
+        <div className={view.asaasIntegration.webhookConfigured ? "auth-hint" : "auth-hint fiscal-warning"}>
+          <strong>{view.asaasIntegration.webhookConfigured ? "Atualização automática pronta" : "Atualização automática ainda incompleta"}</strong>
           <span>
-            {asaasIntegration.webhookConfigured
+            {view.asaasIntegration.webhookConfigured
               ? "Quando o cliente paga, o sistema já consegue receber a confirmação sozinho."
               : "Ainda falta concluir a ligação automática para o sistema saber sozinho quando o cliente paga."}
           </span>
@@ -828,35 +722,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </article>
         </div>
 
-        {asaasConnected ? (
-          <div className="auth-hint">
-            <strong>Conta Asaas conectada</strong>
-            <span>
-              {asaasCreated
-                ? "A conta de recebimento foi criada e ligada à empresa. Se ainda faltar algum documento, finalize isso direto na conta."
-                : "A empresa já pode emitir cobranças pela conta conectada."}
-            </span>
-          </div>
-        ) : null}
-        {asaasDisconnected ? (
-          <div className="auth-hint fiscal-warning">
-            <strong>Conta Asaas desconectada</strong>
-            <span>A empresa voltou a operar sem uma conta própria conectada.</span>
-          </div>
-        ) : null}
-        {asaasError ? (
-          <div className="auth-hint fiscal-warning">
-            <strong>Falha na configuração Asaas</strong>
-            <span>{asaasError}</span>
-            {asaasError.includes("ASAAS_API_KEY da conta principal") ? (
-              <small className="muted-text">
-                Para criar subcontas dentro do produto, a plataforma precisa ter uma `ASAAS_API_KEY` principal válida no ambiente de produção.
-              </small>
-            ) : null}
-          </div>
-        ) : null}
+        <SetupAsaasFlashMessages state={flash} />
 
-        {canManage ? (
+        {view.canManage ? (
           <>
             <div className="guided-flow-stack">
               <details className="guided-flow-card" open={workspaceAsaas.mode !== "workspace"}>
@@ -1000,7 +868,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </>
         ) : null}
 
-        {canManage && workspaceAsaas.mode === "workspace" ? (
+        {view.canManage && workspaceAsaas.mode === "workspace" ? (
           <form action={disconnectWorkspaceAsaasAccountAction} className="card-action">
             <button type="submit" className="ghost-button">
               Desconectar conta própria
@@ -1135,11 +1003,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       </section>
 
       <section className="section-split">
-        <article className={transactionalEmailReady ? "split-panel success" : "split-panel"}>
+        <article className={view.transactionalEmailReady ? "split-panel success" : "split-panel"}>
           <span className="section-label">Segurança de acesso</span>
           <h2>Recuperação de senha e convites por email</h2>
           <p>
-            {transactionalEmailReady
+            {view.transactionalEmailReady
               ? "O envio transacional está pronto para convites, recuperação de senha e notificações de acesso."
               : "Ainda falta configurar o provider transacional para convites automáticos e recuperação de senha por email."}
           </p>
@@ -1162,8 +1030,8 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         </div>
 
-        {alertPrefsSaved ? <p className="auth-hint">Preferências pessoais de alerta salvas com sucesso.</p> : null}
-        {alertPrefsError ? <p className="auth-error">{alertPrefsError}</p> : null}
+        {flash.alertPrefsSaved ? <p className="auth-hint">Preferências pessoais de alerta salvas com sucesso.</p> : null}
+        {flash.alertPrefsError ? <p className="auth-error">{flash.alertPrefsError}</p> : null}
 
         <div className="cards-grid quote-grid">
           <article className="dashboard-card">
@@ -1260,23 +1128,14 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         </div>
 
-        {inviteCreated ? <p className="auth-hint">Convite criado com sucesso. Compartilhe o link com a pessoa convidada.</p> : null}
-        {inviteRevoked ? <p className="auth-hint">Convite revogado com sucesso.</p> : null}
-        {inviteAccepted ? <p className="auth-hint">Convite aceito com sucesso. O acesso já está ativo neste workspace.</p> : null}
-        {inviteResent ? <p className="auth-hint">Convite reenviado com sucesso.</p> : null}
-        {inviteRenewed ? <p className="auth-hint">Convite renovado com sucesso.</p> : null}
-        {teamCreated ? <p className="auth-hint">Usuário adicionado à empresa com sucesso.</p> : null}
-        {teamUpdated ? <p className="auth-hint">Papel do usuário atualizado com sucesso.</p> : null}
-        {teamRemoved ? <p className="auth-hint">Usuário removido da empresa com sucesso.</p> : null}
-        {teamPasswordReset ? <p className="auth-hint">Senha do usuário redefinida com sucesso.</p> : null}
-        {teamError ? <p className="auth-error">{teamError}</p> : null}
+        <SetupTeamFlashMessages state={flash} />
 
-        {isLocalDataMode() ? (
+        {view.localMode ? (
           <div className="auth-hint">
             <strong>Ambiente de teste ativo</strong>
             <span>Quando o sistema estiver ligado ao banco oficial, esta área cria acessos reais para a equipe.</span>
           </div>
-        ) : !canManage ? (
+        ) : !view.canManage ? (
           <div className="auth-hint">
             <strong>Acesso restrito</strong>
             <span>Seu perfil atual permite consultar a equipe, mas não convidar novas pessoas.</span>
@@ -1386,7 +1245,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 ) : (
                   <small className="muted-text">Link indisponível neste ambiente</small>
                 )}
-                {canManage ? (
+                {view.canManage ? (
                   <>
                     {invite.status === "Pendente" ? (
                       <form action={resendWorkspaceInviteAction} className="row-action">
@@ -1448,7 +1307,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <span>{member.role}</span>
               <span>{member.joinedAt}</span>
               <div>
-                {canManage && !isLocalDataMode() ? (
+                {view.canManage && !view.localMode ? (
                   <div className="cards-grid">
                     <form action={updateWorkspaceMemberRoleAction} className="inline-form">
                       <input type="hidden" name="membershipId" value={member.id} />
@@ -1641,7 +1500,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 </div>
                 <div>
                   <strong>Ambiente</strong>
-                  <span>{asaasIntegration.environment === "production" ? "Produção" : "Sandbox"}</span>
+                  <span>{view.asaasIntegration.environment === "production" ? "Produção" : "Sandbox"}</span>
                 </div>
               </article>
               <article className="report-table-row report-table-row-2">
@@ -1661,7 +1520,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 </div>
                 <div>
                   <strong>Atualização automática</strong>
-                  <span>{asaasIntegration.webhookConfigured ? "Pronta" : "Pendente"}</span>
+                  <span>{view.asaasIntegration.webhookConfigured ? "Pronta" : "Pendente"}</span>
                 </div>
               </article>
             </div>

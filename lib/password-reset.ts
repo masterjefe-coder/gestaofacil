@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { resolveAppBaseUrl } from "@/lib/app-url";
+import { assertPasswordResetAllowed, AuthRateLimitError, registerPasswordResetAttempt } from "@/lib/auth-security";
 import { recordPasswordResetCompleted, recordPasswordResetRequested } from "@/lib/auth-event-log";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { hashPassword } from "@/lib/password-auth";
@@ -70,6 +71,18 @@ export async function requestPasswordReset(emailInput: string) {
   if (!email) {
     throw new PasswordResetError("Informe o email da conta para recuperar a senha.");
   }
+
+  try {
+    await assertPasswordResetAllowed(email);
+  } catch (error) {
+    if (error instanceof AuthRateLimitError) {
+      throw new PasswordResetError(`Muitas tentativas de recuperação. Aguarde ${error.retryAfterSeconds}s antes de tentar novamente.`);
+    }
+
+    throw error;
+  }
+
+  await registerPasswordResetAttempt(email);
 
   const user = await prisma.user.findUnique({
     where: { email },

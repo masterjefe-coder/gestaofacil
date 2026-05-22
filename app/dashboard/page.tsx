@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { DashboardShell } from "@/components/dashboard-shell";
 import {
+  dashboardModuleCards,
+  getDashboardPriorityClass,
+  getDashboardPriorityLabel,
+} from "@/lib/dashboard-home";
+import {
   generateDashboardChargeFromQuoteAction,
   markDashboardChargeTodayAction,
   markDashboardCustomerStatusAction,
@@ -13,81 +18,6 @@ import {
   getDashboardStats,
   getTodayAgenda,
 } from "@/lib/workspace-repository";
-
-function getPriorityLabel(priority: "critical" | "high" | "normal") {
-  if (priority === "critical") {
-    return "Prioridade crítica";
-  }
-
-  if (priority === "high") {
-    return "Prioridade alta";
-  }
-
-  return "Prioridade normal";
-}
-
-function getPriorityClass(priority: "critical" | "high" | "normal") {
-  if (priority === "critical") {
-    return "priority-critical";
-  }
-
-  if (priority === "high") {
-    return "priority-high";
-  }
-
-  return "priority-normal";
-}
-
-const moduleCards = [
-  {
-    href: "/dashboard/quotes",
-    kicker: "Comercial",
-    title: "Orçamentos",
-    description: "Criar propostas, acompanhar negociações e avançar vendas.",
-  },
-  {
-    href: "/dashboard/orders",
-    kicker: "Operação",
-    title: "Pedidos",
-    description: "Ver serviços aprovados, agendados e em execução.",
-  },
-  {
-    href: "/dashboard/billing",
-    kicker: "Financeiro",
-    title: "Cobranças e pagamentos",
-    description: "Receber, cobrar no prazo e acompanhar retornos dos clientes.",
-  },
-  {
-    href: "/dashboard/customers",
-    kicker: "Relacionamento",
-    title: "Clientes",
-    description: "Consultar histórico, follow-ups e oportunidades da base.",
-  },
-  {
-    href: "/dashboard/fiscal",
-    kicker: "Notas",
-    title: "Emissão",
-    description: "Preparar, revisar e emitir notas sem retrabalho.",
-  },
-  {
-    href: "/dashboard/setup#integrations-section",
-    kicker: "WhatsApp",
-    title: "Conexões",
-    description: "Conectar o número principal e acompanhar o canal da empresa.",
-  },
-  {
-    href: "/dashboard/setup#subscription-section",
-    kicker: "Plano",
-    title: "Cobrança do sistema",
-    description: "Ver assinatura, plano atual e status da cobrança recorrente.",
-  },
-  {
-    href: "/dashboard/setup#team-section",
-    kicker: "Empresa",
-    title: "Equipe e acessos",
-    description: "Gerenciar pessoas, dados da empresa e acessos do sistema.",
-  },
-];
 
 export default async function DashboardPage() {
   const [dashboardStats, todayAgenda, recommendations, cadenceMetrics, cadenceRisks] = await Promise.all([
@@ -119,14 +49,14 @@ export default async function DashboardPage() {
       )}
     >
       <section className="dashboard-overview-hero">
-        <article className={`dashboard-spotlight-card fade-in-up ${heroRecommendation ? getPriorityClass(heroRecommendation.priority) : "priority-normal"}`}>
+        <article className={`dashboard-spotlight-card fade-in-up ${heroRecommendation ? getDashboardPriorityClass(heroRecommendation.priority) : "priority-normal"}`}>
           <div className="dashboard-spotlight-header">
             <div>
               <span className="section-label">Prioridade do dia</span>
               <h2>{heroRecommendation?.title || "A operação está estável e pronta para seguir pelos módulos."}</h2>
             </div>
-            <span className={`dashboard-priority-badge ${heroRecommendation ? getPriorityClass(heroRecommendation.priority) : "priority-normal"}`}>
-              {heroRecommendation ? getPriorityLabel(heroRecommendation.priority) : "Tudo sob controle"}
+            <span className={`dashboard-priority-badge ${heroRecommendation ? getDashboardPriorityClass(heroRecommendation.priority) : "priority-normal"}`}>
+              {heroRecommendation ? getDashboardPriorityLabel(heroRecommendation.priority) : "Tudo sob controle"}
             </span>
           </div>
 
@@ -224,7 +154,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="cards-grid quote-grid">
-          {moduleCards.map((item) => (
+          {dashboardModuleCards.map((item) => (
             <Link key={item.href} href={item.href} className="dashboard-card dashboard-card-refined nav-card fade-in-up">
               <span className="dashboard-kicker">{item.kicker}</span>
               <h3>{item.title}</h3>
@@ -248,12 +178,12 @@ export default async function DashboardPage() {
               {recommendations.slice(0, 3).map((item) => (
                 <article
                   key={`${item.kicker}-${item.title}`}
-                  className={`dashboard-card dashboard-card-refined fade-in-up ${getPriorityClass(item.priority)}`}
+                  className={`dashboard-card dashboard-card-refined fade-in-up ${getDashboardPriorityClass(item.priority)}`}
                 >
                   <span className="dashboard-kicker">{item.kicker}</span>
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
-                  <small className={`muted-text priority-text ${getPriorityClass(item.priority)}`}>{getPriorityLabel(item.priority)}</small>
+                  <small className={`muted-text priority-text ${getDashboardPriorityClass(item.priority)}`}>{getDashboardPriorityLabel(item.priority)}</small>
                   <Link href={item.href} className="secondary-link">
                     {item.hrefLabel}
                   </Link>
