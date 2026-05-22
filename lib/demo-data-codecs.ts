@@ -346,7 +346,7 @@ export function formatDueDateLabel(date: Date | string) {
     return "acompanhar cobranca";
   }
 
-  return `vence ${new Intl.DateTimeFormat("pt-BR").format(parsed)}`;
+  return `vence ${new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(parsed)}`;
 }
 
 export function buildChargeDueLabel(input: { dueLabel?: string; dueDate?: string; status?: Charge["status"] }) {
