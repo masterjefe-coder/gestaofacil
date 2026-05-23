@@ -1,7 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildOperationalDiagnosticsSnapshot } from "@/lib/operational-diagnostics";
+import { resetAllCircuitBreakerStates, withRetryAndCircuitBreaker } from "@/lib/api-retry";
+import {
+  buildOperationalDiagnosticsSnapshot,
+  operationalDiagnosticsDeps,
+} from "@/lib/operational-diagnostics";
 import { REQUEST_ID_HEADER } from "@/lib/request-tracing";
+
+const originalDiagnosticsDeps = {
+  inspectNfseNationalCertificate: operationalDiagnosticsDeps.inspectNfseNationalCertificate,
+  probeEvolutionApi: operationalDiagnosticsDeps.probeEvolutionApi,
+};
+
+function restoreOperationalDiagnosticsDeps() {
+  operationalDiagnosticsDeps.inspectNfseNationalCertificate = originalDiagnosticsDeps.inspectNfseNationalCertificate;
+  operationalDiagnosticsDeps.probeEvolutionApi = originalDiagnosticsDeps.probeEvolutionApi;
+}
 
 async function withEnv<T>(entries: Record<string, string | undefined>, fn: () => Promise<T>) {
   const previous = new Map<string, string | undefined>();
@@ -30,6 +44,8 @@ async function withEnv<T>(entries: Record<string, string | undefined>, fn: () =>
 }
 
 test("operational diagnostics snapshot reports warnings when key env vars are missing", async () => {
+  resetAllCircuitBreakerStates();
+  restoreOperationalDiagnosticsDeps();
   await withEnv({
     NODE_ENV: "production",
     DATABASE_URL: undefined,
@@ -49,7 +65,7 @@ test("operational diagnostics snapshot reports warnings when key env vars are mi
     NFSE_NATIONAL_CERT_PFX_PATH: undefined,
     NFSE_NATIONAL_CERT_PASSPHRASE: undefined,
   }, async () => {
-    const snapshot = buildOperationalDiagnosticsSnapshot("warning-request-id");
+    const snapshot = await buildOperationalDiagnosticsSnapshot("warning-request-id");
 
     assert.equal(snapshot.requestId, "warning-request-id");
     assert.equal(snapshot.requestTracing.header, REQUEST_ID_HEADER);
@@ -64,6 +80,20 @@ test("operational diagnostics snapshot reports warnings when key env vars are mi
 });
 
 test("operational diagnostics snapshot reports ok when runtime and integrations are configured", async () => {
+  resetAllCircuitBreakerStates();
+  operationalDiagnosticsDeps.probeEvolutionApi = async () => ({
+    configured: true,
+    reachable: true,
+    summary: "Endpoint respondeu e a API está acessível a partir do app.",
+  });
+  operationalDiagnosticsDeps.inspectNfseNationalCertificate = async () => ({
+    ok: true,
+    subject: "CN=Gestao Facil",
+    issuer: "CN=Fake CA",
+    validFrom: "2026-01-01T00:00:00.000Z",
+    validTo: "2027-01-01T00:00:00.000Z",
+    hasPrivateKey: true,
+  });
   await withEnv({
     NODE_ENV: "production",
     DATABASE_URL: "file:./test.db",
@@ -82,7 +112,7 @@ test("operational diagnostics snapshot reports ok when runtime and integrations 
     NFSE_NATIONAL_CERT_PFX_BASE64: "ZmFrZQ==",
     NFSE_NATIONAL_CERT_PASSPHRASE: "cert-secret",
   }, async () => {
-    const snapshot = buildOperationalDiagnosticsSnapshot("ok-request-id");
+    const snapshot = await buildOperationalDiagnosticsSnapshot("ok-request-id");
 
     assert.equal(snapshot.status, "ok");
     assert.equal(snapshot.summary.warningCount, 0);
@@ -90,6 +120,51 @@ test("operational diagnostics snapshot reports ok when runtime and integrations 
     assert.equal(snapshot.runtime.authSecretConfigured, true);
     assert.equal(snapshot.integrations.asaas.webhookConfigured, true);
     assert.equal(snapshot.integrations.evolution.defaultInstanceConfigured, true);
+    assert.equal(snapshot.integrations.evolution.connectivity.reachable, true);
     assert.equal(snapshot.integrations.nfse.ready, true);
+    assert.equal(snapshot.integrations.nfse.certificateInspection.ok, true);
+    assert.equal(snapshot.resilience.openCircuitBreakerCount, 0);
+    assert.equal(snapshot.checks.some((check) => check.key === "api-resilience" && check.level === "ok"), true);
   });
+  restoreOperationalDiagnosticsDeps();
+});
+
+test("operational diagnostics snapshot reports open circuit breakers as warnings", async () => {
+  resetAllCircuitBreakerStates();
+  operationalDiagnosticsDeps.probeEvolutionApi = async () => ({
+    configured: false,
+    reachable: false,
+    summary: "Integração ainda não configurada neste ambiente.",
+  });
+  operationalDiagnosticsDeps.inspectNfseNationalCertificate = async () => ({
+    ok: false,
+    error: "Certificado ausente.",
+  });
+
+  try {
+    await withRetryAndCircuitBreaker(
+      "diagnostics-test-breaker",
+      async () => {
+        throw new Error("upstream failed");
+      },
+      {
+        maxAttempts: 1,
+      },
+      {
+        failureThreshold: 1,
+        resetTimeoutMs: 60000,
+      },
+    );
+  } catch {
+    // Intentionally ignored so we can inspect the breaker state in diagnostics.
+  }
+
+  const snapshot = await buildOperationalDiagnosticsSnapshot("breaker-request-id");
+
+  assert.equal(snapshot.resilience.openCircuitBreakerCount, 1);
+  assert.equal(snapshot.resilience.circuitBreakers["diagnostics-test-breaker"]?.state, "OPEN");
+  assert.equal(snapshot.checks.some((check) => check.key === "api-resilience" && check.level === "warning"), true);
+
+  resetAllCircuitBreakerStates();
+  restoreOperationalDiagnosticsDeps();
 });

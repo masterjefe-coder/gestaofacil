@@ -2,7 +2,7 @@ import { resolveAppBaseUrl } from "@/lib/app-url";
 import { parseCurrencyToNumber } from "@/lib/demo-data-codecs";
 import type { ExternalChargeBilling } from "@/lib/types";
 import { withRetryAndCircuitBreaker } from "@/lib/api-retry";
-import { getLogger } from "@/lib/api-logger";
+import { getLogger, summarizeExternalErrorDetails } from "@/lib/api-logger";
 import { generateIdempotencyKey } from "@/lib/idempotency";
 
 const logger = getLogger({ service: "asaas-api" });
@@ -240,10 +240,14 @@ async function asaasFetchWithApiKey<T>(apiKey: string, path: string, init?: Requ
       const duration = Date.now() - startTime;
 
       if (!response.ok) {
+        const responseBody = await response.clone().text().catch(() => "");
+        const detailSummary = summarizeExternalErrorDetails(responseBody);
         logger.error("Asaas API request failed", undefined, {
           requestId,
           status: response.status,
           duration,
+          detailSummary,
+          detailLength: responseBody.length,
         });
       } else {
         logger.info("Asaas API request successful", {

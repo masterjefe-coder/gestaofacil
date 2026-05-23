@@ -6,15 +6,20 @@ import { recordAuditEvent } from "@/lib/audit-repository";
 
 const logger = getLogger({ route: "api/auth/logout-track" });
 
+export const logoutTrackRouteDeps = {
+  getCurrentWorkspaceContext,
+  recordAuditEvent,
+};
+
 export async function POST(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
 
   try {
-    const context = await getCurrentWorkspaceContext();
+    const context = await logoutTrackRouteDeps.getCurrentWorkspaceContext();
     const userAgent = request.headers.get("user-agent");
 
-    await recordAuditEvent({
+    await logoutTrackRouteDeps.recordAuditEvent({
       action: "auth.logout.requested",
       entityType: "user",
       entityId: context.userId,

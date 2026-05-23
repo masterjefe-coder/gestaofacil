@@ -1,4 +1,5 @@
 export type SetupSearchParams = {
+  operationalFocus?: string;
   evolutionMessage?: string;
   evolutionOk?: string;
   asaasConnected?: string;

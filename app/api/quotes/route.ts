@@ -6,15 +6,21 @@ import { createQuote, listQuotes } from "@/lib/quote-repository";
 
 const logger = getLogger({ route: "api/quotes" });
 
+export const quotesRouteDeps = {
+  requireApiModuleAccess,
+  listQuotes,
+  createQuote,
+};
+
 export async function GET(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess("quotes", "canView");
+  const unauthorized = await quotesRouteDeps.requireApiModuleAccess("quotes", "canView");
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
 
-  const quotes = await listQuotes();
+  const quotes = await quotesRouteDeps.listQuotes();
   requestLogger.info("Quotes listed", { count: quotes.length });
   return attachRequestId(NextResponse.json({ quotes }), requestId);
 }
@@ -22,7 +28,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess("quotes", "canManage");
+  const unauthorized = await quotesRouteDeps.requireApiModuleAccess("quotes", "canManage");
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
@@ -41,7 +47,7 @@ export async function POST(request: Request) {
     return attachRequestId(NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 }), requestId);
   }
 
-  const quote = await createQuote({
+  const quote = await quotesRouteDeps.createQuote({
     customer: body.customer,
     title: body.title,
     amount: body.amount,

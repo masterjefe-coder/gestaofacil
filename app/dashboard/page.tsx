@@ -1,7 +1,13 @@
 import Link from "next/link";
+import { DashboardOperationalDomainsStrip } from "@/components/dashboard-operational-domains-strip";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { DashboardOperationalSummary } from "@/components/dashboard-operational-summary";
 import {
   dashboardModuleCards,
+  getDashboardHeroState,
+  getOperationalPromotionForRecommendation,
+  orderDashboardModuleCards,
+  orderDashboardRecommendations,
   getDashboardPriorityClass,
   getDashboardPriorityLabel,
 } from "@/lib/dashboard-home";
@@ -18,18 +24,56 @@ import {
   getDashboardStats,
   getTodayAgenda,
 } from "@/lib/workspace-repository";
+import { mapOperationalAlertsToNavigationSignals } from "@/lib/dashboard-navigation-signals";
+import { getOperationalAlerts, getPrimaryOperationalAlert } from "@/lib/operational-alerts";
+import { listWorkspaceAuditEntriesByActions, listWorkspaceAuditEntriesByType } from "@/lib/audit-repository";
+import { buildOperationalDiagnosticsSnapshot } from "@/lib/operational-diagnostics";
+import { summarizeOperationalSignals } from "@/lib/operational-diagnostics-panel-helpers";
 
 export default async function DashboardPage() {
-  const [dashboardStats, todayAgenda, recommendations, cadenceMetrics, cadenceRisks] = await Promise.all([
+  const [
+    dashboardStats,
+    todayAgenda,
+    recommendations,
+    cadenceMetrics,
+    cadenceRisks,
+    operationalAlerts,
+    operationalDiagnostics,
+    evolutionAuditEntries,
+    fiscalAuditEntries,
+    asaasIncidentEntries,
+    asaasLifecycleEntries,
+    subscriptionAuditEntries,
+  ] = await Promise.all([
     getDashboardStats(),
     getTodayAgenda(),
     getDashboardRecommendations(),
     getDashboardCadenceMetrics(),
     getDashboardCadenceRisks(),
+    getOperationalAlerts(),
+    buildOperationalDiagnosticsSnapshot("dashboard-home"),
+    listWorkspaceAuditEntriesByType("evolution", 6),
+    listWorkspaceAuditEntriesByType("nfse", 6),
+    listWorkspaceAuditEntriesByActions(["charge.asaas.failed", "asaas.payment_overdue"], 6),
+    listWorkspaceAuditEntriesByActions(["workspace.asaas.connected", "workspace.asaas.disconnected", "workspace.asaas.subaccount_created"], 6),
+    listWorkspaceAuditEntriesByActions(["workspace.subscription.checkout_created", "workspace.subscription.checkout_synced", "subscription.asaas.payment_overdue", "subscription.asaas.payment_received", "subscription.asaas.payment_confirmed"], 6),
   ]);
 
-  const heroRecommendation = recommendations[0];
   const headlineStats = dashboardStats.slice(0, 4);
+  const navigationSignals = mapOperationalAlertsToNavigationSignals(operationalAlerts);
+  const orderedModuleCards = orderDashboardModuleCards(navigationSignals);
+  const orderedRecommendations = orderDashboardRecommendations(recommendations, navigationSignals);
+  const primaryOperationalAlert = getPrimaryOperationalAlert(operationalAlerts);
+  const heroState = getDashboardHeroState(orderedRecommendations, navigationSignals, primaryOperationalAlert);
+  const operationalSignals = {
+    evolution: summarizeOperationalSignals(evolutionAuditEntries),
+    fiscal: summarizeOperationalSignals(fiscalAuditEntries),
+    asaas: summarizeOperationalSignals([
+      ...asaasIncidentEntries,
+      ...asaasLifecycleEntries,
+    ]),
+    subscription: summarizeOperationalSignals(subscriptionAuditEntries),
+  };
 
   return (
     <DashboardShell
@@ -48,60 +92,70 @@ export default async function DashboardPage() {
         </>
       )}
     >
+      <DashboardOperationalDomainsStrip signals={navigationSignals} />
+
       <section className="dashboard-overview-hero">
-        <article className={`dashboard-spotlight-card fade-in-up ${heroRecommendation ? getDashboardPriorityClass(heroRecommendation.priority) : "priority-normal"}`}>
+        <article className={`dashboard-spotlight-card fade-in-up ${getDashboardPriorityClass(heroState.priority)}`}>
           <div className="dashboard-spotlight-header">
             <div>
               <span className="section-label">Prioridade do dia</span>
-              <h2>{heroRecommendation?.title || "A operação está estável e pronta para seguir pelos módulos."}</h2>
+              <h2>{heroState.title}</h2>
             </div>
-            <span className={`dashboard-priority-badge ${heroRecommendation ? getDashboardPriorityClass(heroRecommendation.priority) : "priority-normal"}`}>
-              {heroRecommendation ? getDashboardPriorityLabel(heroRecommendation.priority) : "Tudo sob controle"}
+            <span className={`dashboard-priority-badge ${getDashboardPriorityClass(heroState.priority)}`}>
+              {heroState.badgeLabel}
             </span>
           </div>
 
-          <p>
-            {heroRecommendation?.description || "Quando surgir um ponto realmente importante, ele aparece aqui primeiro para você não perder tempo procurando onde agir."}
-          </p>
+          <p>{heroState.description}</p>
+          {heroState.sourceLabel ? (
+            <small className="dashboard-hero-cause">
+              Dominio em foco: {heroState.sourceLabel}
+            </small>
+          ) : null}
+          {heroState.recoveryMessage ? (
+            <small className="dashboard-hero-recovery">
+              Ultimo sinal saudavel: {heroState.recoveryMessage}
+            </small>
+          ) : null}
 
           <div className="dashboard-hero-actions">
-            {heroRecommendation?.action?.kind === "quote_followup" ? (
+            {heroState.action?.kind === "quote_followup" ? (
               <form action={markDashboardQuoteFollowUpAction} className="card-action">
-                <input type="hidden" name="id" value={heroRecommendation.action.targetId} />
-                <input type="hidden" name="dueLabel" value={heroRecommendation.action.dueLabel || "Follow-up hoje"} />
+                <input type="hidden" name="id" value={heroState.action.targetId} />
+                <input type="hidden" name="dueLabel" value={heroState.action.dueLabel || "Follow-up hoje"} />
                 <button type="submit" className="primary-link">
-                  {heroRecommendation.action.label}
+                  {heroState.action.label}
                 </button>
               </form>
             ) : null}
-            {heroRecommendation?.action?.kind === "quote_to_charge" ? (
+            {heroState.action?.kind === "quote_to_charge" ? (
               <form action={generateDashboardChargeFromQuoteAction} className="card-action">
-                <input type="hidden" name="id" value={heroRecommendation.action.targetId} />
+                <input type="hidden" name="id" value={heroState.action.targetId} />
                 <button type="submit" className="primary-link">
-                  {heroRecommendation.action.label}
+                  {heroState.action.label}
                 </button>
               </form>
             ) : null}
-            {heroRecommendation?.action?.kind === "customer_status" ? (
+            {heroState.action?.kind === "customer_status" ? (
               <form action={markDashboardCustomerStatusAction} className="card-action">
-                <input type="hidden" name="id" value={heroRecommendation.action.targetId} />
-                <input type="hidden" name="status" value={heroRecommendation.action.status || ""} />
-                <input type="hidden" name="note" value={heroRecommendation.action.note || ""} />
+                <input type="hidden" name="id" value={heroState.action.targetId} />
+                <input type="hidden" name="status" value={heroState.action.status || ""} />
+                <input type="hidden" name="note" value={heroState.action.note || ""} />
                 <button type="submit" className="primary-link">
-                  {heroRecommendation.action.label}
+                  {heroState.action.label}
                 </button>
               </form>
             ) : null}
-            {heroRecommendation?.action?.kind === "charge_today" ? (
+            {heroState.action?.kind === "charge_today" ? (
               <form action={markDashboardChargeTodayAction} className="card-action">
-                <input type="hidden" name="id" value={heroRecommendation.action.targetId} />
+                <input type="hidden" name="id" value={heroState.action.targetId} />
                 <button type="submit" className="primary-link">
-                  {heroRecommendation.action.label}
+                  {heroState.action.label}
                 </button>
               </form>
             ) : null}
-            <Link href={heroRecommendation?.href || "/dashboard/quotes"} className="secondary-link">
-              {heroRecommendation?.hrefLabel || "Abrir área responsável"}
+            <Link href={heroState.href} className="secondary-link">
+              {heroState.hrefLabel}
             </Link>
           </div>
 
@@ -154,7 +208,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="cards-grid quote-grid">
-          {dashboardModuleCards.map((item) => (
+          {orderedModuleCards.map((item) => (
             <Link key={item.href} href={item.href} className="dashboard-card dashboard-card-refined nav-card fade-in-up">
               <span className="dashboard-kicker">{item.kicker}</span>
               <h3>{item.title}</h3>
@@ -173,21 +227,34 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {recommendations.length > 0 ? (
+          {orderedRecommendations.length > 0 ? (
             <div className="cards-grid quote-grid">
-              {recommendations.slice(0, 3).map((item) => (
-                <article
-                  key={`${item.kicker}-${item.title}`}
-                  className={`dashboard-card dashboard-card-refined fade-in-up ${getDashboardPriorityClass(item.priority)}`}
-                >
-                  <span className="dashboard-kicker">{item.kicker}</span>
+              {orderedRecommendations.slice(0, 3).map((item) => (
+                (() => {
+                  const operationalPromotion = getOperationalPromotionForRecommendation(item, navigationSignals);
+
+                  return (
+                    <article
+                      key={`${item.kicker}-${item.title}`}
+                      className={`dashboard-card dashboard-card-refined fade-in-up ${getDashboardPriorityClass(item.priority)}`}
+                    >
+                      <div className="dashboard-card-kicker-row">
+                        <span className="dashboard-kicker">{item.kicker}</span>
+                        {operationalPromotion ? (
+                          <span className={`dashboard-operational-badge dashboard-operational-badge-${operationalPromotion.status}`}>
+                            {operationalPromotion.label}: {operationalPromotion.signalLabel}
+                          </span>
+                        ) : null}
+                      </div>
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
                   <small className={`muted-text priority-text ${getDashboardPriorityClass(item.priority)}`}>{getDashboardPriorityLabel(item.priority)}</small>
                   <Link href={item.href} className="secondary-link">
                     {item.hrefLabel}
                   </Link>
-                </article>
+                    </article>
+                  );
+                })()
               ))}
             </div>
           ) : (
@@ -199,6 +266,11 @@ export default async function DashboardPage() {
         </article>
 
         <aside className="dashboard-side-rail">
+          <DashboardOperationalSummary
+            snapshot={operationalDiagnostics}
+            signals={operationalSignals}
+          />
+
           <article className="agenda-card agenda-card-refined">
             <div className="card-header">
               <div>

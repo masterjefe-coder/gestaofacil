@@ -7,15 +7,21 @@ import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 
 const logger = getLogger({ route: "api/evolution/pairing" });
 
+export const evolutionPairingRouteDeps = {
+  requireApiSession,
+  getCurrentWorkspaceContext,
+  connectEvolutionInstance,
+};
+
 export async function GET(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiSession();
+  const unauthorized = await evolutionPairingRouteDeps.requireApiSession();
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
 
-  const context = await getCurrentWorkspaceContext();
+  const context = await evolutionPairingRouteDeps.getCurrentWorkspaceContext();
   if (!canManageWorkspace(context.workspaceRole)) {
     requestLogger.warn("Evolution pairing rejected because workspace role cannot manage setup", {
       workspaceRole: context.workspaceRole,
@@ -38,7 +44,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await connectEvolutionInstance(instanceName);
+    const result = await evolutionPairingRouteDeps.connectEvolutionInstance(instanceName);
     requestLogger.info("Evolution pairing requested", {
       instanceName,
       hasPairingCode: Boolean(result.pairingCode),

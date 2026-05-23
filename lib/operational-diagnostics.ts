@@ -1,7 +1,11 @@
+import { getAllCircuitBreakerStates } from "@/lib/api-retry";
 import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
-import { getEvolutionIntegrationStatus } from "@/lib/evolution-api";
-import { getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
+import { getEvolutionIntegrationStatus, probeEvolutionApi } from "@/lib/evolution-api";
+import {
+  getNfseNationalIntegrationStatus,
+  inspectNfseNationalCertificate,
+} from "@/lib/nfse-national-provider";
 import { REQUEST_ID_HEADER } from "@/lib/request-tracing";
 
 type DiagnosticLevel = "ok" | "warning";
@@ -10,6 +14,12 @@ export type OperationalDiagnosticCheck = {
   key: string;
   level: DiagnosticLevel;
   summary: string;
+};
+
+type OperationalCircuitBreaker = {
+  state: "CLOSED" | "OPEN" | "HALF_OPEN";
+  failureCount: number;
+  lastFailureAt: string | null;
 };
 
 export type OperationalDiagnosticsSnapshot = {
@@ -39,12 +49,19 @@ export type OperationalDiagnosticsSnapshot = {
       environment: "sandbox" | "production";
       webhookConfigured: boolean;
       webhookTokenConfigured: boolean;
+      helper: string;
     };
     evolution: {
       enabled: boolean;
       webhookConfigured: boolean;
       defaultInstanceConfigured: boolean;
       timeoutMs: number;
+      helper: string;
+      connectivity: {
+        configured: boolean;
+        reachable: boolean;
+        summary: string;
+      };
     };
     nfse: {
       enabled: boolean;
@@ -53,7 +70,19 @@ export type OperationalDiagnosticsSnapshot = {
       hasCertificate: boolean;
       certificateSource?: "base64" | "path";
       missing: string[];
+      helper: string;
+      certificateInspection: {
+        ok: boolean;
+        validFrom?: string;
+        validTo?: string;
+        error?: string;
+      };
     };
+  };
+  resilience: {
+    openCircuitBreakerCount: number;
+    halfOpenCircuitBreakerCount: number;
+    circuitBreakers: Record<string, OperationalCircuitBreaker>;
   };
   checks: OperationalDiagnosticCheck[];
 };
@@ -62,15 +91,50 @@ function buildCheck(key: string, level: DiagnosticLevel, summary: string): Opera
   return { key, level, summary };
 }
 
-export function buildOperationalDiagnosticsSnapshot(requestId: string): OperationalDiagnosticsSnapshot {
-  const asaas = getAsaasIntegrationStatus();
-  const evolution = getEvolutionIntegrationStatus();
-  const nfse = getNfseNationalIntegrationStatus();
-  const localMode = isLocalDataMode();
+function toLastFailureAt(value: number) {
+  return value > 0 ? new Date(value).toISOString() : null;
+}
+
+export const operationalDiagnosticsDeps = {
+  getAllCircuitBreakerStates,
+  getAsaasIntegrationStatus,
+  getEvolutionIntegrationStatus,
+  getNfseNationalIntegrationStatus,
+  inspectNfseNationalCertificate,
+  isLocalDataMode,
+  probeEvolutionApi,
+};
+
+export async function buildOperationalDiagnosticsSnapshot(
+  requestId: string,
+): Promise<OperationalDiagnosticsSnapshot> {
+  const asaas = operationalDiagnosticsDeps.getAsaasIntegrationStatus();
+  const evolution = operationalDiagnosticsDeps.getEvolutionIntegrationStatus();
+  const nfse = operationalDiagnosticsDeps.getNfseNationalIntegrationStatus();
+  const localMode = operationalDiagnosticsDeps.isLocalDataMode();
   const databaseConfigured = Boolean(process.env.DATABASE_URL?.trim());
   const appBaseUrlConfigured = Boolean(process.env.APP_BASE_URL?.trim());
   const healthTokenConfigured = Boolean(process.env.HEALTHCHECK_TOKEN?.trim());
   const authSecretConfigured = Boolean(process.env.AUTH_SECRET?.trim() || process.env.NEXTAUTH_SECRET?.trim());
+  const [evolutionConnectivity, nfseCertificateInspection] = await Promise.all([
+    operationalDiagnosticsDeps.probeEvolutionApi(),
+    nfse.hasCertificate
+      ? operationalDiagnosticsDeps.inspectNfseNationalCertificate()
+      : Promise.resolve({ ok: false as const, error: "Certificado ausente." }),
+  ]);
+  const rawCircuitBreakers = operationalDiagnosticsDeps.getAllCircuitBreakerStates();
+  const circuitBreakers = Object.fromEntries(
+    Object.entries(rawCircuitBreakers).map(([name, state]) => [
+      name,
+      {
+        state: state.state,
+        failureCount: state.failureCount,
+        lastFailureAt: toLastFailureAt(state.lastFailureTime),
+      },
+    ]),
+  );
+  const openCircuitBreakerCount = Object.values(rawCircuitBreakers).filter((state) => state.state === "OPEN").length;
+  const halfOpenCircuitBreakerCount = Object.values(rawCircuitBreakers).filter((state) => state.state === "HALF_OPEN").length;
   const checks: OperationalDiagnosticCheck[] = [
     buildCheck(
       "runtime-storage",
@@ -121,11 +185,36 @@ export function buildOperationalDiagnosticsSnapshot(requestId: string): Operatio
         : "Evolution ainda nao configurada no ambiente.",
     ),
     buildCheck(
+      "evolution-connectivity",
+      !evolution.enabled || evolutionConnectivity.reachable ? "ok" : "warning",
+      !evolution.enabled
+        ? "Probe de conectividade pulada porque a Evolution ainda nao foi configurada."
+        : evolutionConnectivity.summary,
+    ),
+    buildCheck(
       "nfse-readiness",
       nfse.ready ? "ok" : "warning",
       nfse.ready
         ? "NFS-e Nacional pronta para operacao automatica."
         : `NFS-e Nacional pendente: ${nfse.missing.join(", ") || "revisar configuracao do ambiente"}.`,
+    ),
+    buildCheck(
+      "nfse-certificate",
+      !nfse.hasCertificate || nfseCertificateInspection.ok ? "ok" : "warning",
+      !nfse.hasCertificate
+        ? "Certificado digital ainda nao configurado no ambiente."
+        : nfseCertificateInspection.ok
+          ? "Certificado digital lido com sucesso para emissao fiscal."
+          : nfseCertificateInspection.error || "Falha ao inspecionar certificado digital da NFS-e.",
+    ),
+    buildCheck(
+      "api-resilience",
+      openCircuitBreakerCount === 0 ? "ok" : "warning",
+      openCircuitBreakerCount === 0
+        ? halfOpenCircuitBreakerCount > 0
+          ? `${halfOpenCircuitBreakerCount} circuit breaker(s) em recuperacao monitorada.`
+          : "Nenhum circuit breaker aberto nas integracoes monitoradas."
+        : `${openCircuitBreakerCount} circuit breaker(s) aberto(s); integracoes externas podem estar degradadas.`,
     ),
   ];
   const warningCount = checks.filter((check) => check.level === "warning").length;
@@ -158,12 +247,15 @@ export function buildOperationalDiagnosticsSnapshot(requestId: string): Operatio
         environment: asaas.environment,
         webhookConfigured: asaas.webhookConfigured,
         webhookTokenConfigured: asaas.webhookTokenConfigured,
+        helper: asaas.helper,
       },
       evolution: {
         enabled: evolution.enabled,
         webhookConfigured: evolution.webhookConfigured,
         defaultInstanceConfigured: Boolean(evolution.instance),
         timeoutMs: evolution.timeoutMs,
+        helper: evolution.helper,
+        connectivity: evolutionConnectivity,
       },
       nfse: {
         enabled: nfse.enabled,
@@ -172,7 +264,19 @@ export function buildOperationalDiagnosticsSnapshot(requestId: string): Operatio
         hasCertificate: nfse.hasCertificate,
         certificateSource: nfse.certificateSource,
         missing: nfse.missing,
+        helper: nfse.helper,
+        certificateInspection: {
+          ok: nfseCertificateInspection.ok,
+          validFrom: nfseCertificateInspection.ok ? nfseCertificateInspection.validFrom : undefined,
+          validTo: nfseCertificateInspection.ok ? nfseCertificateInspection.validTo : undefined,
+          error: nfseCertificateInspection.ok ? undefined : nfseCertificateInspection.error,
+        },
       },
+    },
+    resilience: {
+      openCircuitBreakerCount,
+      halfOpenCircuitBreakerCount,
+      circuitBreakers,
     },
     checks,
   };

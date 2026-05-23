@@ -16,12 +16,14 @@ function isAuthorized(request: NextRequest) {
   return timingSafeCompare(receivedToken, configuredToken);
 }
 
-export async function GET() {
-  return NextResponse.json({
+export async function GET(request: NextRequest) {
+  const requestId = getOrCreateRequestId(request);
+
+  return attachRequestId(NextResponse.json({
     status: "ok",
     service: "gestao-facil-asaas-webhook",
     timestamp: new Date().toISOString(),
-  });
+  }), requestId);
 }
 
 export async function POST(request: NextRequest) {

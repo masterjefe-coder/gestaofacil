@@ -6,16 +6,22 @@ import { getWorkspaceSetup, updateWorkspaceSetup } from "@/lib/workspace-setting
 
 const logger = getLogger({ route: "api/setup" });
 
+export const setupRouteDeps = {
+  requireApiModuleAccess,
+  getWorkspaceSetup,
+  updateWorkspaceSetup,
+};
+
 export async function GET(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess("setup", "canView");
+  const unauthorized = await setupRouteDeps.requireApiModuleAccess("setup", "canView");
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
 
   try {
-    const setup = await getWorkspaceSetup();
+    const setup = await setupRouteDeps.getWorkspaceSetup();
     requestLogger.info("Workspace setup fetched");
     return attachRequestId(NextResponse.json({ setup }), requestId);
   } catch (error) {
@@ -28,7 +34,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess(
+  const unauthorized = await setupRouteDeps.requireApiModuleAccess(
     "setup",
     "canConfigure",
     "Seu perfil atual nao pode alterar a configuracao da empresa.",
@@ -58,7 +64,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await updateWorkspaceSetup({
+    const result = await setupRouteDeps.updateWorkspaceSetup({
       name: body.name,
       slug: body.slug,
       niche: body.niche || "",

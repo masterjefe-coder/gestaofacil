@@ -37,6 +37,7 @@ type FiscalPageProps = {
     certificateOk?: string;
     focus?: string;
     view?: string;
+    operationalFocus?: string;
   }>;
 };
 
@@ -57,6 +58,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
   );
   const issuePreviewMap = new Map(issuePreviews);
   const params = await searchParams;
+  const operationalFocus = params?.operationalFocus || "";
   const integrationStatus = getNfseNationalIntegrationStatus();
   const emissionModes = getNfseEmissionModeSummary();
   const portalUrls = getNfseNationalPortalUrls();
@@ -79,6 +81,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
     : focus === "ready"
       ? "O dashboard destacou documentos prontos para seguir emissão sem novo retrabalho operacional."
       : "";
+  const documentosFocused = operationalFocus === "documentos";
 
   return (
     <DashboardShell
@@ -507,13 +510,23 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         )}
       </section>
 
-      <section id="documentos-fiscais" className="data-panel">
+      <section
+        id="documentos-fiscais"
+        className={documentosFocused ? "data-panel operational-focus-panel" : "data-panel"}
+      >
         <div className="card-header">
           <div>
             <span className="section-label">Documentos fiscais</span>
             <h2>Notas em preparação, prontas, emitidas e com ajuste pendente</h2>
           </div>
         </div>
+
+        {documentosFocused ? (
+          <div className="operational-focus-banner">
+            <strong>Atenção operacional direcionada</strong>
+            <span>Você chegou aqui porque a fila fiscal está com pendência estrutural ou documento pedindo revisão.</span>
+          </div>
+        ) : null}
 
         {documents.length > 0 ? (
           <div className="cards-grid quote-grid">

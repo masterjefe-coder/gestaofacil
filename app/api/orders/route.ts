@@ -6,15 +6,22 @@ import { ensureOrderFromQuote, listOrders, updateOrderStatus } from "@/lib/order
 
 const logger = getLogger({ route: "api/orders" });
 
+export const ordersRouteDeps = {
+  requireApiModuleAccess,
+  listOrders,
+  ensureOrderFromQuote,
+  updateOrderStatus,
+};
+
 export async function GET(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess("orders", "canView");
+  const unauthorized = await ordersRouteDeps.requireApiModuleAccess("orders", "canView");
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
 
-  const orders = await listOrders();
+  const orders = await ordersRouteDeps.listOrders();
   requestLogger.info("Orders listed", { count: orders.length });
   return attachRequestId(NextResponse.json({ orders }), requestId);
 }
@@ -22,7 +29,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess("orders", "canManage");
+  const unauthorized = await ordersRouteDeps.requireApiModuleAccess("orders", "canManage");
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
@@ -35,7 +42,7 @@ export async function POST(request: Request) {
   };
 
   if (body.quoteId) {
-    const order = await ensureOrderFromQuote(body.quoteId);
+    const order = await ordersRouteDeps.ensureOrderFromQuote(body.quoteId);
 
     if (!order) {
       requestLogger.warn("Order creation from quote failed — quote not found", { quoteId: body.quoteId });
@@ -51,7 +58,7 @@ export async function POST(request: Request) {
     return attachRequestId(NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 }), requestId);
   }
 
-  const order = await updateOrderStatus(body.id, {
+  const order = await ordersRouteDeps.updateOrderStatus(body.id, {
     status: body.status,
     note: body.note,
   });

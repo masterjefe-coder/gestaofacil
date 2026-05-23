@@ -36,6 +36,7 @@ type BillingPageProps = {
   searchParams?: Promise<{
     focus?: string;
     view?: string;
+    operationalFocus?: string;
   }>;
 };
 
@@ -112,6 +113,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
   const savedPreference = await readDashboardQueuePreference("billing");
   const focus = params?.focus || savedPreference.focus || "";
   const requestedView = params?.view || savedPreference.view || "";
+  const operationalFocus = params?.operationalFocus || "";
   const triageChargeIds = new Set(chargesNeedingHumanTriage.map((item) => item.id));
   const viewFromFocus: Partial<Record<string, BillingQueueView>> = {
     contestations: "triage",
@@ -145,6 +147,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
       : focus === "triage"
         ? "O dashboard identificou respostas no canal que ainda pedem leitura humana na cobrança."
         : "";
+  const recebimentosFocused = operationalFocus === "recebimentos";
 
   return (
     <DashboardShell
@@ -646,7 +649,10 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         )}
       </section>
 
-      <section id="recebimentos" className="data-panel">
+      <section
+        id="recebimentos"
+        className={recebimentosFocused ? "data-panel operational-focus-panel" : "data-panel"}
+      >
         <div className="card-header">
           <div>
             <span className="section-label">Fila de follow-up</span>
@@ -657,6 +663,13 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             <small>item(ns) no recorte atual</small>
           </div>
         </div>
+
+        {recebimentosFocused ? (
+          <div className="operational-focus-banner">
+            <strong>Atenção operacional direcionada</strong>
+            <span>Você chegou aqui porque a fila de recebimentos ou a triagem financeira merece ação primeiro.</span>
+          </div>
+        ) : null}
 
         {highlightedFollowUps.length > 0 ? (
           <div className="cards-grid quote-grid">

@@ -6,15 +6,21 @@ import { createCustomer, listCustomers } from "@/lib/customer-repository";
 
 const logger = getLogger({ route: "api/customers" });
 
+export const customersRouteDeps = {
+  requireApiModuleAccess,
+  listCustomers,
+  createCustomer,
+};
+
 export async function GET(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess("customers", "canView");
+  const unauthorized = await customersRouteDeps.requireApiModuleAccess("customers", "canView");
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
 
-  const customers = await listCustomers();
+  const customers = await customersRouteDeps.listCustomers();
   requestLogger.info("Customers listed", { count: customers.length });
   return attachRequestId(NextResponse.json({ customers }), requestId);
 }
@@ -22,7 +28,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess("customers", "canManage");
+  const unauthorized = await customersRouteDeps.requireApiModuleAccess("customers", "canManage");
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
@@ -41,7 +47,7 @@ export async function POST(request: Request) {
     return attachRequestId(NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 }), requestId);
   }
 
-  const customer = await createCustomer({
+  const customer = await customersRouteDeps.createCustomer({
     name: body.name,
     document: body.document || undefined,
     segment: body.segment,

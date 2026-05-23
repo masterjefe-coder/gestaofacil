@@ -6,15 +6,22 @@ import { createCharge, createChargeFromQuote, listCharges } from "@/lib/charge-r
 
 const logger = getLogger({ route: "api/charges" });
 
+export const chargesRouteDeps = {
+  requireApiModuleAccess,
+  listCharges,
+  createChargeFromQuote,
+  createCharge,
+};
+
 export async function GET(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess("billing", "canView");
+  const unauthorized = await chargesRouteDeps.requireApiModuleAccess("billing", "canView");
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
 
-  const charges = await listCharges();
+  const charges = await chargesRouteDeps.listCharges();
   requestLogger.info("Charges listed", { count: charges.length });
   return attachRequestId(NextResponse.json({ charges }), requestId);
 }
@@ -22,7 +29,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess(
+  const unauthorized = await chargesRouteDeps.requireApiModuleAccess(
     "billing",
     "canManage",
     "Seu perfil atual pode acompanhar a fila financeira, mas nao criar ou alterar cobrancas.",
@@ -43,7 +50,7 @@ export async function POST(request: Request) {
   };
 
   if (body.quoteId) {
-    const charge = await createChargeFromQuote(
+    const charge = await chargesRouteDeps.createChargeFromQuote(
       body.quoteId,
       body.paymentMethod || "Pix",
       body.dueLabel || "",
@@ -69,7 +76,7 @@ export async function POST(request: Request) {
     return attachRequestId(NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 }), requestId);
   }
 
-  const charge = await createCharge({
+  const charge = await chargesRouteDeps.createCharge({
     customer: body.customer,
     amount: body.amount,
     dueLabel: body.dueLabel || "",

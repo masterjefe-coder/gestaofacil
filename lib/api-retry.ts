@@ -47,6 +47,12 @@ enum CircuitState {
   HALF_OPEN = "HALF_OPEN",
 }
 
+export type CircuitBreakerSnapshot = {
+  state: CircuitState;
+  failureCount: number;
+  lastFailureTime: number;
+};
+
 class CircuitBreaker {
   private state: CircuitState = CircuitState.CLOSED;
   private failureCount = 0;
@@ -100,7 +106,7 @@ class CircuitBreaker {
     }
   }
 
-  getState() {
+  getState(): CircuitBreakerSnapshot {
     return {
       state: this.state,
       failureCount: this.failureCount,
@@ -253,11 +259,15 @@ export function getCircuitBreakerState(name: string) {
  * Get all circuit breaker states for monitoring
  */
 export function getAllCircuitBreakerStates() {
-  const states: Record<string, ReturnType<CircuitBreaker["getState"]>> = {};
+  const states: Record<string, CircuitBreakerSnapshot> = {};
   for (const [name, breaker] of circuitBreakers.entries()) {
     states[name] = breaker.getState();
   }
   return states;
+}
+
+export function resetAllCircuitBreakerStates() {
+  circuitBreakers.clear();
 }
 
 // Made with Bob
