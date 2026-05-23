@@ -8,11 +8,15 @@ import { REQUEST_ID_HEADER } from "@/lib/request-tracing";
 const originalDiagnosticsDeps = {
   inspectNfseNationalCertificate: operationalDiagnosticsDeps.inspectNfseNationalCertificate,
   probeEvolutionApi: operationalDiagnosticsDeps.probeEvolutionApi,
+  listBackgroundJobStats: operationalDiagnosticsDeps.listBackgroundJobStats,
+  getRateLimiterStats: operationalDiagnosticsDeps.getRateLimiterStats,
 };
 
 function restoreOperationalDiagnosticsDeps() {
   operationalDiagnosticsDeps.inspectNfseNationalCertificate = originalDiagnosticsDeps.inspectNfseNationalCertificate;
   operationalDiagnosticsDeps.probeEvolutionApi = originalDiagnosticsDeps.probeEvolutionApi;
+  operationalDiagnosticsDeps.listBackgroundJobStats = originalDiagnosticsDeps.listBackgroundJobStats;
+  operationalDiagnosticsDeps.getRateLimiterStats = originalDiagnosticsDeps.getRateLimiterStats;
 }
 
 async function withEnv<T>(entries: Record<string, string | undefined>, fn: () => Promise<T>) {
@@ -43,6 +47,20 @@ async function withEnv<T>(entries: Record<string, string | undefined>, fn: () =>
 
 test("diagnostics route rejects unauthenticated requests without health token", async () => {
   restoreOperationalDiagnosticsDeps();
+  operationalDiagnosticsDeps.listBackgroundJobStats = async () => ({
+    pendingCount: 0,
+    runningCount: 0,
+    failedCount: 0,
+    completedCount: 0,
+  });
+  operationalDiagnosticsDeps.getRateLimiterStats = () => ({
+    mode: "local",
+    auth: { windowMs: 15 * 60 * 1000, maxRequests: 5 },
+    api: { windowMs: 60 * 1000, maxRequests: 60 },
+    webhook: { windowMs: 60 * 1000, maxRequests: 100 },
+    passwordReset: { windowMs: 60 * 60 * 1000, maxRequests: 3 },
+    general: { windowMs: 60 * 1000, maxRequests: 100 },
+  });
   await withEnv({ HEALTHCHECK_TOKEN: "health-secret" }, async () => {
     const response = await getDiagnostics(new NextRequest("http://localhost/api/diagnostics"));
     const payload = await response.json();
@@ -66,6 +84,20 @@ test("diagnostics route returns operational snapshot for valid health token", as
     validFrom: "2026-01-01T00:00:00.000Z",
     validTo: "2027-01-01T00:00:00.000Z",
     hasPrivateKey: true,
+  });
+  operationalDiagnosticsDeps.listBackgroundJobStats = async () => ({
+    pendingCount: 1,
+    runningCount: 0,
+    failedCount: 0,
+    completedCount: 5,
+  });
+  operationalDiagnosticsDeps.getRateLimiterStats = () => ({
+    mode: "distributed",
+    auth: { windowMs: 15 * 60 * 1000, maxRequests: 5 },
+    api: { windowMs: 60 * 1000, maxRequests: 60 },
+    webhook: { windowMs: 60 * 1000, maxRequests: 100 },
+    passwordReset: { windowMs: 60 * 60 * 1000, maxRequests: 3 },
+    general: { windowMs: 60 * 1000, maxRequests: 100 },
   });
   await withEnv({
     NODE_ENV: "production",
@@ -100,12 +132,15 @@ test("diagnostics route returns operational snapshot for valid health token", as
     assert.equal(payload.requestTracing.header, REQUEST_ID_HEADER);
     assert.equal(payload.runtime.mode, "database");
     assert.equal(payload.runtime.appBaseUrlConfigured, true);
+    assert.equal(payload.runtime.rateLimitMode, "distributed");
     assert.equal(payload.integrations.asaas.webhookConfigured, true);
     assert.equal(payload.integrations.evolution.defaultInstanceConfigured, true);
     assert.equal(payload.integrations.evolution.connectivity.reachable, true);
     assert.equal(payload.integrations.nfse.ready, true);
     assert.equal(payload.integrations.nfse.certificateInspection.ok, true);
     assert.equal(payload.resilience.openCircuitBreakerCount, 0);
+    assert.equal("providers" in payload.resilience, true);
+    assert.equal(payload.resilience.jobs.pendingCount, 1);
     assert.equal(
       payload.checks.some((check: { key: string; level: string }) => check.key === "auth-secrets" && check.level === "ok"),
       true,

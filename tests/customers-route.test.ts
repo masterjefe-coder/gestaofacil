@@ -136,3 +136,30 @@ test("customers route POST creates customer with defaults and request id", async
     restoreCustomersRouteDeps();
   }
 });
+
+test("customers route POST rejects blank required values after normalization", async () => {
+  customersRouteDeps.requireApiModuleAccess = async () => null;
+
+  try {
+    const requestId = "customers-post-blank-required-request-id";
+    const response = await postCustomers(new Request("http://localhost/api/customers", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        [REQUEST_ID_HEADER]: requestId,
+      },
+      body: JSON.stringify({
+        name: "Cliente A",
+        segment: "   ",
+        city: "Sao Paulo",
+      }),
+    }));
+    const payload = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.match(payload.error, /obrigatorios ausentes/i);
+    assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
+  } finally {
+    restoreCustomersRouteDeps();
+  }
+});

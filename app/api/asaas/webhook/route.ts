@@ -4,7 +4,7 @@ import { getLogger } from "@/lib/api-logger";
 import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 import { isWebhookSecretConfigured } from "@/lib/runtime-safety";
 import { timingSafeCompare, verifyWebhookTimestamp } from "@/lib/security-crypto";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitRequest } from "@/lib/rate-limit";
 
 const logger = getLogger({ route: "api/asaas/webhook" });
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   const requestLogger = logger.child({ requestId });
 
   // Apply rate limiting for webhooks
-  const rateLimitResponse = rateLimit(request, "webhook");
+  const rateLimitResponse = await rateLimitRequest(request, "webhook");
   if (rateLimitResponse) {
     requestLogger.warn("Asaas webhook rate limited");
     return attachRequestId(rateLimitResponse, requestId);

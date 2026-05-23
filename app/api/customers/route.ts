@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getLogger } from "@/lib/api-logger";
 import { requireApiModuleAccess } from "@/lib/api-auth";
+import { ApiInputError, parseCustomerPayload, readJsonObject } from "@/lib/api-inputs";
 import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 import { createCustomer, listCustomers } from "@/lib/customer-repository";
 
@@ -33,29 +34,20 @@ export async function POST(request: Request) {
     return attachRequestId(unauthorized, requestId);
   }
 
-  const body = (await request.json()) as {
-    name?: string;
-    document?: string;
-    segment?: string;
-    city?: string;
-    status?: "Ativo" | "Aguardando retorno" | "Recorrente";
-    note?: string;
-  };
+  try {
+    const body = parseCustomerPayload(await readJsonObject(request));
+    const customer = await customersRouteDeps.createCustomer(body);
 
-  if (!body.name || !body.segment || !body.city) {
-    requestLogger.warn("Customer creation rejected — missing required fields");
-    return attachRequestId(NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 }), requestId);
+    requestLogger.info("Customer created", { customerId: customer.id, name: body.name });
+    return attachRequestId(NextResponse.json({ customer }, { status: 201 }), requestId);
+  } catch (error) {
+    if (error instanceof ApiInputError) {
+      requestLogger.warn("Customer creation rejected — invalid request payload", { reason: error.message });
+      return attachRequestId(NextResponse.json({ error: error.message }, { status: 400 }), requestId);
+    }
+
+    const message = error instanceof Error ? error.message : "Falha ao criar o cliente.";
+    requestLogger.error("Customer creation failed", error instanceof Error ? error : undefined);
+    return attachRequestId(NextResponse.json({ error: message }, { status: 400 }), requestId);
   }
-
-  const customer = await customersRouteDeps.createCustomer({
-    name: body.name,
-    document: body.document || undefined,
-    segment: body.segment,
-    city: body.city,
-    status: body.status || "Ativo",
-    note: body.note || "",
-  });
-
-  requestLogger.info("Customer created", { customerId: customer.id, name: body.name });
-  return attachRequestId(NextResponse.json({ customer }, { status: 201 }), requestId);
 }

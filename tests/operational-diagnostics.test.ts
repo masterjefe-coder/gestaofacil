@@ -10,11 +10,15 @@ import { REQUEST_ID_HEADER } from "@/lib/request-tracing";
 const originalDiagnosticsDeps = {
   inspectNfseNationalCertificate: operationalDiagnosticsDeps.inspectNfseNationalCertificate,
   probeEvolutionApi: operationalDiagnosticsDeps.probeEvolutionApi,
+  listBackgroundJobStats: operationalDiagnosticsDeps.listBackgroundJobStats,
+  getRateLimiterStats: operationalDiagnosticsDeps.getRateLimiterStats,
 };
 
 function restoreOperationalDiagnosticsDeps() {
   operationalDiagnosticsDeps.inspectNfseNationalCertificate = originalDiagnosticsDeps.inspectNfseNationalCertificate;
   operationalDiagnosticsDeps.probeEvolutionApi = originalDiagnosticsDeps.probeEvolutionApi;
+  operationalDiagnosticsDeps.listBackgroundJobStats = originalDiagnosticsDeps.listBackgroundJobStats;
+  operationalDiagnosticsDeps.getRateLimiterStats = originalDiagnosticsDeps.getRateLimiterStats;
 }
 
 async function withEnv<T>(entries: Record<string, string | undefined>, fn: () => Promise<T>) {
@@ -46,6 +50,20 @@ async function withEnv<T>(entries: Record<string, string | undefined>, fn: () =>
 test("operational diagnostics snapshot reports warnings when key env vars are missing", async () => {
   resetAllCircuitBreakerStates();
   restoreOperationalDiagnosticsDeps();
+  operationalDiagnosticsDeps.listBackgroundJobStats = async () => ({
+    pendingCount: 0,
+    runningCount: 0,
+    failedCount: 0,
+    completedCount: 0,
+  });
+  operationalDiagnosticsDeps.getRateLimiterStats = () => ({
+    mode: "local",
+    auth: { windowMs: 15 * 60 * 1000, maxRequests: 5 },
+    api: { windowMs: 60 * 1000, maxRequests: 60 },
+    webhook: { windowMs: 60 * 1000, maxRequests: 100 },
+    passwordReset: { windowMs: 60 * 60 * 1000, maxRequests: 3 },
+    general: { windowMs: 60 * 1000, maxRequests: 100 },
+  });
   await withEnv({
     NODE_ENV: "production",
     DATABASE_URL: undefined,
@@ -94,6 +112,20 @@ test("operational diagnostics snapshot reports ok when runtime and integrations 
     validTo: "2027-01-01T00:00:00.000Z",
     hasPrivateKey: true,
   });
+  operationalDiagnosticsDeps.listBackgroundJobStats = async () => ({
+    pendingCount: 2,
+    runningCount: 1,
+    failedCount: 0,
+    completedCount: 4,
+  });
+  operationalDiagnosticsDeps.getRateLimiterStats = () => ({
+    mode: "distributed",
+    auth: { windowMs: 15 * 60 * 1000, maxRequests: 5 },
+    api: { windowMs: 60 * 1000, maxRequests: 60 },
+    webhook: { windowMs: 60 * 1000, maxRequests: 100 },
+    passwordReset: { windowMs: 60 * 60 * 1000, maxRequests: 3 },
+    general: { windowMs: 60 * 1000, maxRequests: 100 },
+  });
   await withEnv({
     NODE_ENV: "production",
     DATABASE_URL: "file:./test.db",
@@ -112,6 +144,18 @@ test("operational diagnostics snapshot reports ok when runtime and integrations 
     NFSE_NATIONAL_CERT_PFX_BASE64: "ZmFrZQ==",
     NFSE_NATIONAL_CERT_PASSPHRASE: "cert-secret",
   }, async () => {
+    await withRetryAndCircuitBreaker(
+      "asaas-api",
+      async () => ({ ok: true }),
+      {
+        maxAttempts: 1,
+      },
+      {
+        failureThreshold: 5,
+        resetTimeoutMs: 60000,
+      },
+    );
+
     const snapshot = await buildOperationalDiagnosticsSnapshot("ok-request-id");
 
     assert.equal(snapshot.status, "ok");
@@ -124,7 +168,12 @@ test("operational diagnostics snapshot reports ok when runtime and integrations 
     assert.equal(snapshot.integrations.nfse.ready, true);
     assert.equal(snapshot.integrations.nfse.certificateInspection.ok, true);
     assert.equal(snapshot.resilience.openCircuitBreakerCount, 0);
+    assert.equal(snapshot.resilience.providers["asaas-api"]?.successCount, 1);
+    assert.equal(snapshot.runtime.rateLimitMode, "distributed");
+    assert.equal(snapshot.resilience.jobs.pendingCount, 2);
     assert.equal(snapshot.checks.some((check) => check.key === "api-resilience" && check.level === "ok"), true);
+    assert.equal(snapshot.checks.some((check) => check.key === "provider-telemetry" && check.level === "ok"), true);
+    assert.equal(snapshot.checks.some((check) => check.key === "background-jobs" && check.level === "ok"), true);
   });
   restoreOperationalDiagnosticsDeps();
 });
@@ -139,6 +188,20 @@ test("operational diagnostics snapshot reports open circuit breakers as warnings
   operationalDiagnosticsDeps.inspectNfseNationalCertificate = async () => ({
     ok: false,
     error: "Certificado ausente.",
+  });
+  operationalDiagnosticsDeps.listBackgroundJobStats = async () => ({
+    pendingCount: 0,
+    runningCount: 0,
+    failedCount: 1,
+    completedCount: 0,
+  });
+  operationalDiagnosticsDeps.getRateLimiterStats = () => ({
+    mode: "local",
+    auth: { windowMs: 15 * 60 * 1000, maxRequests: 5 },
+    api: { windowMs: 60 * 1000, maxRequests: 60 },
+    webhook: { windowMs: 60 * 1000, maxRequests: 100 },
+    passwordReset: { windowMs: 60 * 60 * 1000, maxRequests: 3 },
+    general: { windowMs: 60 * 1000, maxRequests: 100 },
   });
 
   try {
@@ -163,7 +226,10 @@ test("operational diagnostics snapshot reports open circuit breakers as warnings
 
   assert.equal(snapshot.resilience.openCircuitBreakerCount, 1);
   assert.equal(snapshot.resilience.circuitBreakers["diagnostics-test-breaker"]?.state, "OPEN");
+  assert.equal(snapshot.resilience.providers["diagnostics-test-breaker"]?.failureCount, 1);
   assert.equal(snapshot.checks.some((check) => check.key === "api-resilience" && check.level === "warning"), true);
+  assert.equal(snapshot.checks.some((check) => check.key === "provider-telemetry" && check.level === "warning"), true);
+  assert.equal(snapshot.checks.some((check) => check.key === "background-jobs" && check.level === "warning"), true);
 
   resetAllCircuitBreakerStates();
   restoreOperationalDiagnosticsDeps();

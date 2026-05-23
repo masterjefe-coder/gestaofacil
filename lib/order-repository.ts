@@ -52,7 +52,10 @@ export async function listOrders(): Promise<Order[]> {
   await ensureDemoCommerceSeeded();
   const { workspaceId } = await getCurrentWorkspaceContext();
   const orders = await prisma.order.findMany({
-    where: { workspaceId },
+    where: {
+      workspaceId,
+      deletedAt: null,
+    },
     include: {
       customer: true,
       quote: true,
@@ -104,21 +107,29 @@ export async function ensureOrderFromQuote(quoteId: string): Promise<Order | nul
   await ensureDemoCommerceSeeded();
   const { workspaceId } = await getCurrentWorkspaceContext();
 
-  const quote = await prisma.quote.findUnique({
-    where: { id: quoteId },
+  const quote = await prisma.quote.findFirst({
+    where: {
+      id: quoteId,
+      workspaceId,
+      deletedAt: null,
+    },
     include: { customer: true },
   });
 
-  if (!quote || quote.workspaceId !== workspaceId) {
+  if (!quote) {
     return null;
   }
 
-  const existing = await prisma.order.findUnique({
-    where: { quoteId },
+  const existing = await prisma.order.findFirst({
+    where: {
+      quoteId,
+      workspaceId,
+      deletedAt: null,
+    },
     include: { customer: true, quote: true },
   });
 
-  if (existing && existing.workspaceId === workspaceId) {
+  if (existing) {
     return {
       id: existing.id,
       customer: existing.customer.name,
@@ -185,6 +196,7 @@ export async function updateOrderStatus(
     where: {
       id,
       workspaceId: context.workspaceId,
+      deletedAt: null,
     },
     include: {
       customer: true,
@@ -200,6 +212,9 @@ export async function updateOrderStatus(
     where: { id: existing.id },
     data: {
       status: mapOrderStatus(input.status),
+      version: {
+        increment: 1,
+      },
       internalNotes: input.note || existing.internalNotes,
       scheduledFor: input.status === "Agendado" ? (existing.scheduledFor || new Date()) : existing.scheduledFor,
       completedAt: input.status === "Concluido" ? new Date() : null,

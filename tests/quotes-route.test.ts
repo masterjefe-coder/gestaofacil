@@ -130,3 +130,31 @@ test("quotes route POST creates quote with defaults and request id", async () =>
     restoreQuotesRouteDeps();
   }
 });
+
+test("quotes route POST rejects invalid status outside the route domain", async () => {
+  quotesRouteDeps.requireApiModuleAccess = async () => null;
+
+  try {
+    const requestId = "quotes-post-invalid-status-request-id";
+    const response = await postQuotes(new Request("http://localhost/api/quotes", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        [REQUEST_ID_HEADER]: requestId,
+      },
+      body: JSON.stringify({
+        customer: "Cliente A",
+        title: "Plano mensal",
+        amount: "R$ 1.500",
+        status: "Rascunho",
+      }),
+    }));
+    const payload = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.match(payload.error, /status/i);
+    assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
+  } finally {
+    restoreQuotesRouteDeps();
+  }
+});

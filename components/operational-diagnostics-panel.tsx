@@ -37,8 +37,22 @@ function formatTimestamp(value: string | null) {
   }).format(new Date(value));
 }
 
+function getProviderOutcomeLabel(value: "success" | "failure" | "circuit-open" | null) {
+  switch (value) {
+    case "success":
+      return "Ultima chamada saudavel";
+    case "failure":
+      return "Ultima chamada com falha";
+    case "circuit-open":
+      return "Protecao aberta na ultima tentativa";
+    default:
+      return "Sem chamada recente";
+  }
+}
+
 export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDiagnosticsPanelProps) {
   const circuitBreakers = Object.entries(snapshot.resilience.circuitBreakers);
+  const providers = Object.entries(snapshot.resilience.providers);
   const topChecks = snapshot.checks.slice(0, 6);
   const warningChecks = snapshot.checks.filter((check) => check.level === "warning").slice(0, 4);
 
@@ -138,6 +152,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
           <div className="ops-inline-meta">
             <span>{snapshot.runtime.healthTokenConfigured ? "Health token pronto" : "Health token ausente"}</span>
             <span>{snapshot.runtime.authSecretConfigured ? "Segredo de sessão ok" : "Segredo pendente"}</span>
+            <span>{snapshot.runtime.rateLimitMode === "distributed" ? "Rate limit distribuido" : "Rate limit local"}</span>
             <span>Request ID base: {snapshot.requestId}</span>
           </div>
           <div className="hero-actions">
@@ -150,6 +165,49 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
           </div>
         </article>
       </div>
+
+      <article className="split-panel">
+        <span className="section-label">Telemetria por provedor</span>
+        <h2>Como as integracoes estao se comportando na pratica</h2>
+        {providers.length > 0 ? (
+          <div className="ops-breaker-list">
+            {providers.map(([name, state]) => (
+              <div key={name} className="ops-provider-item">
+                <strong>{name}</strong>
+                <span>{getProviderOutcomeLabel(state.lastOutcome)}</span>
+                <small>
+                  {state.successCount} sucesso(s) · {state.failureCount} falha(s) · {state.retriedCalls} com retry
+                </small>
+                <small>
+                  {state.lastDurationMs !== null ? `${state.lastDurationMs}ms na ultima chamada` : "Sem duracao recente"}
+                  {state.lastStatusCode ? ` · status ${state.lastStatusCode}` : ""}
+                </small>
+                {state.lastErrorMessage ? <small>{state.lastErrorMessage}</small> : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <small className="muted-text">As chamadas externas ainda nao geraram amostra suficiente neste runtime.</small>
+        )}
+      </article>
+
+      <article className="split-panel">
+        <span className="section-label">Fila assíncrona</span>
+        <h2>Jobs operacionais em background</h2>
+        <div className="ops-inline-meta">
+          <span>{snapshot.resilience.jobs.pendingCount} pendente(s)</span>
+          <span>{snapshot.resilience.jobs.runningCount} em execucao</span>
+          <span>{snapshot.resilience.jobs.failedCount} falho(s)</span>
+          <span>{snapshot.resilience.jobs.completedCount} concluido(s)</span>
+        </div>
+        <p>
+          {snapshot.resilience.jobs.failedCount > 0
+            ? "Existe job falho pedindo triagem manual ou nova tentativa controlada."
+            : snapshot.resilience.jobs.pendingCount > 0
+              ? "A fila tem trabalho pendente, mas sem falha estrutural conhecida agora."
+              : "Nenhum job operacional pendente ou falho no momento."}
+        </p>
+      </article>
 
       <article className="split-panel">
         <span className="section-label">Checks principais</span>

@@ -124,10 +124,55 @@ Condicoes para voltar:
 - Testes aderentes de webhook: concluido na primeira camada
 - Correlacao basica com `x-request-id`: concluido nas rotas criticas
 - Governanca de PR no repositorio: concluido com `CODEOWNERS`, template de PR e guia de branch protection
+- Diagnostics/admin view operacional: concluido com endpoint, painel no setup, resumo na home, shell e navegacao contextual
+- Telemetria de retry/circuit breaker por provedor: concluido na camada operacional atual
+- CSP e security headers: revisados para uma politica mais restrita e aderente ao app atual
 
-## Proxima melhor leva
+## Status consolidado do reaproveitamento
 
-- Expandir observabilidade util para operacao
-  - padronizar `x-request-id` tambem em outras rotas sensiveis
-  - melhorar logs de erro nas integracoes sem expor dado sensivel
-  - avaliar um endpoint/admin view simples para diagnostico operacional antes de pensar em OpenTelemetry
+- Concluido
+  - Webhook hardening com validacao, rate limit local, timestamp e testes aderentes
+  - Correlacao com `x-request-id` nas rotas criticas e nas integracoes externas
+  - Logs estruturados com sanitizacao de erro externo
+  - Resumo operacional no dashboard, shell, sidebar e modulos com deep links de acao
+  - Testes aderentes das rotas criticas de webhook, health, setup, exportacao e integracoes operacionais
+  - CI unico com job `quality`
+  - Security headers base e CSP revisada
+
+- Parcialmente concluido
+  - Resiliencia das integracoes externas
+    - Retry, circuit breaker, idempotency key e telemetria operacional por provedor ja entraram
+    - Ainda falta calibracao fina de limites por ambiente e por provedor com dados reais de producao
+  - Observabilidade enxuta
+    - Request id, logs estruturados, endpoint de diagnostico e view admin ja entraram
+    - Ainda faltam metricas mais formais e eventualmente rollout pequeno de OpenTelemetry
+  - Rate limit distribuido
+    - Ja existe modo distribuido persistido com fallback local, headers coerentes e diagnostico operacional
+    - Ainda falta trocar o backend por Redis quando houver necessidade real de multi-instancia pesada
+  - Fila de jobs
+    - Ja existe persistencia de jobs, leasing, retry basico, dedupe e visibilidade operacional
+    - Ainda falta worker dedicado, observabilidade de execucao e backend de fila mais forte se o volume crescer
+  - Soft delete
+    - Schema, repositorios centrais e leituras operacionais criticas ja consideram `deletedAt`
+    - Ainda falta estrategia explicita de restauracao e propagacao total para todos os read models restantes
+  - Validacao centralizada
+    - Rotas criticas e actions principais ja usam parsing compartilhado aderente ao dominio real
+    - Ainda falta ampliar isso para toda superficie restante do produto
+  - Governanca de merge
+    - Workflow, `quality`, `CODEOWNERS` e template estao no lugar
+    - Ainda depende de o repositorio manter branch protection e status checks exigidos no GitHub
+
+- Pendente
+  - Optimistic locking para edicao concorrente
+  - UI utilitaria apenas onde houver uso real, acessibilidade e aderencia visual
+
+## Proximas levas mais fortes
+
+1. Calibrar resiliência por provedor com limites reais de produção
+   - revisar `maxAttempts`, timeout, abertura e recuperação de breaker por integração
+   - separar melhor falha transitória de falha funcional de provedor
+2. Decidir se já existe necessidade operacional real de rate limit distribuído
+   - se sim, substituir a estratégia local em vez de duplicar
+3. Avaliar fila de jobs para webhooks e tarefas assíncronas
+   - próximo passo real: worker dedicado, reconciliação e processamento desacoplado contínuo
+4. Fechar optimistic locking e restauração de soft delete junto de revisão explícita de UX e schema

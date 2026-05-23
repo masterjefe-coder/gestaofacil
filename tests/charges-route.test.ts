@@ -197,3 +197,30 @@ test("charges route POST creates manual charge with defaults and request id", as
     restoreChargesRouteDeps();
   }
 });
+
+test("charges route POST rejects invalid status outside the route domain", async () => {
+  chargesRouteDeps.requireApiModuleAccess = async () => null;
+
+  try {
+    const requestId = "charges-post-invalid-status-request-id";
+    const response = await postCharges(new Request("http://localhost/api/charges", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        [REQUEST_ID_HEADER]: requestId,
+      },
+      body: JSON.stringify({
+        customer: "Cliente A",
+        amount: "R$ 1.200",
+        status: "Atrasado",
+      }),
+    }));
+    const payload = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.match(payload.error, /status/i);
+    assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
+  } finally {
+    restoreChargesRouteDeps();
+  }
+});

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getLogger } from "@/lib/api-logger";
 import { requireApiModuleAccess } from "@/lib/api-auth";
+import { ApiInputError, parseSetupPayload, readJsonObject } from "@/lib/api-inputs";
 import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 import { getWorkspaceSetup, updateWorkspaceSetup } from "@/lib/workspace-settings-repository";
 
@@ -43,52 +44,40 @@ export async function POST(request: Request) {
     return attachRequestId(unauthorized, requestId);
   }
 
-  const body = (await request.json()) as {
-    name?: string;
-    slug?: string;
-    niche?: string;
-    legalName?: string;
-    tradeName?: string;
-    document?: string;
-    city?: string;
-    state?: string;
-    serviceDescription?: string;
-    defaultFiscalServiceCode?: string;
-    defaultPixKey?: string;
-    defaultPaymentMessage?: string;
-  };
-
-  if (!body.name || !body.slug || !body.tradeName || !body.document) {
-    requestLogger.warn("Workspace setup update rejected because required fields are missing");
-    return attachRequestId(NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 }), requestId);
-  }
-
   try {
+    const body = parseSetupPayload(await readJsonObject(request));
     const result = await setupRouteDeps.updateWorkspaceSetup({
       name: body.name,
       slug: body.slug,
-      niche: body.niche || "",
-      legalName: body.legalName || "",
+      niche: body.niche,
+      legalName: body.legalName,
       tradeName: body.tradeName,
       document: body.document,
-      city: body.city || "",
-      state: body.state || "",
-      serviceDescription: body.serviceDescription || "",
-      defaultFiscalServiceCode: body.defaultFiscalServiceCode || "",
-      defaultPixKey: body.defaultPixKey || "",
-      defaultPaymentMessage: body.defaultPaymentMessage || "",
+      city: body.city,
+      state: body.state,
+      serviceDescription: body.serviceDescription,
+      defaultFiscalServiceCode: body.defaultFiscalServiceCode,
+      defaultPixKey: body.defaultPixKey,
+      defaultPaymentMessage: body.defaultPaymentMessage,
     });
     requestLogger.info("Workspace setup updated", {
       slug: body.slug,
-      city: body.city || "",
-      state: body.state || "",
+      city: body.city,
+      state: body.state,
     });
 
     return attachRequestId(NextResponse.json({ setup: result }, { status: 200 }), requestId);
   } catch (error) {
+    if (error instanceof ApiInputError) {
+      requestLogger.warn("Workspace setup update rejected because request payload is invalid", {
+        reason: error.message,
+      });
+      return attachRequestId(NextResponse.json({ error: error.message }, { status: 400 }), requestId);
+    }
+
     const message = error instanceof Error ? error.message : "Falha ao salvar o setup.";
     requestLogger.error("Workspace setup update failed", error instanceof Error ? error : undefined, {
-      slug: body.slug,
+      requestId,
     });
     return attachRequestId(NextResponse.json({ error: message }, { status: 400 }), requestId);
   }

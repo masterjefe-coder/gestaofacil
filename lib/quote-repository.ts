@@ -22,7 +22,10 @@ export async function listQuotes(): Promise<Quote[]> {
     const { workspaceId } = await getCurrentWorkspaceContext();
 
     const quotes = await prisma.quote.findMany({
-      where: { workspaceId },
+      where: {
+        workspaceId,
+        deletedAt: null,
+      },
       include: {
         customer: true,
       },
@@ -59,6 +62,7 @@ export async function createQuote(input: QuoteInput): Promise<Quote> {
       where: {
         workspaceId,
         name: input.customer,
+        deletedAt: null,
       },
     });
 
@@ -143,6 +147,7 @@ export async function updateQuote(id: string, input: QuoteUpdateInput): Promise<
       where: {
         id,
         workspaceId,
+        deletedAt: null,
       },
       include: {
         customer: true,
@@ -164,6 +169,9 @@ export async function updateQuote(id: string, input: QuoteUpdateInput): Promise<
       where: { id: existing.id },
       data: {
         status: mapQuoteStatus(nextStatus),
+        version: {
+          increment: 1,
+        },
         summary: encodeQuoteSummary({
           status: nextStatus,
           dueLabel: nextDueLabel,
@@ -229,10 +237,17 @@ export async function deleteQuote(id: string): Promise<void> {
     await ensureDemoCommerceSeeded();
     const { workspaceId } = await getCurrentWorkspaceContext();
 
-    await prisma.quote.deleteMany({
+    await prisma.quote.updateMany({
       where: {
         id,
         workspaceId,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: new Date(),
+        version: {
+          increment: 1,
+        },
       },
     });
     return;

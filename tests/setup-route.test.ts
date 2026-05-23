@@ -102,6 +102,29 @@ test("setup route POST rejects missing required fields", async () => {
   }
 });
 
+test("setup route POST rejects invalid json payload", async () => {
+  setupRouteDeps.requireApiModuleAccess = async () => null;
+
+  try {
+    const requestId = "setup-post-invalid-json-request-id";
+    const response = await postSetup(new Request("http://localhost/api/setup", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        [REQUEST_ID_HEADER]: requestId,
+      },
+      body: "{invalid",
+    }));
+    const payload = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.match(payload.error, /json invalido/i);
+    assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
+  } finally {
+    restoreSetupRouteDeps();
+  }
+});
+
 test("setup route POST updates setup payload with normalized optional fields", async () => {
   setupRouteDeps.requireApiModuleAccess = async () => null;
   setupRouteDeps.updateWorkspaceSetup = async (input) => ({

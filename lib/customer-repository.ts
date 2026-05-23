@@ -49,7 +49,10 @@ export async function listCustomers(): Promise<Customer[]> {
   const workspace = await ensureDemoCustomersSeeded();
 
   const dbCustomers = await prisma.customer.findMany({
-    where: { workspaceId: workspace.id },
+    where: {
+      workspaceId: workspace.id,
+      deletedAt: null,
+    },
     include: {
       charges: true,
     },
@@ -167,6 +170,7 @@ export async function updateCustomerStatus(
     where: {
       id,
       workspaceId,
+      deletedAt: null,
     },
     include: {
       charges: true,
@@ -188,6 +192,9 @@ export async function updateCustomerStatus(
     where: { id: existing.id },
     data: {
       notes: encodeCustomerNotes(nextMeta),
+      version: {
+        increment: 1,
+      },
     },
     include: {
       charges: true,
@@ -254,10 +261,17 @@ export async function deleteCustomer(id: string): Promise<void> {
   await ensureDemoCommerceSeeded();
   const { workspaceId } = await getCurrentWorkspaceContext();
 
-  await prisma.customer.deleteMany({
+  await prisma.customer.updateMany({
     where: {
       id,
       workspaceId,
+      deletedAt: null,
+    },
+    data: {
+      deletedAt: new Date(),
+      version: {
+        increment: 1,
+      },
     },
   });
 }

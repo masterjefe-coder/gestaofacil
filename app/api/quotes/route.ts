@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getLogger } from "@/lib/api-logger";
 import { requireApiModuleAccess } from "@/lib/api-auth";
+import { ApiInputError, parseQuotePayload, readJsonObject } from "@/lib/api-inputs";
 import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 import { createQuote, listQuotes } from "@/lib/quote-repository";
 
@@ -33,29 +34,20 @@ export async function POST(request: Request) {
     return attachRequestId(unauthorized, requestId);
   }
 
-  const body = (await request.json()) as {
-    customer?: string;
-    title?: string;
-    amount?: string;
-    status?: "Enviado" | "Aprovado" | "Follow-up";
-    dueLabel?: string;
-    summary?: string;
-  };
+  try {
+    const body = parseQuotePayload(await readJsonObject(request));
+    const quote = await quotesRouteDeps.createQuote(body);
 
-  if (!body.customer || !body.title || !body.amount) {
-    requestLogger.warn("Quote creation rejected — missing required fields");
-    return attachRequestId(NextResponse.json({ error: "Dados obrigatorios ausentes." }, { status: 400 }), requestId);
+    requestLogger.info("Quote created", { quoteId: quote.id, customer: body.customer, amount: quote.amount });
+    return attachRequestId(NextResponse.json({ quote }, { status: 201 }), requestId);
+  } catch (error) {
+    if (error instanceof ApiInputError) {
+      requestLogger.warn("Quote creation rejected — invalid request payload", { reason: error.message });
+      return attachRequestId(NextResponse.json({ error: error.message }, { status: 400 }), requestId);
+    }
+
+    const message = error instanceof Error ? error.message : "Falha ao criar o orcamento.";
+    requestLogger.error("Quote creation failed", error instanceof Error ? error : undefined);
+    return attachRequestId(NextResponse.json({ error: message }, { status: 400 }), requestId);
   }
-
-  const quote = await quotesRouteDeps.createQuote({
-    customer: body.customer,
-    title: body.title,
-    amount: body.amount,
-    status: body.status || "Enviado",
-    dueLabel: body.dueLabel || "",
-    summary: body.summary || "",
-  });
-
-  requestLogger.info("Quote created", { quoteId: quote.id, customer: body.customer, amount: quote.amount });
-  return attachRequestId(NextResponse.json({ quote }, { status: 201 }), requestId);
 }

@@ -142,6 +142,7 @@ async function resolveLinkedChargeId(workspaceId: string, remoteJid: string) {
   const customers = await prisma.customer.findMany({
     where: {
       workspaceId,
+      deletedAt: null,
       phone: {
         not: null,
       },
@@ -162,6 +163,7 @@ async function resolveLinkedChargeId(workspaceId: string, remoteJid: string) {
     where: {
       workspaceId,
       customerId: customer.id,
+      deletedAt: null,
       status: {
         not: "PAID",
       },

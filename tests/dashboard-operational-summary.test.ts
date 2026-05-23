@@ -29,6 +29,7 @@ function buildSnapshot(
       appBaseUrlConfigured: true,
       healthTokenConfigured: true,
       authSecretConfigured: true,
+      rateLimitMode: "distributed",
     },
     integrations: {
       asaas: {
@@ -68,6 +69,13 @@ function buildSnapshot(
       openCircuitBreakerCount: 1,
       halfOpenCircuitBreakerCount: 0,
       circuitBreakers: {},
+      providers: {},
+      jobs: {
+        pendingCount: 1,
+        runningCount: 0,
+        failedCount: 0,
+        completedCount: 3,
+      },
     },
     checks: [
       {

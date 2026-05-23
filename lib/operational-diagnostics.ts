@@ -1,4 +1,5 @@
-import { getAllCircuitBreakerStates } from "@/lib/api-retry";
+import { getAllCircuitBreakerStates, getAllRetryTelemetryStates } from "@/lib/api-retry";
+import { listBackgroundJobStats } from "@/lib/background-jobs";
 import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { getEvolutionIntegrationStatus, probeEvolutionApi } from "@/lib/evolution-api";
@@ -6,6 +7,7 @@ import {
   getNfseNationalIntegrationStatus,
   inspectNfseNationalCertificate,
 } from "@/lib/nfse-national-provider";
+import { getRateLimiterStats } from "@/lib/rate-limit";
 import { REQUEST_ID_HEADER } from "@/lib/request-tracing";
 
 type DiagnosticLevel = "ok" | "warning";
@@ -19,6 +21,23 @@ export type OperationalDiagnosticCheck = {
 type OperationalCircuitBreaker = {
   state: "CLOSED" | "OPEN" | "HALF_OPEN";
   failureCount: number;
+  lastFailureAt: string | null;
+};
+
+type OperationalProviderTelemetry = {
+  totalCalls: number;
+  successCount: number;
+  failureCount: number;
+  retriedCalls: number;
+  totalAttempts: number;
+  totalRetryDelayMs: number;
+  circuitOpenRejections: number;
+  lastAttemptCount: number;
+  lastDurationMs: number | null;
+  lastOutcome: "success" | "failure" | "circuit-open" | null;
+  lastErrorMessage: string | null;
+  lastStatusCode: number | null;
+  lastSuccessAt: string | null;
   lastFailureAt: string | null;
 };
 
@@ -42,6 +61,7 @@ export type OperationalDiagnosticsSnapshot = {
     appBaseUrlConfigured: boolean;
     healthTokenConfigured: boolean;
     authSecretConfigured: boolean;
+    rateLimitMode: "local" | "distributed";
   };
   integrations: {
     asaas: {
@@ -83,6 +103,13 @@ export type OperationalDiagnosticsSnapshot = {
     openCircuitBreakerCount: number;
     halfOpenCircuitBreakerCount: number;
     circuitBreakers: Record<string, OperationalCircuitBreaker>;
+    providers: Record<string, OperationalProviderTelemetry>;
+    jobs: {
+      pendingCount: number;
+      runningCount: number;
+      failedCount: number;
+      completedCount: number;
+    };
   };
   checks: OperationalDiagnosticCheck[];
 };
@@ -97,11 +124,14 @@ function toLastFailureAt(value: number) {
 
 export const operationalDiagnosticsDeps = {
   getAllCircuitBreakerStates,
+  getAllRetryTelemetryStates,
+  getRateLimiterStats,
   getAsaasIntegrationStatus,
   getEvolutionIntegrationStatus,
   getNfseNationalIntegrationStatus,
   inspectNfseNationalCertificate,
   isLocalDataMode,
+  listBackgroundJobStats,
   probeEvolutionApi,
 };
 
@@ -116,13 +146,16 @@ export async function buildOperationalDiagnosticsSnapshot(
   const appBaseUrlConfigured = Boolean(process.env.APP_BASE_URL?.trim());
   const healthTokenConfigured = Boolean(process.env.HEALTHCHECK_TOKEN?.trim());
   const authSecretConfigured = Boolean(process.env.AUTH_SECRET?.trim() || process.env.NEXTAUTH_SECRET?.trim());
-  const [evolutionConnectivity, nfseCertificateInspection] = await Promise.all([
+  const [jobStats, evolutionConnectivity, nfseCertificateInspection] = await Promise.all([
+    operationalDiagnosticsDeps.listBackgroundJobStats(),
     operationalDiagnosticsDeps.probeEvolutionApi(),
     nfse.hasCertificate
       ? operationalDiagnosticsDeps.inspectNfseNationalCertificate()
       : Promise.resolve({ ok: false as const, error: "Certificado ausente." }),
   ]);
+  const rateLimiterStats = operationalDiagnosticsDeps.getRateLimiterStats();
   const rawCircuitBreakers = operationalDiagnosticsDeps.getAllCircuitBreakerStates();
+  const providerTelemetry = operationalDiagnosticsDeps.getAllRetryTelemetryStates();
   const circuitBreakers = Object.fromEntries(
     Object.entries(rawCircuitBreakers).map(([name, state]) => [
       name,
@@ -165,6 +198,13 @@ export async function buildOperationalDiagnosticsSnapshot(
       healthTokenConfigured
         ? "HEALTHCHECK_TOKEN configurado para diagnostico autenticado."
         : "HEALTHCHECK_TOKEN ausente; o endpoint detalhado depende apenas de sessao.",
+    ),
+    buildCheck(
+      "rate-limit-mode",
+      rateLimiterStats.mode === "distributed" || localMode ? "ok" : "warning",
+      rateLimiterStats.mode === "distributed"
+        ? "Rate limit compartilhado ativo com bucket persistido."
+        : "Rate limit ainda local em memoria; bom para baixo volume, mas sem coordenacao entre instancias.",
     ),
     buildCheck(
       "asaas-webhook",
@@ -216,6 +256,26 @@ export async function buildOperationalDiagnosticsSnapshot(
           : "Nenhum circuit breaker aberto nas integracoes monitoradas."
         : `${openCircuitBreakerCount} circuit breaker(s) aberto(s); integracoes externas podem estar degradadas.`,
     ),
+    buildCheck(
+      "provider-telemetry",
+      Object.values(providerTelemetry).some((provider) => provider.failureCount > 0 || provider.circuitOpenRejections > 0)
+        ? "warning"
+        : "ok",
+      Object.keys(providerTelemetry).length === 0
+        ? "Telemetria de provedores ainda sem chamadas registradas neste runtime."
+        : Object.entries(providerTelemetry)
+          .map(([provider, state]) => {
+            const outcome = state.lastOutcome || "sem resultado";
+            const status = state.lastStatusCode ? ` status ${state.lastStatusCode}` : "";
+            return `${provider}: ${outcome}${status}, ${state.failureCount} falha(s), ${state.retriedCalls} chamada(s) com retry`;
+          })
+          .join(" | "),
+    ),
+    buildCheck(
+      "background-jobs",
+      jobStats.failedCount > 0 ? "warning" : "ok",
+      `${jobStats.pendingCount} job(s) pendente(s), ${jobStats.runningCount} em execucao e ${jobStats.failedCount} falho(s).`,
+    ),
   ];
   const warningCount = checks.filter((check) => check.level === "warning").length;
   const okCount = checks.length - warningCount;
@@ -240,6 +300,7 @@ export async function buildOperationalDiagnosticsSnapshot(
       appBaseUrlConfigured,
       healthTokenConfigured,
       authSecretConfigured,
+      rateLimitMode: rateLimiterStats.mode,
     },
     integrations: {
       asaas: {
@@ -277,6 +338,8 @@ export async function buildOperationalDiagnosticsSnapshot(
       openCircuitBreakerCount,
       halfOpenCircuitBreakerCount,
       circuitBreakers,
+      providers: providerTelemetry,
+      jobs: jobStats,
     },
     checks,
   };

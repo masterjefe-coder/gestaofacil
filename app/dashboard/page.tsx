@@ -3,7 +3,6 @@ import { DashboardOperationalDomainsStrip } from "@/components/dashboard-operati
 import { DashboardShell } from "@/components/dashboard-shell";
 import { DashboardOperationalSummary } from "@/components/dashboard-operational-summary";
 import {
-  dashboardModuleCards,
   getDashboardHeroState,
   getOperationalPromotionForRecommendation,
   orderDashboardModuleCards,

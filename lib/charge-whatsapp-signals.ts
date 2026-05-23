@@ -136,7 +136,10 @@ export async function listChargeWhatsappSignals(): Promise<ChargeWhatsappSignal[
   const { workspaceId } = await getCurrentWorkspaceContext();
   const [customers, events] = await Promise.all([
     prisma.customer.findMany({
-      where: { workspaceId },
+      where: {
+        workspaceId,
+        deletedAt: null,
+      },
       select: {
         name: true,
         phone: true,

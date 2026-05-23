@@ -26,6 +26,7 @@ export class CircuitBreakerError extends Error {
 }
 
 type RetryConfig = {
+  telemetryKey?: string;
   maxAttempts?: number;
   initialDelayMs?: number;
   maxDelayMs?: number;
@@ -51,6 +52,33 @@ export type CircuitBreakerSnapshot = {
   state: CircuitState;
   failureCount: number;
   lastFailureTime: number;
+};
+
+export type RetryTelemetrySnapshot = {
+  totalCalls: number;
+  successCount: number;
+  failureCount: number;
+  retriedCalls: number;
+  totalAttempts: number;
+  totalRetryDelayMs: number;
+  circuitOpenRejections: number;
+  lastAttemptCount: number;
+  lastDurationMs: number | null;
+  lastOutcome: "success" | "failure" | "circuit-open" | null;
+  lastErrorMessage: string | null;
+  lastStatusCode: number | null;
+  lastSuccessAt: string | null;
+  lastFailureAt: string | null;
+};
+
+type RetryExecutionRecord = {
+  telemetryKey?: string;
+  attempts: number;
+  retryDelayMs: number;
+  durationMs: number;
+  outcome: "success" | "failure" | "circuit-open";
+  error?: Error;
+  statusCode?: number | null;
 };
 
 class CircuitBreaker {
@@ -116,6 +144,7 @@ class CircuitBreaker {
 }
 
 const circuitBreakers = new Map<string, CircuitBreaker>();
+const retryTelemetry = new Map<string, RetryTelemetrySnapshot>();
 
 function getCircuitBreaker(name: string, config: CircuitBreakerConfig): CircuitBreaker {
   if (!circuitBreakers.has(name)) {
@@ -173,6 +202,68 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function toIsoTimestamp(value: number) {
+  return value > 0 ? new Date(value).toISOString() : null;
+}
+
+function getErrorStatusCode(error: unknown) {
+  if (error && typeof error === "object" && "status" in error) {
+    const status = (error as { status?: unknown }).status;
+    return typeof status === "number" ? status : null;
+  }
+
+  if (error && typeof error === "object" && "statusCode" in error) {
+    const statusCode = (error as { statusCode?: unknown }).statusCode;
+    return typeof statusCode === "number" ? statusCode : null;
+  }
+
+  return null;
+}
+
+function updateRetryTelemetry(record: RetryExecutionRecord) {
+  if (!record.telemetryKey) {
+    return;
+  }
+
+  const current = retryTelemetry.get(record.telemetryKey) || {
+    totalCalls: 0,
+    successCount: 0,
+    failureCount: 0,
+    retriedCalls: 0,
+    totalAttempts: 0,
+    totalRetryDelayMs: 0,
+    circuitOpenRejections: 0,
+    lastAttemptCount: 0,
+    lastDurationMs: null,
+    lastOutcome: null,
+    lastErrorMessage: null,
+    lastStatusCode: null,
+    lastSuccessAt: null,
+    lastFailureAt: null,
+  };
+
+  const now = Date.now();
+  const next: RetryTelemetrySnapshot = {
+    ...current,
+    totalCalls: current.totalCalls + 1,
+    successCount: current.successCount + (record.outcome === "success" ? 1 : 0),
+    failureCount: current.failureCount + (record.outcome === "failure" ? 1 : 0),
+    retriedCalls: current.retriedCalls + (record.attempts > 1 ? 1 : 0),
+    totalAttempts: current.totalAttempts + record.attempts,
+    totalRetryDelayMs: current.totalRetryDelayMs + record.retryDelayMs,
+    circuitOpenRejections: current.circuitOpenRejections + (record.outcome === "circuit-open" ? 1 : 0),
+    lastAttemptCount: record.attempts,
+    lastDurationMs: record.durationMs,
+    lastOutcome: record.outcome,
+    lastErrorMessage: record.error?.message || null,
+    lastStatusCode: record.statusCode ?? null,
+    lastSuccessAt: record.outcome === "success" ? toIsoTimestamp(now) : current.lastSuccessAt,
+    lastFailureAt: record.outcome === "success" ? current.lastFailureAt : toIsoTimestamp(now),
+  };
+
+  retryTelemetry.set(record.telemetryKey, next);
+}
+
 function defaultShouldRetry(error: unknown): boolean {
   void error;
   return false;
@@ -186,6 +277,7 @@ export async function withRetry<T>(
   config: RetryConfig = {}
 ): Promise<T> {
   const fullConfig: Required<RetryConfig> = {
+    telemetryKey: config.telemetryKey ?? "",
     maxAttempts: config.maxAttempts ?? 3,
     initialDelayMs: config.initialDelayMs ?? 1000,
     maxDelayMs: config.maxDelayMs ?? 30000,
@@ -196,14 +288,33 @@ export async function withRetry<T>(
   };
 
   let lastError: Error | undefined;
+  let totalRetryDelayMs = 0;
+  const startedAt = Date.now();
 
   for (let attempt = 1; attempt <= fullConfig.maxAttempts; attempt++) {
     try {
-      return await fn();
+      const result = await fn();
+      updateRetryTelemetry({
+        telemetryKey: fullConfig.telemetryKey || undefined,
+        attempts: attempt,
+        retryDelayMs: totalRetryDelayMs,
+        durationMs: Date.now() - startedAt,
+        outcome: "success",
+      });
+      return result;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
       if (attempt === fullConfig.maxAttempts || !isRetryableError(error, fullConfig)) {
+        updateRetryTelemetry({
+          telemetryKey: fullConfig.telemetryKey || undefined,
+          attempts: attempt,
+          retryDelayMs: totalRetryDelayMs,
+          durationMs: Date.now() - startedAt,
+          outcome: lastError instanceof CircuitBreakerError ? "circuit-open" : "failure",
+          error: lastError,
+          statusCode: getErrorStatusCode(error),
+        });
         throw new RetryError(
           `Failed after ${attempt} attempt(s): ${lastError.message}`,
           attempt,
@@ -212,6 +323,7 @@ export async function withRetry<T>(
       }
 
       const delay = calculateDelay(attempt, fullConfig);
+      totalRetryDelayMs += delay;
       await sleep(delay);
     }
   }
@@ -244,7 +356,28 @@ export async function withRetryAndCircuitBreaker<T>(
   retryConfig: RetryConfig = {},
   circuitConfig: CircuitBreakerConfig = {}
 ): Promise<T> {
-  return withCircuitBreaker(name, () => withRetry(fn, retryConfig), circuitConfig);
+  const telemetryKey = retryConfig.telemetryKey ?? name;
+  const startedAt = Date.now();
+
+  try {
+    return await withCircuitBreaker(name, () => withRetry(fn, {
+      ...retryConfig,
+      telemetryKey,
+    }), circuitConfig);
+  } catch (error) {
+    if (error instanceof CircuitBreakerError) {
+      updateRetryTelemetry({
+        telemetryKey,
+        attempts: 0,
+        retryDelayMs: 0,
+        durationMs: Date.now() - startedAt,
+        outcome: "circuit-open",
+        error,
+      });
+    }
+
+    throw error;
+  }
 }
 
 /**
@@ -266,8 +399,17 @@ export function getAllCircuitBreakerStates() {
   return states;
 }
 
+export function getRetryTelemetryState(name: string) {
+  return retryTelemetry.get(name) || null;
+}
+
+export function getAllRetryTelemetryStates() {
+  return Object.fromEntries(retryTelemetry.entries());
+}
+
 export function resetAllCircuitBreakerStates() {
   circuitBreakers.clear();
+  retryTelemetry.clear();
 }
 
 // Made with Bob
