@@ -16,6 +16,11 @@ export type OperationalDiagnosticsSnapshot = {
   service: string;
   timestamp: string;
   requestId: string;
+  status: "ok" | "warning";
+  summary: {
+    okCount: number;
+    warningCount: number;
+  };
   requestTracing: {
     header: string;
     enabled: true;
@@ -123,11 +128,18 @@ export function buildOperationalDiagnosticsSnapshot(requestId: string): Operatio
         : `NFS-e Nacional pendente: ${nfse.missing.join(", ") || "revisar configuracao do ambiente"}.`,
     ),
   ];
+  const warningCount = checks.filter((check) => check.level === "warning").length;
+  const okCount = checks.length - warningCount;
 
   return {
     service: "gestao-facil",
     timestamp: new Date().toISOString(),
     requestId,
+    status: warningCount > 0 ? "warning" : "ok",
+    summary: {
+      okCount,
+      warningCount,
+    },
     requestTracing: {
       header: REQUEST_ID_HEADER,
       enabled: true,
