@@ -69,7 +69,10 @@ export async function listCustomerWhatsappActivity(): Promise<CustomerWhatsappAc
   const { workspaceId } = await getCurrentWorkspaceContext();
   const [customers, events] = await Promise.all([
     prisma.customer.findMany({
-      where: { workspaceId },
+      where: {
+        workspaceId,
+        deletedAt: null,
+      },
       orderBy: { createdAt: "desc" },
     }),
     prisma.auditEvent.findMany({

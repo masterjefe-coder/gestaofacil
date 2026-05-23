@@ -6,14 +6,16 @@ import { redirect } from "next/navigation";
 import { createChargeFromQuote, updateCharge } from "@/lib/charge-repository";
 import { updateCustomerStatus } from "@/lib/customer-repository";
 import { ACTIVE_WORKSPACE_COOKIE, requireSessionUser } from "@/lib/auth-session";
+import {
+  FormInputError,
+  readOptionalFormMaybeString,
+  readOptionalFormString,
+  readRequiredFormEnum,
+} from "@/lib/form-inputs";
 import { writeDashboardQueuePreference, type DashboardQueueModule } from "@/lib/dashboard-queue-preferences";
 import { prisma } from "@/lib/prisma";
 import { updateQuote } from "@/lib/quote-repository";
 import type { Customer } from "@/lib/types";
-
-function getString(formData: FormData, key: string) {
-  return String(formData.get(key) || "").trim();
-}
 
 function buildRedirectUrl(path: string, view?: string, focus?: string) {
   const params = new URLSearchParams();
@@ -48,10 +50,10 @@ function revalidateDashboardOperationViews() {
 }
 
 export async function persistDashboardQueuePreferenceAction(formData: FormData) {
-  const moduleKey = getString(formData, "module") as DashboardQueueModule;
-  const path = getString(formData, "path") || "/dashboard";
-  const view = getString(formData, "view");
-  const focus = getString(formData, "focus");
+  const path = readOptionalFormString(formData, "path") || "/dashboard";
+  const view = readOptionalFormString(formData, "view");
+  const focus = readOptionalFormString(formData, "focus");
+  const moduleKey = readOptionalFormString(formData, "module") as DashboardQueueModule;
 
   if (!moduleKey) {
     redirect(path);
@@ -66,8 +68,8 @@ export async function persistDashboardQueuePreferenceAction(formData: FormData) 
 }
 
 export async function switchActiveWorkspaceAction(formData: FormData) {
-  const workspaceId = getString(formData, "workspaceId");
-  const returnTo = getString(formData, "returnTo") || "/dashboard";
+  const workspaceId = readOptionalFormString(formData, "workspaceId");
+  const returnTo = readOptionalFormString(formData, "returnTo") || "/dashboard";
 
   if (!workspaceId) {
     redirect(returnTo);
@@ -105,8 +107,8 @@ export async function switchActiveWorkspaceAction(formData: FormData) {
 }
 
 export async function markDashboardQuoteFollowUpAction(formData: FormData) {
-  const id = getString(formData, "id");
-  const dueLabel = getString(formData, "dueLabel") || "Follow-up hoje";
+  const id = readOptionalFormString(formData, "id");
+  const dueLabel = readOptionalFormString(formData, "dueLabel") || "Follow-up hoje";
 
   if (!id) {
     return;
@@ -120,7 +122,7 @@ export async function markDashboardQuoteFollowUpAction(formData: FormData) {
 }
 
 export async function generateDashboardChargeFromQuoteAction(formData: FormData) {
-  const id = getString(formData, "id");
+  const id = readOptionalFormString(formData, "id");
 
   if (!id) {
     return;
@@ -132,20 +134,33 @@ export async function generateDashboardChargeFromQuoteAction(formData: FormData)
 }
 
 export async function markDashboardCustomerStatusAction(formData: FormData) {
-  const id = getString(formData, "id");
-  const status = getString(formData, "status") as Customer["status"];
-  const note = getString(formData, "note") || undefined;
+  const id = readOptionalFormString(formData, "id");
 
-  if (!id || !status) {
+  if (!id) {
     return;
   }
 
-  await updateCustomerStatus(id, status, note);
-  revalidateDashboardOperationViews();
+  try {
+    const status = readRequiredFormEnum(
+      formData,
+      "status",
+      ["Ativo", "Aguardando retorno", "Recorrente"] satisfies readonly Customer["status"][],
+    );
+    const note = readOptionalFormMaybeString(formData, "note");
+
+    await updateCustomerStatus(id, status, note);
+    revalidateDashboardOperationViews();
+  } catch (error) {
+    if (error instanceof FormInputError) {
+      return;
+    }
+
+    throw error;
+  }
 }
 
 export async function markDashboardChargeTodayAction(formData: FormData) {
-  const id = getString(formData, "id");
+  const id = readOptionalFormString(formData, "id");
 
   if (!id) {
     return;
@@ -160,7 +175,7 @@ export async function markDashboardChargeTodayAction(formData: FormData) {
 }
 
 export async function markDashboardQuoteApprovedAction(formData: FormData) {
-  const id = getString(formData, "id");
+  const id = readOptionalFormString(formData, "id");
 
   if (!id) {
     return;

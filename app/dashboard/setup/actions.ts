@@ -31,11 +31,16 @@ import {
   WorkspaceInviteError,
 } from "@/lib/workspace-invite-repository";
 import { updateCurrentUserAlertPreferences } from "@/lib/workspace-user-preferences";
+import {
+  FormInputError,
+  readFormCheckbox,
+  readOptionalFormMaybeString,
+  readOptionalFormString,
+  readOptionalFormEnum,
+  readRequiredFormString,
+  readRequiredPositiveNumber,
+} from "@/lib/form-inputs";
 import type { SetupInput } from "@/lib/types";
-
-function getString(formData: FormData, key: string) {
-  return String(formData.get(key) || "").trim();
-}
 
 function redirectToSetup(params: Record<string, string | undefined>, hash?: string): never {
   const query = new URLSearchParams();
@@ -63,28 +68,28 @@ function redirectEvolution(message: string, ok = false, extras?: Record<string, 
 }
 
 export async function updateWorkspaceSetupAction(formData: FormData) {
-  const input: SetupInput = {
-    name: getString(formData, "name"),
-    slug: getString(formData, "slug"),
-    niche: getString(formData, "niche"),
-    legalName: getString(formData, "legalName"),
-    tradeName: getString(formData, "tradeName"),
-    document: getString(formData, "document"),
-    city: getString(formData, "city"),
-    state: getString(formData, "state"),
-    serviceDescription: getString(formData, "serviceDescription"),
-    defaultFiscalServiceCode: getString(formData, "defaultFiscalServiceCode"),
-    defaultPixKey: getString(formData, "defaultPixKey"),
-    defaultPaymentMessage: getString(formData, "defaultPaymentMessage"),
-  };
-
-  if (!input.name || !input.slug || !input.tradeName || !input.document) {
-    redirectToSetup({ setupError: "Preencha os campos principais da empresa antes de salvar." });
-  }
-
   try {
+    const input: SetupInput = {
+      name: readRequiredFormString(formData, "name", "Preencha os campos principais da empresa antes de salvar."),
+      slug: readRequiredFormString(formData, "slug", "Preencha os campos principais da empresa antes de salvar."),
+      niche: readOptionalFormString(formData, "niche"),
+      legalName: readOptionalFormString(formData, "legalName"),
+      tradeName: readRequiredFormString(formData, "tradeName", "Preencha os campos principais da empresa antes de salvar."),
+      document: readRequiredFormString(formData, "document", "Preencha os campos principais da empresa antes de salvar."),
+      city: readOptionalFormString(formData, "city"),
+      state: readOptionalFormString(formData, "state"),
+      serviceDescription: readOptionalFormString(formData, "serviceDescription"),
+      defaultFiscalServiceCode: readOptionalFormString(formData, "defaultFiscalServiceCode"),
+      defaultPixKey: readOptionalFormString(formData, "defaultPixKey"),
+      defaultPaymentMessage: readOptionalFormString(formData, "defaultPaymentMessage"),
+    };
+
     await updateWorkspaceSetup(input);
   } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectToSetup({ setupError: error.message });
+    }
+
     const message = error instanceof Error
       ? error.message
       : "Nao foi possivel salvar os dados da empresa.";
@@ -98,12 +103,18 @@ export async function updateWorkspaceSetupAction(formData: FormData) {
 }
 
 export async function createWorkspaceMemberAction(formData: FormData) {
-  const name = getString(formData, "memberName");
-  const email = getString(formData, "memberEmail");
-  const password = getString(formData, "memberPassword");
-  const role = (getString(formData, "memberRole") as WorkspaceRole) || WorkspaceRole.MEMBER;
-
   try {
+    const name = readRequiredFormString(formData, "memberName", "Informe nome, email e senha inicial do usuario.");
+    const email = readRequiredFormString(formData, "memberEmail", "Informe nome, email e senha inicial do usuario.");
+    const password = readRequiredFormString(formData, "memberPassword", "Informe nome, email e senha inicial do usuario.");
+    const role = readOptionalFormEnum(
+      formData,
+      "memberRole",
+      Object.values(WorkspaceRole),
+      WorkspaceRole.MEMBER,
+      "Escolha um papel valido para o usuario.",
+    );
+
     await createWorkspaceMember({
       name,
       email,
@@ -111,6 +122,10 @@ export async function createWorkspaceMemberAction(formData: FormData) {
       role,
     });
   } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectToSetup({ teamError: error.message }, "#team-section");
+    }
+
     const message =
       error instanceof WorkspaceMemberError
         ? error.message
@@ -125,11 +140,17 @@ export async function createWorkspaceMemberAction(formData: FormData) {
 }
 
 export async function createWorkspaceInviteAction(formData: FormData) {
-  const name = getString(formData, "inviteName");
-  const email = getString(formData, "inviteEmail");
-  const role = (getString(formData, "inviteRole") as WorkspaceRole) || WorkspaceRole.MEMBER;
-
   try {
+    const name = readOptionalFormString(formData, "inviteName");
+    const email = readRequiredFormString(formData, "inviteEmail", "Informe pelo menos o email da pessoa convidada.");
+    const role = readOptionalFormEnum(
+      formData,
+      "inviteRole",
+      Object.values(WorkspaceRole),
+      WorkspaceRole.MEMBER,
+      "Escolha um papel valido para o convite.",
+    );
+
     const result = await createAndDeliverWorkspaceInvite({
       name,
       email,
@@ -140,6 +161,10 @@ export async function createWorkspaceInviteAction(formData: FormData) {
       redirectToSetup({ inviteCreated: "1", teamError: `Convite criado, mas o email não saiu: ${result.delivery.error}` }, "#team-section");
     }
   } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectToSetup({ teamError: error.message }, "#team-section");
+    }
+
     const message =
       error instanceof WorkspaceInviteError
         ? error.message
@@ -154,7 +179,7 @@ export async function createWorkspaceInviteAction(formData: FormData) {
 }
 
 export async function resendWorkspaceInviteAction(formData: FormData) {
-  const inviteId = getString(formData, "inviteId");
+  const inviteId = readRequiredFormString(formData, "inviteId", "Nao encontrei o convite selecionado.");
 
   try {
     const delivery = await resendWorkspaceInvite(inviteId);
@@ -180,7 +205,7 @@ export async function resendWorkspaceInviteAction(formData: FormData) {
 }
 
 export async function renewWorkspaceInviteAction(formData: FormData) {
-  const inviteId = getString(formData, "inviteId");
+  const inviteId = readRequiredFormString(formData, "inviteId", "Nao encontrei o convite selecionado.");
 
   try {
     const result = await renewWorkspaceInvite(inviteId);
@@ -206,7 +231,7 @@ export async function renewWorkspaceInviteAction(formData: FormData) {
 }
 
 export async function revokeWorkspaceInviteAction(formData: FormData) {
-  const inviteId = getString(formData, "inviteId");
+  const inviteId = readRequiredFormString(formData, "inviteId", "Nao encontrei o convite selecionado.");
 
   try {
     await revokeWorkspaceInvite(inviteId);
@@ -225,15 +250,25 @@ export async function revokeWorkspaceInviteAction(formData: FormData) {
 }
 
 export async function updateWorkspaceMemberRoleAction(formData: FormData) {
-  const membershipId = getString(formData, "membershipId");
-  const role = (getString(formData, "memberRole") as WorkspaceRole) || WorkspaceRole.MEMBER;
-
   try {
+    const membershipId = readRequiredFormString(formData, "membershipId", "Nao encontrei o usuario selecionado.");
+    const role = readOptionalFormEnum(
+      formData,
+      "memberRole",
+      Object.values(WorkspaceRole),
+      WorkspaceRole.MEMBER,
+      "Escolha um papel valido para o usuario.",
+    );
+
     await updateWorkspaceMemberRole({
       membershipId,
       role,
     });
   } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectToSetup({ teamError: error.message }, "#team-section");
+    }
+
     const message =
       error instanceof WorkspaceMemberError
         ? error.message
@@ -248,7 +283,7 @@ export async function updateWorkspaceMemberRoleAction(formData: FormData) {
 }
 
 export async function removeWorkspaceMemberAction(formData: FormData) {
-  const membershipId = getString(formData, "membershipId");
+  const membershipId = readRequiredFormString(formData, "membershipId", "Nao encontrei o usuario selecionado.");
 
   try {
     await removeWorkspaceMember(membershipId);
@@ -267,15 +302,19 @@ export async function removeWorkspaceMemberAction(formData: FormData) {
 }
 
 export async function resetWorkspaceMemberPasswordAction(formData: FormData) {
-  const membershipId = getString(formData, "membershipId");
-  const password = getString(formData, "memberPasswordReset");
-
   try {
+    const membershipId = readRequiredFormString(formData, "membershipId", "Nao encontrei o usuario selecionado.");
+    const password = readRequiredFormString(formData, "memberPasswordReset", "Informe uma nova senha para o usuario.");
+
     await resetWorkspaceMemberPassword({
       membershipId,
       password,
     });
   } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectToSetup({ teamError: error.message }, "#team-section");
+    }
+
     const message =
       error instanceof WorkspaceMemberError
         ? error.message
@@ -290,19 +329,25 @@ export async function resetWorkspaceMemberPasswordAction(formData: FormData) {
 }
 
 export async function createEvolutionInstanceAction(formData: FormData) {
-  const instanceName = getString(formData, "instanceName");
-  const number = getString(formData, "instanceNumber");
-
-  if (!instanceName) {
-    redirectEvolution("Defina um nome de instância para criar a conexão WhatsApp.");
-  }
-
   try {
+    const instanceName = readRequiredFormString(
+      formData,
+      "instanceName",
+      "Defina um nome de instância para criar a conexão WhatsApp.",
+    );
+    const number = readOptionalFormMaybeString(formData, "instanceNumber");
+
     await createEvolutionInstance({
       instanceName,
-      number: number || undefined,
+      number,
     });
+    revalidatePath("/dashboard/setup");
+    redirectEvolution(`Instância ${instanceName} criada com sucesso na Evolution API.`, true);
   } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectEvolution(error.message);
+    }
+
     const message =
       error instanceof EvolutionApiError
         ? error.message
@@ -310,25 +355,28 @@ export async function createEvolutionInstanceAction(formData: FormData) {
 
     redirectEvolution(message);
   }
-
-  revalidatePath("/dashboard/setup");
-  redirectEvolution(`Instância ${instanceName} criada com sucesso na Evolution API.`, true);
 }
 
 export async function connectEvolutionInstanceAction(formData: FormData) {
-  const instanceName = getString(formData, "instanceName");
-  let pairingCode: string | undefined;
-
   try {
-    if (!instanceName) {
-      redirectEvolution("Escolha uma instância para solicitar o pareamento.");
-    }
+    const instanceName = readRequiredFormString(
+      formData,
+      "instanceName",
+      "Escolha uma instância para solicitar o pareamento.",
+    );
 
     const result = await connectEvolutionInstance(instanceName);
-    pairingCode = result.pairingCode;
+    const pairingCode = result.pairingCode;
 
     revalidatePath("/dashboard/setup");
+    redirectEvolution(`Pareamento solicitado para ${instanceName}.`, true, {
+      evolutionPairingCode: pairingCode,
+    });
   } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectEvolution(error.message);
+    }
+
     const message =
       error instanceof EvolutionApiError
         ? error.message
@@ -336,31 +384,28 @@ export async function connectEvolutionInstanceAction(formData: FormData) {
 
     redirectEvolution(message);
   }
-
-  redirectEvolution(`Pareamento solicitado para ${instanceName}.`, true, {
-    evolutionPairingCode: pairingCode,
-  });
 }
 
 export async function connectWorkspaceAsaasAccountAction(formData: FormData) {
-  const apiKey = getString(formData, "asaasApiKey");
-  const accountId = getString(formData, "asaasAccountId");
-  const splitEnabled = getString(formData, "asaasSplitEnabled") === "on";
-
-  if (!apiKey) {
-    redirectToSetup(
-      { asaasError: "Informe a API key da conta ou subconta Asaas do workspace." },
-      "#integrations-section",
-    );
-  }
-
   try {
+    const apiKey = readRequiredFormString(
+      formData,
+      "asaasApiKey",
+      "Informe a API key da conta ou subconta Asaas do workspace.",
+    );
+    const accountId = readOptionalFormMaybeString(formData, "asaasAccountId");
+    const splitEnabled = readFormCheckbox(formData, "asaasSplitEnabled");
+
     await connectWorkspaceAsaasAccount({
       apiKey,
-      accountId: accountId || undefined,
+      accountId,
       splitEnabled,
     });
   } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectToSetup({ asaasError: error.message }, "#integrations-section");
+    }
+
     const message = error instanceof Error
       ? error.message
       : "Nao foi possivel conectar a conta Asaas do workspace.";
@@ -390,42 +435,39 @@ export async function disconnectWorkspaceAsaasAccountAction() {
 }
 
 export async function createWorkspaceAsaasSubaccountAction(formData: FormData) {
-  const name = getString(formData, "subaccountName");
-  const email = getString(formData, "subaccountEmail");
-  const cpfCnpj = getString(formData, "subaccountCpfCnpj");
-  const mobilePhone = getString(formData, "subaccountMobilePhone");
-  const incomeValue = Number(getString(formData, "subaccountIncomeValue").replace(",", "."));
-  const address = getString(formData, "subaccountAddress");
-  const addressNumber = getString(formData, "subaccountAddressNumber");
-  const complement = getString(formData, "subaccountComplement");
-  const province = getString(formData, "subaccountProvince");
-  const postalCode = getString(formData, "subaccountPostalCode");
-  const companyType = getString(formData, "subaccountCompanyType");
-  const birthDate = getString(formData, "subaccountBirthDate");
-
-  if (!name || !email || !cpfCnpj || !mobilePhone || !incomeValue || !address || !addressNumber || !province || !postalCode) {
-    redirectToSetup(
-      { asaasError: "Preencha os dados essenciais para criar a conta de recebimento no Asaas." },
-      "#integrations-section",
-    );
-  }
-
   try {
+    const name = readRequiredFormString(formData, "subaccountName", "Preencha os dados essenciais para criar a conta de recebimento no Asaas.");
+    const email = readRequiredFormString(formData, "subaccountEmail", "Preencha os dados essenciais para criar a conta de recebimento no Asaas.");
+    const cpfCnpj = readRequiredFormString(formData, "subaccountCpfCnpj", "Preencha os dados essenciais para criar a conta de recebimento no Asaas.");
+    const mobilePhone = readRequiredFormString(formData, "subaccountMobilePhone", "Preencha os dados essenciais para criar a conta de recebimento no Asaas.");
+    const incomeValue = readRequiredPositiveNumber(formData, "subaccountIncomeValue", "Informe um faturamento mensal valido para criar a conta no Asaas.");
+    const address = readRequiredFormString(formData, "subaccountAddress", "Preencha os dados essenciais para criar a conta de recebimento no Asaas.");
+    const addressNumber = readRequiredFormString(formData, "subaccountAddressNumber", "Preencha os dados essenciais para criar a conta de recebimento no Asaas.");
+    const complement = readOptionalFormMaybeString(formData, "subaccountComplement");
+    const province = readRequiredFormString(formData, "subaccountProvince", "Preencha os dados essenciais para criar a conta de recebimento no Asaas.");
+    const postalCode = readRequiredFormString(formData, "subaccountPostalCode", "Preencha os dados essenciais para criar a conta de recebimento no Asaas.");
+    const companyType = readOptionalFormMaybeString(formData, "subaccountCompanyType");
+    const birthDate = readOptionalFormMaybeString(formData, "subaccountBirthDate");
+
     await createWorkspaceAsaasSubaccount({
       name,
       email,
       cpfCnpj,
       mobilePhone,
-      companyType: companyType || undefined,
-      birthDate: birthDate || undefined,
+      companyType,
+      birthDate,
       incomeValue,
       address,
       addressNumber,
-      complement: complement || undefined,
+      complement,
       province,
       postalCode,
     });
   } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectToSetup({ asaasError: error.message }, "#integrations-section");
+    }
+
     const message = error instanceof Error
       ? error.message
       : "Nao foi possivel criar a conta de recebimento no Asaas.";
@@ -439,8 +481,8 @@ export async function createWorkspaceAsaasSubaccountAction(formData: FormData) {
 }
 
 export async function updateWorkspaceSubscriptionPlanAction(formData: FormData) {
-  const plan = getString(formData, "subscriptionPlan");
-  const billingCycle = getString(formData, "subscriptionBillingCycle");
+  const plan = readOptionalFormString(formData, "subscriptionPlan");
+  const billingCycle = readOptionalFormString(formData, "subscriptionBillingCycle");
 
   if (!isSubscriptionPlanCode(plan) || !isSubscriptionBillingCycleCode(billingCycle)) {
     redirectToSetup(
@@ -490,10 +532,10 @@ export async function createWorkspaceSubscriptionCheckoutAction() {
 export async function updateUserAlertPreferencesAction(formData: FormData) {
   try {
     await updateCurrentUserAlertPreferences({
-      showOperationalAlerts: getString(formData, "showOperationalAlerts") === "on",
-      showNotificationCenter: getString(formData, "showNotificationCenter") === "on",
-      emailOnInviteAccepted: getString(formData, "emailOnInviteAccepted") === "on",
-      emailOnSecurityAlerts: getString(formData, "emailOnSecurityAlerts") === "on",
+      showOperationalAlerts: readFormCheckbox(formData, "showOperationalAlerts"),
+      showNotificationCenter: readFormCheckbox(formData, "showNotificationCenter"),
+      emailOnInviteAccepted: readFormCheckbox(formData, "emailOnInviteAccepted"),
+      emailOnSecurityAlerts: readFormCheckbox(formData, "emailOnSecurityAlerts"),
     });
   } catch (error) {
     const message = error instanceof Error

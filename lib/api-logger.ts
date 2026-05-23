@@ -126,6 +126,32 @@ function maskHeaders(headers: Record<string, string>): Record<string, string> {
   return masked;
 }
 
+export function summarizeExternalErrorDetails(
+  value: string | null | undefined,
+  maxLength = 240,
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const masked = maskSensitiveData(normalized);
+  const safeValue = typeof masked === "string" ? masked : normalized;
+
+  if (safeValue.length <= maxLength) {
+    return safeValue;
+  }
+
+  return `${safeValue.slice(0, Math.max(0, maxLength - 3))}...`;
+}
+
 function formatLogEntry(entry: ApiLogEntry): string {
   return JSON.stringify(entry);
 }

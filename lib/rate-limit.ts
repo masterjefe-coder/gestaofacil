@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkDistributedRateLimit } from "@/lib/distributed-rate-limit";
 
 /**
  * In-memory rate limiter using a Map
@@ -90,6 +91,10 @@ const rateLimiters = {
   // Moderate limits for general endpoints
   general: new RateLimiter(60 * 1000, 100), // 100 requests per minute
 };
+
+function isDistributedRateLimitEnabled() {
+  return process.env.RATE_LIMIT_DISTRIBUTED_ENABLED === "1";
+}
 
 /**
  * Get client identifier from request
@@ -199,6 +204,55 @@ export function withRateLimit(
   };
 }
 
+export async function rateLimitRequest(
+  request: NextRequest,
+  type: keyof typeof rateLimiters = "general",
+): Promise<NextResponse | null> {
+  if (!isDistributedRateLimitEnabled()) {
+    return rateLimit(request, type);
+  }
+
+  const identifier = getClientIdentifier(request);
+  const limitsByType: Record<keyof typeof rateLimiters, { windowMs: number; maxRequests: number }> = {
+    auth: { windowMs: 15 * 60 * 1000, maxRequests: 5 },
+    api: { windowMs: 60 * 1000, maxRequests: 60 },
+    webhook: { windowMs: 60 * 1000, maxRequests: 100 },
+    passwordReset: { windowMs: 60 * 60 * 1000, maxRequests: 3 },
+    general: { windowMs: 60 * 1000, maxRequests: 100 },
+  };
+  const config = limitsByType[type];
+  const result = await checkDistributedRateLimit({
+    scope: type,
+    identifier,
+    windowMs: config.windowMs,
+    maxRequests: config.maxRequests,
+  });
+
+  if (!result.allowed) {
+    const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);
+
+    return NextResponse.json(
+      {
+        error: "Too many requests",
+        message: "Rate limit exceeded. Please try again later.",
+        retryAfter,
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": retryAfter.toString(),
+          "X-RateLimit-Limit": result.limit.toString(),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": new Date(result.resetAt).toISOString(),
+          "X-RateLimit-Mode": "distributed",
+        },
+      },
+    );
+  }
+
+  return null;
+}
+
 /**
  * Reset rate limit for testing purposes
  */
@@ -211,6 +265,7 @@ export function resetRateLimit(identifier: string, type: keyof typeof rateLimite
  */
 export function getRateLimiterStats() {
   return {
+    mode: (isDistributedRateLimitEnabled() ? "distributed" : "local") as "distributed" | "local",
     auth: { windowMs: 15 * 60 * 1000, maxRequests: 5 },
     api: { windowMs: 60 * 1000, maxRequests: 60 },
     webhook: { windowMs: 60 * 1000, maxRequests: 100 },

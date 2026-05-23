@@ -8,9 +8,15 @@ import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { switchActiveWorkspaceAction } from "@/app/dashboard/actions";
 import { authOptions } from "@/lib/auth-options";
 import { getCurrentWorkspaceContext } from "@/lib/auth-session";
+import {
+  getCurrentDashboardModuleSignal,
+  getDashboardNavigationSignalClass,
+  mapOperationalAlertsToNavigationSignals,
+} from "@/lib/dashboard-navigation-signals";
 import { dashboardNav } from "@/lib/mock-data";
 import { getWorkspaceRoleLabel } from "@/lib/workspace-access";
 import { getDashboardNotificationCenter } from "@/lib/dashboard-notification-center";
+import { getPrimaryOperationalAlert } from "@/lib/operational-alerts";
 import { getSubscriptionStatusLabel } from "@/lib/subscription";
 import { listUserWorkspaces } from "@/lib/workspace-membership-repository";
 import { getOperationalAlerts } from "@/lib/operational-alerts";
@@ -52,6 +58,15 @@ export async function DashboardShell({
   ]);
 
   const restrictedSubscription = subscription.status === "PAST_DUE" || subscription.status === "CANCELED";
+  const primaryOperationalAlert = getPrimaryOperationalAlert(operationalAlerts);
+  const additionalOperationalAlerts = primaryOperationalAlert
+    ? operationalAlerts.slice(1)
+    : operationalAlerts;
+  const navigationSignals = mapOperationalAlertsToNavigationSignals(operationalAlerts);
+  const navigationSignalsByHref = new Map(
+    navigationSignals.map((signal) => [signal.href, signal]),
+  );
+  const currentModuleSignal = getCurrentDashboardModuleSignal(currentPath, navigationSignals);
 
   if (restrictedSubscription && currentPath !== "/dashboard/setup") {
     redirect("/dashboard/setup?subscriptionIntent=1");
@@ -81,16 +96,27 @@ export async function DashboardShell({
         </div>
 
         <nav className="sidebar-nav" aria-label="Navegação do dashboard">
-          {dashboardNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={item.href === currentPath ? "sidebar-link sidebar-link-active" : "sidebar-link"}
-            >
-              <span>{item.label}</span>
-              <small>{item.helper}</small>
-            </Link>
-          ))}
+          {dashboardNav.map((item) => {
+            const signal = navigationSignalsByHref.get(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={item.href === currentPath ? "sidebar-link sidebar-link-active" : "sidebar-link"}
+              >
+                <div className="sidebar-link-heading">
+                  <span>{item.label}</span>
+                  {signal ? (
+                    <small className={`sidebar-link-badge sidebar-link-badge-${getDashboardNavigationSignalClass(signal.status)}`}>
+                      {signal.label}
+                    </small>
+                  ) : null}
+                </div>
+                <small>{item.helper}</small>
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="sidebar-footer">
@@ -118,12 +144,65 @@ export async function DashboardShell({
           </div>
         ) : null}
 
-        {alertPreferences.showOperationalAlerts && operationalAlerts.length > 0 ? (
+        {currentModuleSignal ? (
+          <section className="dashboard-module-focus">
+            <div className={`dashboard-module-focus-card dashboard-module-focus-card-${getDashboardNavigationSignalClass(currentModuleSignal.status)}`}>
+              <div>
+                <span className="section-label">Modulo em foco</span>
+                <strong>{currentModuleSignal.label} pede atencao operacional agora.</strong>
+                <span>
+                  Esta area foi sinalizada na leitura operacional e merece revisao antes de ampliar a fila normal.
+                </span>
+              </div>
+              <div className="dashboard-module-focus-actions">
+                {currentModuleSignal.targetHref && currentModuleSignal.targetLabel ? (
+                  <Link href={currentModuleSignal.targetHref} className="secondary-link">
+                    {currentModuleSignal.targetLabel}
+                  </Link>
+                ) : null}
+                <Link href="/dashboard" className="secondary-link">
+                  Voltar para a central
+                </Link>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {alertPreferences.showOperationalAlerts && primaryOperationalAlert ? (
+          <section className="dashboard-alert-hero">
+            <div className={primaryOperationalAlert.tone === "critical" ? "auth-hint fiscal-warning dashboard-alert-hero-card" : "auth-hint dashboard-alert-hero-card"}>
+              <div className="dashboard-alert-hero-copy">
+                <span className="section-label">Em atenção agora</span>
+                <strong>{primaryOperationalAlert.title}</strong>
+                <span>{primaryOperationalAlert.message}</span>
+                {primaryOperationalAlert.recoveryMessage ? (
+                  <small>
+                    Último sinal saudável: {primaryOperationalAlert.recoveryMessage}
+                    {primaryOperationalAlert.recoveryAt ? ` · ${primaryOperationalAlert.recoveryAt}` : ""}
+                  </small>
+                ) : null}
+              </div>
+              {primaryOperationalAlert.href && primaryOperationalAlert.hrefLabel ? (
+                <Link href={primaryOperationalAlert.href} className="secondary-link">
+                  {primaryOperationalAlert.hrefLabel}
+                </Link>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {alertPreferences.showOperationalAlerts && additionalOperationalAlerts.length > 0 ? (
           <section className="dashboard-alert-stack">
-            {operationalAlerts.map((alert) => (
+            {additionalOperationalAlerts.map((alert) => (
               <div key={alert.id} className={alert.tone === "critical" ? "auth-hint fiscal-warning" : "auth-hint"}>
                 <strong>{alert.title}</strong>
                 <span>{alert.message}</span>
+                {alert.recoveryMessage ? (
+                  <small className="muted-text">
+                    Último sinal saudável: {alert.recoveryMessage}
+                    {alert.recoveryAt ? ` · ${alert.recoveryAt}` : ""}
+                  </small>
+                ) : null}
                 {alert.href && alert.hrefLabel ? (
                   <Link href={alert.href} className="secondary-link">
                     {alert.hrefLabel}

@@ -73,6 +73,14 @@ enum SubscriptionBillingCycle {
   YEARLY
 }
 
+enum BackgroundJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
 model User {
   id          String               @id @default(cuid())
   name        String?
@@ -127,6 +135,7 @@ model Workspace {
   charges       Charge[]
   nfseDocuments NfseDocument[]
   auditEvents   AuditEvent[]
+  backgroundJobs BackgroundJob[]
   subscription  WorkspaceSubscription?
   invites       WorkspaceInvite[]
   userPreferences WorkspaceUserPreference[]
@@ -238,6 +247,8 @@ model Customer {
   city          String?
   state         String?
   notes         String?
+  deletedAt     DateTime?
+  version       Int           @default(1)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   workspaceId   String
@@ -249,6 +260,7 @@ model Customer {
   nfseDocuments NfseDocument[]
 
   @@index([workspaceId, name])
+  @@index([workspaceId, deletedAt])
 }
 
 model ServiceCatalogItem {
@@ -296,6 +308,8 @@ model Quote {
   approvalToken String?      @unique
   approvedAt    DateTime?
   expiresAt     DateTime?
+  deletedAt     DateTime?
+  version       Int          @default(1)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   customerId    String
@@ -308,6 +322,7 @@ model Quote {
   order         Order?
 
   @@index([workspaceId, status])
+  @@index([workspaceId, deletedAt])
 }
 
 model QuoteItem {
@@ -328,6 +343,8 @@ model Order {
   scheduledFor  DateTime?
   completedAt   DateTime?
   internalNotes String?
+  deletedAt     DateTime?
+  version       Int         @default(1)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   quoteId       String      @unique
@@ -341,6 +358,7 @@ model Order {
   nfseDocument  NfseDocument?
 
   @@index([workspaceId, status])
+  @@index([workspaceId, deletedAt])
 }
 
 model OrderItem {
@@ -364,6 +382,8 @@ model Charge {
   pixCode       String?
   dueDate       DateTime?
   paidAt        DateTime?
+  deletedAt     DateTime?
+  version       Int         @default(1)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   workspaceId   String
@@ -374,6 +394,7 @@ model Charge {
   order         Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, status])
+  @@index([workspaceId, deletedAt])
 }
 
 model NfseDocument {
@@ -384,6 +405,8 @@ model NfseDocument {
   serviceAmount    Decimal    @db.Decimal(10, 2)
   issuedAt         DateTime?
   errorMessage     String?
+  deletedAt        DateTime?
+  version          Int        @default(1)
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
   workspaceId      String
@@ -394,6 +417,46 @@ model NfseDocument {
   order            Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, status])
+  @@index([workspaceId, deletedAt])
+}
+
+model BackgroundJob {
+  id           String              @id @default(cuid())
+  type         String
+  payload      Json
+  status       BackgroundJobStatus @default(PENDING)
+  dedupeKey    String?
+  attempts     Int                 @default(0)
+  maxAttempts  Int                 @default(3)
+  scheduledFor DateTime            @default(now())
+  availableAt  DateTime            @default(now())
+  lockedAt     DateTime?
+  lockedBy     String?
+  lastError    String?
+  completedAt  DateTime?
+  failedAt     DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  workspaceId  String?
+  workspace    Workspace?          @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@unique([type, dedupeKey])
+  @@index([status, availableAt])
+  @@index([workspaceId, status])
+}
+
+model RateLimitBucket {
+  id         String   @id @default(cuid())
+  scope      String
+  identifier String
+  windowKey  String
+  count      Int      @default(0)
+  resetAt    DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([scope, identifier, windowKey])
+  @@index([resetAt])
 }
 
 model AuditEvent {

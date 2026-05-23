@@ -1,7 +1,7 @@
 import https from "node:https";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { withRetry } from "@/lib/api-retry";
-import { getLogger } from "@/lib/api-logger";
+import { getLogger, summarizeExternalErrorDetails } from "@/lib/api-logger";
 
 const logger = getLogger({ service: "nfse-national" });
 
@@ -29,6 +29,16 @@ export type NfseNationalResponse = {
   headers: Record<string, string | string[] | undefined>;
   body: string;
 };
+
+class NfseNationalRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "NfseNationalRequestError";
+  }
+}
 
 function encodeXmlPayload(xmlPayload: string) {
   return JSON.stringify({
@@ -113,12 +123,24 @@ export function createNfseNationalClient(config: NfseNationalClientConfig) {
                   headers: res.headers,
                   body: Buffer.concat(chunks).toString("utf8"),
                 };
+                const detailSummary = summarizeExternalErrorDetails(response.body);
 
                 if (res.statusCode && res.statusCode >= 400) {
                   logger.error("NFS-e National API request failed", undefined, {
                     status: res.statusCode,
                     duration,
+                    detailSummary,
                   });
+
+                  if ([408, 429, 500, 502, 503, 504].includes(res.statusCode)) {
+                    reject(new NfseNationalRequestError(
+                      detailSummary
+                        ? `NFS-e Nacional respondeu com falha transitória (${res.statusCode}). ${detailSummary}`
+                        : `NFS-e Nacional respondeu com falha transitória (${res.statusCode}).`,
+                      res.statusCode,
+                    ));
+                    return;
+                  }
                 } else {
                   logger.info("NFS-e National API request successful", {
                     status: res.statusCode,
@@ -149,6 +171,7 @@ export function createNfseNationalClient(config: NfseNationalClientConfig) {
         });
       },
       {
+        telemetryKey: "nfse-national-api",
         maxAttempts: 3,
         initialDelayMs: 2000,
         retryableStatuses: [408, 429, 500, 502, 503, 504],

@@ -4,7 +4,7 @@ import { getLogger } from "@/lib/api-logger";
 import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 import { isWebhookSecretConfigured } from "@/lib/runtime-safety";
 import { timingSafeCompare, verifyWebhookTimestamp } from "@/lib/security-crypto";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitRequest } from "@/lib/rate-limit";
 
 const logger = getLogger({ route: "api/evolution/webhook" });
 
@@ -21,12 +21,14 @@ function isAuthorized(request: NextRequest) {
   return timingSafeCompare(authorization, expectedAuth);
 }
 
-export async function GET() {
-  return NextResponse.json({
+export async function GET(request: NextRequest) {
+  const requestId = getOrCreateRequestId(request);
+
+  return attachRequestId(NextResponse.json({
     status: "ok",
     service: "gestao-facil-evolution-webhook",
     timestamp: new Date().toISOString(),
-  });
+  }), requestId);
 }
 
 export async function POST(request: NextRequest) {
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
   const requestLogger = logger.child({ requestId });
 
   // Apply rate limiting for webhooks
-  const rateLimitResponse = rateLimit(request, "webhook");
+  const rateLimitResponse = await rateLimitRequest(request, "webhook");
   if (rateLimitResponse) {
     requestLogger.warn("Evolution webhook rate limited");
     return attachRequestId(rateLimitResponse, requestId);

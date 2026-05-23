@@ -7,6 +7,11 @@ import { getDashboardReportSnapshot } from "@/lib/workspace-repository";
 
 const logger = getLogger({ route: "api/reports/export" });
 
+export const reportExportRouteDeps = {
+  requireApiModuleAccess,
+  getDashboardReportSnapshot,
+};
+
 function createSheet(rows: Array<Record<string, string | number>>) {
   return XLSX.utils.json_to_sheet(rows);
 }
@@ -14,12 +19,12 @@ function createSheet(rows: Array<Record<string, string | number>>) {
 export async function GET(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiModuleAccess("reports", "canView");
+  const unauthorized = await reportExportRouteDeps.requireApiModuleAccess("reports", "canView");
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
 
-  const report = await getDashboardReportSnapshot();
+  const report = await reportExportRouteDeps.getDashboardReportSnapshot();
   const workbook = XLSX.utils.book_new();
 
   XLSX.utils.book_append_sheet(workbook, createSheet(

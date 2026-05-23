@@ -71,7 +71,10 @@ export async function listChargeWhatsappHistory(charges: Charge[]) {
   await ensureDemoCommerceSeeded();
   const { workspaceId } = await getCurrentWorkspaceContext();
   const customers = await prisma.customer.findMany({
-    where: { workspaceId },
+    where: {
+      workspaceId,
+      deletedAt: null,
+    },
     select: {
       name: true,
       phone: true,

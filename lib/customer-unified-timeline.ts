@@ -114,6 +114,9 @@ export async function listCustomerUnifiedTimeline() {
   if (!isLocalDataMode()) {
     const [dbQuotes, dbOrders, dbCharges, dbNfseDocuments, customerAudit, quoteAudit, chargeAudit, nfseAudit] = await Promise.all([
       prisma.quote.findMany({
+        where: {
+          deletedAt: null,
+        },
         select: {
           id: true,
           title: true,
@@ -122,6 +125,9 @@ export async function listCustomerUnifiedTimeline() {
         },
       }),
       prisma.order.findMany({
+        where: {
+          deletedAt: null,
+        },
         select: {
           id: true,
           createdAt: true,
@@ -129,6 +135,9 @@ export async function listCustomerUnifiedTimeline() {
         },
       }),
       prisma.charge.findMany({
+        where: {
+          deletedAt: null,
+        },
         select: {
           id: true,
           createdAt: true,
@@ -136,6 +145,9 @@ export async function listCustomerUnifiedTimeline() {
         },
       }),
       prisma.nfseDocument.findMany({
+        where: {
+          deletedAt: null,
+        },
         select: {
           id: true,
           createdAt: true,

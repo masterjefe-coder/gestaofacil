@@ -222,7 +222,10 @@ export async function listNfseDocuments(): Promise<NfseDocument[]> {
   await ensureDemoCommerceSeeded();
   const { workspaceId } = await getCurrentWorkspaceContext();
   const documents = await prisma.nfseDocument.findMany({
-    where: { workspaceId },
+    where: {
+      workspaceId,
+      deletedAt: null,
+    },
     include: {
       customer: true,
       order: true,
@@ -271,6 +274,7 @@ export async function createNfseFromCharge(chargeId: string): Promise<NfseDocume
     where: {
       id: chargeId,
       workspaceId: context.workspaceId,
+      deletedAt: null,
     },
     include: {
       customer: true,
@@ -287,8 +291,12 @@ export async function createNfseFromCharge(chargeId: string): Promise<NfseDocume
   }
 
   if (charge.order.nfseDocument) {
-    const existing = await prisma.nfseDocument.findUnique({
-      where: { orderId: charge.orderId },
+    const existing = await prisma.nfseDocument.findFirst({
+      where: {
+        orderId: charge.orderId,
+        workspaceId: context.workspaceId,
+        deletedAt: null,
+      },
       include: { customer: true, order: true },
     });
 
@@ -357,10 +365,29 @@ export async function updateNfseStatus(
 
   await ensureDemoCommerceSeeded();
   const context = await getCurrentWorkspaceContext();
+  const existing = await prisma.nfseDocument.findFirst({
+    where: {
+      id,
+      workspaceId: context.workspaceId,
+      deletedAt: null,
+    },
+    include: {
+      customer: true,
+      order: true,
+    },
+  });
+
+  if (!existing) {
+    return null;
+  }
+
   const updated = await prisma.nfseDocument.update({
-    where: { id },
+    where: { id: existing.id },
     data: {
       status: mapNfseStatus(status),
+      version: {
+        increment: 1,
+      },
       issuedAt: status === "Emitida" ? new Date() : null,
       verificationCode: status === "Emitida" ? `VF-${id.slice(0, 6).toUpperCase()}` : undefined,
       externalId: status === "Emitida" ? `NFS-${id.slice(0, 8).toUpperCase()}` : undefined,
@@ -416,6 +443,7 @@ export async function listNfseReadyQueue() {
     where: {
       workspaceId: context.workspaceId,
       status: "PAID",
+      deletedAt: null,
     },
     include: {
       customer: true,
@@ -547,6 +575,7 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
     where: {
       id,
       workspaceId: context.workspaceId,
+      deletedAt: null,
     },
     include: {
       customer: true,
@@ -668,6 +697,7 @@ export async function issueNfseNationalDocument(id: string, options?: NfseIssueO
     where: {
       id,
       workspaceId: context.workspaceId,
+      deletedAt: null,
     },
     include: {
       customer: true,
@@ -718,9 +748,12 @@ export async function issueNfseNationalDocument(id: string, options?: NfseIssueO
 
     const metadata = parseIssuedNfseMetadata(response.body);
     const updated = await prisma.nfseDocument.update({
-      where: { id },
+      where: { id: dbDocument.id },
       data: {
         status: "ISSUED",
+        version: {
+          increment: 1,
+        },
         issuedAt: new Date(),
         externalId: metadata.accessKey || signed.dpsId,
         verificationCode: metadata.verificationCode || signed.digest.slice(0, 12).toUpperCase(),
@@ -790,6 +823,7 @@ export async function createQuickNfseDraft(input: QuickNfseDraftInput): Promise<
   const dbCustomer = await prisma.customer.findFirst({
     where: {
       workspaceId: context.workspaceId,
+      deletedAt: null,
       OR: [
         { name: customer.name },
         ...(customer.document ? [{ document: customer.document }] : []),

@@ -1,5 +1,5 @@
 import { withRetryAndCircuitBreaker } from "@/lib/api-retry";
-import { getLogger } from "@/lib/api-logger";
+import { getLogger, summarizeExternalErrorDetails } from "@/lib/api-logger";
 import { generateIdempotencyKey } from "@/lib/idempotency";
 
 const logger = getLogger({ service: "evolution-api" });
@@ -183,14 +183,18 @@ async function evolutionRequest<T>(path: string, init?: RequestInit): Promise<T>
 
       if (!response.ok) {
         const details = await response.text();
+        const detailSummary = summarizeExternalErrorDetails(details);
         logger.error("Evolution API request failed", undefined, {
           requestId,
           status: response.status,
           duration,
-          details,
+          detailSummary,
+          detailLength: details.length,
         });
         throw new EvolutionApiError(
-          `Evolution API recusou a operação (${response.status}): ${details || "sem detalhe"}`,
+          detailSummary
+            ? `Evolution API recusou a operação (${response.status}). ${detailSummary}`
+            : `Evolution API recusou a operação (${response.status}).`,
           response.status
         );
       }

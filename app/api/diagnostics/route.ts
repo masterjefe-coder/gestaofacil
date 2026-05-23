@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const snapshot = buildOperationalDiagnosticsSnapshot(requestId);
+  const snapshot = await buildOperationalDiagnosticsSnapshot(requestId);
   const warningCount = snapshot.checks.filter((check) => check.level === "warning").length;
 
   requestLogger.info("Operational diagnostics served", {
@@ -46,6 +46,8 @@ export async function GET(request: Request) {
     asaasEnabled: snapshot.integrations.asaas.enabled,
     evolutionEnabled: snapshot.integrations.evolution.enabled,
     nfseReady: snapshot.integrations.nfse.ready,
+    openCircuitBreakerCount: snapshot.resilience.openCircuitBreakerCount,
+    halfOpenCircuitBreakerCount: snapshot.resilience.halfOpenCircuitBreakerCount,
   });
 
   return attachRequestId(NextResponse.json(snapshot), requestId);

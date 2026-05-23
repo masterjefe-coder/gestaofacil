@@ -277,6 +277,7 @@ async function applyDatabaseWebhook(reference: Extract<ChargeReference, { mode: 
     where: {
       id: reference.chargeId,
       workspaceId: reference.workspaceId,
+      deletedAt: null,
     },
     include: {
       customer: true,

@@ -88,11 +88,11 @@ async function ensureDemoCommerceSeededInternal() {
   const workspaceId = state.workspace.id;
 
   const { nfseCount, customerCount, quoteCount, orderCount, chargeCount } = await Promise.all([
-    prisma.nfseDocument.count({ where: { workspaceId } }),
-    prisma.customer.count({ where: { workspaceId } }),
-    prisma.quote.count({ where: { workspaceId } }),
-    prisma.order.count({ where: { workspaceId } }),
-    prisma.charge.count({ where: { workspaceId } }),
+    prisma.nfseDocument.count({ where: { workspaceId, deletedAt: null } }),
+    prisma.customer.count({ where: { workspaceId, deletedAt: null } }),
+    prisma.quote.count({ where: { workspaceId, deletedAt: null } }),
+    prisma.order.count({ where: { workspaceId, deletedAt: null } }),
+    prisma.charge.count({ where: { workspaceId, deletedAt: null } }),
   ]).then(([nfseCount, customerCount, quoteCount, orderCount, chargeCount]) => ({
     nfseCount,
     customerCount,
@@ -117,7 +117,10 @@ async function ensureDemoCommerceSeededInternal() {
   }
 
   const customers = await prisma.customer.findMany({
-    where: { workspaceId },
+    where: {
+      workspaceId,
+      deletedAt: null,
+    },
   });
   const customersByName = new Map(customers.map((customer) => [customer.name, customer]));
 
@@ -161,7 +164,10 @@ async function ensureDemoCommerceSeededInternal() {
   }
 
   const quotes = await prisma.quote.findMany({
-    where: { workspaceId },
+    where: {
+      workspaceId,
+      deletedAt: null,
+    },
   });
   const quotesById = new Map(quotes.map((quote) => [quote.id, quote]));
 
@@ -195,7 +201,10 @@ async function ensureDemoCommerceSeededInternal() {
   }
 
   const orders = await prisma.order.findMany({
-    where: { workspaceId },
+    where: {
+      workspaceId,
+      deletedAt: null,
+    },
     include: { quote: true, customer: true },
   });
 

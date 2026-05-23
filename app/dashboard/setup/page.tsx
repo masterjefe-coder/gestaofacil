@@ -3,6 +3,7 @@ import { SetupAsaasFlashMessages, SetupSubscriptionFlashMessages, SetupTeamFlash
 import { DashboardShell } from "@/components/dashboard-shell";
 import { EvolutionPairingPanel } from "@/components/evolution-pairing-panel";
 import { InviteLinkField } from "@/components/invite-link-field";
+import { OperationalDiagnosticsPanel } from "@/components/operational-diagnostics-panel";
 import {
   connectWorkspaceAsaasAccountAction,
   createWorkspaceAsaasSubaccountAction,
@@ -27,6 +28,8 @@ import { listWorkspaceAuditEntriesByActions } from "@/lib/audit-repository";
 import { listWorkspaceAuditEntriesByType } from "@/lib/audit-repository";
 import { getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { buildSetupPageViewModel } from "@/lib/setup-page-data";
+import { buildOperationalDiagnosticsSnapshot } from "@/lib/operational-diagnostics";
+import { summarizeOperationalSignals } from "@/lib/operational-diagnostics-panel-helpers";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import {
   fetchEvolutionInstances,
@@ -58,6 +61,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     invites,
     auditEntries,
     evolutionAuditEntries,
+    fiscalAuditEntries,
     asaasIncidentEntries,
     asaasLifecycleEntries,
     subscriptionAuditEntries,
@@ -65,6 +69,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     params,
     fiscalReadiness,
     evolutionProbe,
+    operationalDiagnostics,
     evolutionInstances,
     workspaceAsaas,
     workspaceAsaasOnboarding,
@@ -78,6 +83,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     listWorkspaceInvites(),
     listAuditEntries(8),
     listWorkspaceAuditEntriesByType("evolution", 8),
+    listWorkspaceAuditEntriesByType("nfse", 8),
     listWorkspaceAuditEntriesByActions(["charge.asaas.failed", "asaas.payment_overdue"], 8),
     listWorkspaceAuditEntriesByActions(["workspace.asaas.connected", "workspace.asaas.disconnected", "workspace.asaas.subaccount_created"], 6),
     listWorkspaceAuditEntriesByActions(["workspace.subscription.checkout_created", "workspace.subscription.checkout_synced", "subscription.asaas.payment_overdue", "subscription.asaas.payment_received", "subscription.asaas.payment_confirmed"], 6),
@@ -85,6 +91,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     searchParams,
     getFiscalSetupReadiness(),
     probeEvolutionApi(),
+    buildOperationalDiagnosticsSnapshot("dashboard-setup"),
     fetchEvolutionInstances().catch(() => []),
     getWorkspaceAsaasConnection(),
     getWorkspaceAsaasOnboardingSnapshot(),
@@ -94,6 +101,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     getCurrentUserAlertPreferences(),
   ]);
   const flash = readSetupPageFlashState(params);
+  const operationalFocus = params?.operationalFocus || "";
   const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
   const view = buildSetupPageViewModel({
     workspaceRole: context.workspaceRole,
@@ -109,6 +117,15 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const selectedEvolutionInstanceState = selectedEvolutionInstanceName
     ? await getEvolutionConnectionState(selectedEvolutionInstanceName).catch(() => null)
     : null;
+  const evolutionSignals = summarizeOperationalSignals(evolutionAuditEntries);
+  const fiscalSignals = summarizeOperationalSignals(fiscalAuditEntries);
+  const asaasSignals = summarizeOperationalSignals([
+    ...asaasIncidentEntries,
+    ...asaasLifecycleEntries,
+  ]);
+  const subscriptionSignals = summarizeOperationalSignals(subscriptionAuditEntries);
+  const subscriptionSectionFocused = operationalFocus === "subscription";
+  const integrationsSectionFocused = operationalFocus === "integrations";
 
   return (
     <DashboardShell
@@ -473,13 +490,33 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </div>
       </section>
 
-      <section id="subscription-section" className="data-panel">
+      <OperationalDiagnosticsPanel
+        snapshot={operationalDiagnostics}
+        signals={{
+          evolution: evolutionSignals,
+          asaas: asaasSignals,
+          fiscal: fiscalSignals,
+          subscription: subscriptionSignals,
+        }}
+      />
+
+      <section
+        id="subscription-section"
+        className={subscriptionSectionFocused ? "data-panel operational-focus-panel" : "data-panel"}
+      >
         <div className="card-header">
           <div>
             <span className="section-label">Plano</span>
             <h2>Plano da empresa e cobrança automática</h2>
           </div>
         </div>
+
+        {subscriptionSectionFocused ? (
+          <div className="operational-focus-banner">
+            <strong>Atenção operacional direcionada</strong>
+            <span>Você chegou aqui porque o plano ou a cobrança recorrente da empresa pedem revisão agora.</span>
+          </div>
+        ) : null}
 
         <div className={subscription.status === "TRIALING" ? "auth-hint" : "auth-hint fiscal-warning"}>
           <strong>{getSubscriptionStatusLabel(subscription.status)}</strong>
@@ -556,13 +593,23 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         ) : null}
       </section>
 
-      <section id="integrations-section" className="data-panel">
+      <section
+        id="integrations-section"
+        className={integrationsSectionFocused ? "data-panel operational-focus-panel" : "data-panel"}
+      >
         <div className="card-header">
           <div>
             <span className="section-label">WhatsApp</span>
             <h2>Conectar o número principal da empresa</h2>
           </div>
         </div>
+
+        {integrationsSectionFocused ? (
+          <div className="operational-focus-banner">
+            <strong>Atenção operacional direcionada</strong>
+            <span>Você chegou aqui porque WhatsApp ou cobrança automática precisam de ajuste nesta empresa.</span>
+          </div>
+        ) : null}
 
         {flash.evolutionMessage ? (
           <div className={flash.evolutionOk ? "auth-hint" : "auth-hint fiscal-warning"}>

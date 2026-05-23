@@ -21,6 +21,7 @@ import {
 } from "@/lib/demo-data-codecs";
 import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { readDemoWorkspaceData, writeDemoWorkspaceData } from "@/lib/demo-store";
+import { enqueueBackgroundJob } from "@/lib/background-jobs";
 import { ensureOrderFromQuote } from "@/lib/order-repository";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -131,7 +132,10 @@ export async function listCharges(): Promise<Charge[]> {
     const { workspaceId } = await getCurrentWorkspaceContext();
 
     const charges = await prisma.charge.findMany({
-      where: { workspaceId },
+      where: {
+        workspaceId,
+        deletedAt: null,
+      },
       include: {
         customer: true,
         order: true,
@@ -159,6 +163,7 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
       where: {
         workspaceId,
         name: input.customer,
+        deletedAt: null,
       },
     });
 
@@ -285,6 +290,21 @@ export async function createCharge(input: ChargeInput): Promise<Charge> {
     });
 
     if (integrationWarning) {
+      await enqueueBackgroundJob({
+        type: "asaas.charge.retry",
+        dedupeKey: `charge:${charge.id}:creation`,
+        payload: {
+          chargeId: charge.id,
+          customerId: customer.id,
+          amount: createdCharge.amount,
+          detail: integrationWarning.message,
+          source: "manual-charge",
+        },
+        workspaceId,
+        availableAt: new Date(Date.now() + 60_000),
+        maxAttempts: 5,
+      });
+
       await recordAuditEvent({
         action: "charge.asaas.failed",
         entityType: "charge",
@@ -366,8 +386,12 @@ export async function createChargeFromQuote(
       return null;
     }
 
-    const dbOrder = await prisma.order.findUnique({
-      where: { id: order.id },
+    const dbOrder = await prisma.order.findFirst({
+      where: {
+        id: order.id,
+        workspaceId,
+        deletedAt: null,
+      },
       include: { customer: true, quote: true },
     });
 
@@ -469,6 +493,21 @@ export async function createChargeFromQuote(
     });
 
     if (integrationWarning) {
+      await enqueueBackgroundJob({
+        type: "asaas.charge.retry",
+        dedupeKey: `charge:${charge.id}:quote`,
+        payload: {
+          chargeId: charge.id,
+          customerId: dbOrder.customer.id,
+          amount: createdCharge.amount,
+          detail: integrationWarning.message,
+          source: "quote-charge",
+        },
+        workspaceId,
+        availableAt: new Date(Date.now() + 60_000),
+        maxAttempts: 5,
+      });
+
       await recordAuditEvent({
         action: "charge.asaas.failed",
         entityType: "charge",
@@ -549,6 +588,7 @@ export async function updateCharge(id: string, input: ChargeUpdateInput): Promis
       where: {
         id,
         workspaceId: context.workspaceId,
+        deletedAt: null,
       },
       include: {
         customer: true,
@@ -576,6 +616,9 @@ export async function updateCharge(id: string, input: ChargeUpdateInput): Promis
       where: { id: existing.id },
       data: {
         status: mapChargeStatus(nextStatus),
+        version: {
+          increment: 1,
+        },
         dueDate: parseDueDateInput(nextDueDate),
         paymentLink: nextPaymentLink || null,
         pixCode: encodeChargeMeta({
@@ -657,6 +700,7 @@ export async function addChargeFollowUp(id: string, input: ChargeFollowUpInput):
       where: {
         id,
         workspaceId: context.workspaceId,
+        deletedAt: null,
       },
       include: {
         customer: true,
@@ -672,6 +716,9 @@ export async function addChargeFollowUp(id: string, input: ChargeFollowUpInput):
     const updated = await prisma.charge.update({
       where: { id: existing.id },
       data: {
+        version: {
+          increment: 1,
+        },
         pixCode: encodeChargeMeta({
           dueLabel: currentView.dueLabel,
           source: currentView.source,
@@ -735,6 +782,7 @@ export async function deleteCharge(id: string): Promise<void> {
       where: {
         id,
         workspaceId: context.workspaceId,
+        deletedAt: null,
       },
       include: {
         customer: true,
@@ -742,10 +790,17 @@ export async function deleteCharge(id: string): Promise<void> {
       },
     });
 
-    await prisma.charge.deleteMany({
+    await prisma.charge.updateMany({
       where: {
         id,
         workspaceId: context.workspaceId,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: new Date(),
+        version: {
+          increment: 1,
+        },
       },
     });
 

@@ -7,15 +7,21 @@ import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 
 const logger = getLogger({ route: "api/evolution/status" });
 
+export const evolutionStatusRouteDeps = {
+  requireApiSession,
+  getCurrentWorkspaceContext,
+  getEvolutionConnectionState,
+};
+
 export async function GET(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const unauthorized = await requireApiSession();
+  const unauthorized = await evolutionStatusRouteDeps.requireApiSession();
   if (unauthorized) {
     return attachRequestId(unauthorized, requestId);
   }
 
-  const context = await getCurrentWorkspaceContext();
+  const context = await evolutionStatusRouteDeps.getCurrentWorkspaceContext();
   if (!canManageWorkspace(context.workspaceRole)) {
     requestLogger.warn("Evolution status rejected because workspace role cannot manage setup", {
       workspaceRole: context.workspaceRole,
@@ -38,7 +44,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await getEvolutionConnectionState(instanceName);
+    const result = await evolutionStatusRouteDeps.getEvolutionConnectionState(instanceName);
     const state = result.instance?.state || "unknown";
     requestLogger.info("Evolution status fetched", {
       instanceName,

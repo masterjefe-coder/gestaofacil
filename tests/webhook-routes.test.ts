@@ -43,12 +43,18 @@ async function withEnv<T>(entries: Record<string, string | undefined>, fn: () =>
 }
 
 test("asaas webhook GET reports service health", async () => {
-  const response = await getAsaasWebhook();
+  const requestId = "asaas-health-request-id";
+  const response = await getAsaasWebhook(new NextRequest("http://localhost/api/asaas/webhook", {
+    headers: {
+      [REQUEST_ID_HEADER]: requestId,
+    },
+  }));
   const payload = await response.json();
 
   assert.equal(response.status, 200);
   assert.equal(payload.status, "ok");
   assert.equal(payload.service, "gestao-facil-asaas-webhook");
+  assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
 });
 
 test("asaas webhook POST returns 503 when auth token is not configured", async () => {
@@ -105,12 +111,18 @@ test("asaas webhook POST rejects expired timestamps before processing", async ()
 });
 
 test("evolution webhook GET reports service health", async () => {
-  const response = await getEvolutionWebhook();
+  const requestId = "evolution-health-request-id";
+  const response = await getEvolutionWebhook(new NextRequest("http://localhost/api/evolution/webhook", {
+    headers: {
+      [REQUEST_ID_HEADER]: requestId,
+    },
+  }));
   const payload = await response.json();
 
   assert.equal(response.status, 200);
   assert.equal(payload.status, "ok");
   assert.equal(payload.service, "gestao-facil-evolution-webhook");
+  assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
 });
 
 test("evolution webhook POST returns 503 when secret is not configured", async () => {
