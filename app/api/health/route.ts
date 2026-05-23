@@ -11,13 +11,26 @@ import { timingSafeCompare } from "@/lib/security-crypto";
 
 const logger = getLogger({ route: "api/health" });
 
+async function getSessionEmailSafe() {
+  try {
+    return (await getServerSession(authOptions))?.user?.email?.trim() || null;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("outside a request scope")) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 export async function GET(request: Request) {
   const requestId = getOrCreateRequestId(request);
   const requestLogger = logger.child({ requestId });
-  const session = await getServerSession(authOptions);
   const configuredHealthToken = process.env.HEALTHCHECK_TOKEN?.trim();
   const receivedHealthToken = request.headers.get("x-health-token")?.trim();
-  const canSeeDetails = Boolean(session?.user?.email) || timingSafeCompare(receivedHealthToken, configuredHealthToken);
+  const hasValidHealthToken = timingSafeCompare(receivedHealthToken, configuredHealthToken);
+  const sessionEmail = hasValidHealthToken ? null : await getSessionEmailSafe();
+  const canSeeDetails = hasValidHealthToken || Boolean(sessionEmail);
 
   if (!canSeeDetails) {
     requestLogger.info("Health check served in public mode");
