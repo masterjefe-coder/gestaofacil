@@ -89,11 +89,6 @@ export default async function ReportsPage() {
         </aside>
       </section>
 
-      <section className="auth-hint">
-        <strong>Relatório operacional</strong>
-        <span>Gerado em {report.generatedAt}. Use a tela para leitura rápida, o Excel para aprofundar e o PDF para compartilhar.</span>
-      </section>
-
       <section className="stats-row">
         {report.summary.map((item) => (
           <article key={item.label} className="stat-card">
@@ -183,14 +178,19 @@ export default async function ReportsPage() {
               <span>Cadência</span>
               <span>Próxima etapa</span>
             </div>
-            {report.topQuotes.map((item) => (
+            {report.topQuotes.length > 0 ? report.topQuotes.map((item) => (
               <article key={item.quoteId} className="report-table-row">
                 <strong>{item.customer}</strong>
                 <span>{item.amount}</span>
                 <span>{item.cadenceLabel}</span>
                 <span>{item.nextStepLabel}</span>
               </article>
-            ))}
+            )) : (
+              <div className="auth-hint">
+                <strong>Sem propostas em destaque</strong>
+                <span>Quando o comercial ganhar volume, este quadro passa a destacar as propostas mais importantes.</span>
+              </div>
+            )}
           </div>
         </section>
 
@@ -208,14 +208,19 @@ export default async function ReportsPage() {
               <span>Etapa concluída</span>
               <span>Próxima etapa</span>
             </div>
-            {report.topCharges.map((item) => (
+            {report.topCharges.length > 0 ? report.topCharges.map((item) => (
               <article key={item.id} className="report-table-row">
                 <strong>{item.customer}</strong>
                 <span>{item.amount}</span>
                 <span>{item.completedStepLabel}</span>
                 <span>{item.nextStepLabel}</span>
               </article>
-            ))}
+            )) : (
+              <div className="auth-hint">
+                <strong>Sem cobranças prioritárias</strong>
+                <span>Quando houver pressão financeira, esta área sobe as cobranças que mais pedem ação.</span>
+              </div>
+            )}
           </div>
         </section>
       </section>
@@ -235,14 +240,19 @@ export default async function ReportsPage() {
               <span>Abertos</span>
               <span>Leitura</span>
             </div>
-            {report.topCustomers.map((item) => (
+            {report.topCustomers.length > 0 ? report.topCustomers.map((item) => (
               <article key={item.customerId} className="report-table-row">
                 <strong>{item.customerName}</strong>
                 <span>{item.status}</span>
                 <span>{item.openAmount}</span>
                 <span>{item.headline}</span>
               </article>
-            ))}
+            )) : (
+              <div className="auth-hint">
+                <strong>Sem clientes em atenção</strong>
+                <span>Quando a base ganhar sinais mais fortes, esta área passa a mostrar quem merece olhar primeiro.</span>
+              </div>
+            )}
           </div>
         </section>
 
@@ -260,14 +270,19 @@ export default async function ReportsPage() {
               <span>Prioridade</span>
               <span>Leitura</span>
             </div>
-            {report.fiscalItems.map((item) => (
+            {report.fiscalItems.length > 0 ? report.fiscalItems.map((item) => (
               <article key={item.documentId} className="report-table-row">
                 <strong>{item.customer}</strong>
                 <span>{item.amount}</span>
                 <span>{item.priorityLabel}</span>
                 <span>{item.helper}</span>
               </article>
-            ))}
+            )) : (
+              <div className="auth-hint">
+                <strong>Sem fila fiscal em destaque</strong>
+                <span>Quando a emissão pedir atenção, este quadro passa a resumir os documentos prioritários.</span>
+              </div>
+            )}
           </div>
         </section>
       </section>

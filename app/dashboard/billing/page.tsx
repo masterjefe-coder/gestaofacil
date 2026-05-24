@@ -314,26 +314,41 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
               <option value="Pago">Pago</option>
             </select>
           </label>
-          <label>
-            <span>Cliente manual</span>
-            <input name="customer" type="text" placeholder="Usar se não vier de orçamento" />
-          </label>
-          <label>
-            <span>Valor manual</span>
-            <input name="amount" type="text" placeholder="Ex.: R$ 950" />
-          </label>
-          <label className="form-span-2">
-            <span>Prazo ou status operacional</span>
-            <input name="dueLabel" type="text" placeholder="Ex.: vence sexta-feira" />
-          </label>
-          <label>
-            <span>Data real de vencimento</span>
-            <input name="dueDate" type="date" />
-          </label>
-          <label className="form-span-2">
-            <span>Origem manual</span>
-            <input name="source" type="text" placeholder="Ex.: cobrança criada após visita técnica" />
-          </label>
+          <details className="guided-flow-card form-span-2">
+            <summary>
+              <div>
+                <span className="section-label">Cobrança manual</span>
+                <h3>Preencher dados só quando não vier de um orçamento aprovado</h3>
+                <p>Abra este bloco apenas para cobranças criadas fora do fluxo comercial padrão.</p>
+              </div>
+              <span className="guided-flow-badge">Opcional</span>
+            </summary>
+
+            <div className="guided-flow-body">
+              <div className="inline-form">
+                <label>
+                  <span>Cliente manual</span>
+                  <input name="customer" type="text" placeholder="Usar se não vier de orçamento" />
+                </label>
+                <label>
+                  <span>Valor manual</span>
+                  <input name="amount" type="text" placeholder="Ex.: R$ 950" />
+                </label>
+                <label className="form-span-2">
+                  <span>Prazo ou status operacional</span>
+                  <input name="dueLabel" type="text" placeholder="Ex.: vence sexta-feira" />
+                </label>
+                <label>
+                  <span>Data real de vencimento</span>
+                  <input name="dueDate" type="date" />
+                </label>
+                <label className="form-span-2">
+                  <span>Origem manual</span>
+                  <input name="source" type="text" placeholder="Ex.: cobrança criada após visita técnica" />
+                </label>
+              </div>
+            </div>
+          </details>
           <button type="submit" className="primary-link form-submit">
             Salvar cobrança
           </button>

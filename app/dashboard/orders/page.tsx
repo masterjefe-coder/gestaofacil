@@ -229,7 +229,25 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                 <strong className="quote-amount">{order.amount}</strong>
                 <p>{order.title}</p>
                 <small className="muted-text">{order.note}</small>
-                <small className="muted-text">Origem: {order.sourceQuoteId}</small>
+                <details className="guided-flow-card">
+                  <summary>
+                    <div>
+                      <span className="section-label">Detalhes</span>
+                      <h3>Ver origem do pedido</h3>
+                      <p>Abra só quando precisar rastrear a proposta que originou esta execução.</p>
+                    </div>
+                    <span className="guided-flow-badge">Opcional</span>
+                  </summary>
+
+                  <div className="guided-flow-body">
+                    <div className="dashboard-mini-list">
+                      <article>
+                        <strong>Origem</strong>
+                        <p>{order.sourceQuoteId}</p>
+                      </article>
+                    </div>
+                  </div>
+                </details>
                 <div className="dashboard-actions">
                   {order.status !== "Agendado" ? (
                     <form action={updateOrderStatusAction} className="card-action">

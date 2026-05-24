@@ -67,6 +67,7 @@ export async function DashboardShell({
     navigationSignals.map((signal) => [signal.href, signal]),
   );
   const currentModuleSignal = getCurrentDashboardModuleSignal(currentPath, navigationSignals);
+  const pageHeading = eyebrow || title;
 
   if (restrictedSubscription && currentPath !== "/dashboard/setup") {
     redirect("/dashboard/setup?subscriptionIntent=1");
@@ -105,15 +106,12 @@ export async function DashboardShell({
                 href={item.href}
                 className={item.href === currentPath ? "sidebar-link sidebar-link-active" : "sidebar-link"}
               >
-                <div className="sidebar-link-heading">
-                  <span>{item.label}</span>
-                  {signal ? (
-                    <small className={`sidebar-link-badge sidebar-link-badge-${getDashboardNavigationSignalClass(signal.status)}`}>
-                      {signal.label}
-                    </small>
-                  ) : null}
-                </div>
-                <small>{item.helper}</small>
+                <span>{item.label}</span>
+                {signal ? (
+                  <small className={`sidebar-link-badge sidebar-link-badge-${getDashboardNavigationSignalClass(signal.status)}`}>
+                    {signal.label}
+                  </small>
+                ) : null}
               </Link>
             );
           })}
@@ -127,14 +125,8 @@ export async function DashboardShell({
       <section className="workspace-content">
         <header className="dashboard-hero">
           <div className="dashboard-hero-copy-block">
-            <span className="eyebrow">{eyebrow}</span>
-            <h1>{title}</h1>
+            <h1>{pageHeading}</h1>
             <p>{description}</p>
-            <div className="dashboard-hero-meta">
-              <span>{setup.tradeName || setup.name}</span>
-              <span>{getWorkspaceRoleLabel(context.workspaceRole)}</span>
-              <span>{getSubscriptionStatusLabel(subscription.status)}</span>
-            </div>
           </div>
 
           {actions ? <div className="dashboard-actions">{actions}</div> : null}
