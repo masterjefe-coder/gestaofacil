@@ -12,6 +12,8 @@
 
 ## Validar antes de abrir para clientes reais
 
+- rodar `npm run readiness` no ambiente alvo e fechar qualquer `FAIL`
+- tratar tambem os `WARN` de `NFS-e` quando o municipio alvo ainda nao estiver liberado no Emissor Nacional
 - conectar a primeira conta ou subconta Asaas real por workspace
 - criar uma cobranca real e confirmar que o dinheiro cai na conta certa
 - validar webhook do Asaas com recebimento real
@@ -22,7 +24,7 @@
 ## Bloqueadores para produção ampla
 
 - primeira validacao real de Asaas por workspace
-- primeira validacao real de NFS-e completa
+- primeira validacao real de NFS-e completa em municipio com `AderenteEmissorNacional = Sim`
 - testes operacionais reais de WhatsApp em rotina
 
 ## Recomendacao de rollout

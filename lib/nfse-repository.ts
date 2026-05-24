@@ -9,6 +9,8 @@ import { ensureDemoCommerceSeeded } from "@/lib/demo-workspace-bootstrap";
 import { prisma } from "@/lib/prisma";
 import { readDemoWorkspaceData, writeDemoWorkspaceData } from "@/lib/demo-store";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
+import { issueJoinvilleRps } from "@/lib/nfse-joinville-provider";
+import { resolveNfseProvider } from "@/lib/nfse-provider";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { buildSignedDpsPayload, issueSignedNfsePayload } from "@/lib/nfse-national-provider";
 import type { Charge, DemoWorkspaceData, NfseDocument, Order, Quote } from "@/lib/types";
@@ -20,6 +22,8 @@ export type FiscalReadinessSummary = {
 };
 
 export type NfseNationalIssuePreview = {
+  providerKey?: "national" | "joinville";
+  providerLabel?: string;
   ready: boolean;
   helper: string;
   missingFields: string[];
@@ -493,15 +497,182 @@ export async function getFiscalSetupReadiness(): Promise<FiscalReadinessSummary>
   };
 }
 
+async function getNfseJoinvilleIssuePreview(id: string): Promise<NfseNationalIssuePreview | null> {
+  const readiness = await getFiscalSetupReadiness();
+  const setup = await getWorkspaceSetup();
+  const municipalCode = setup.municipalCode?.trim();
+  const defaultServiceCode = setup.defaultFiscalServiceCode?.trim() || process.env.NFSE_NATIONAL_SERVICE_CODE?.trim() || "";
+  const municipalRegistration = process.env.NFSE_JOINVILLE_MUNICIPAL_REGISTRATION?.trim() || "";
+
+  if (isLocalDataMode()) {
+    const data = await readDemoWorkspaceData();
+    const document = data.nfseDocuments.find((item) => item.id === id);
+
+    if (!document) {
+      return null;
+    }
+
+    const customer = data.customers.find((item) => item.name === document.customer);
+    const missingFields = [
+      ...readiness.missingFields,
+      !municipalCode ? "codigo IBGE do municipio emissor" : null,
+      !municipalRegistration ? "inscricao municipal de Joinville" : null,
+      !defaultServiceCode ? "codigo do servico padrao" : null,
+      !normalizeDocumentDigits(customer?.document).length ? "documento do cliente" : null,
+    ].filter((item): item is string => !!item);
+
+    if (missingFields.length > 0) {
+      return {
+        providerKey: "joinville",
+        providerLabel: "NF-em Joinville",
+        ready: false,
+        helper: `Antes de emitir via Joinville, complete: ${missingFields.join(", ")}.`,
+        missingFields,
+      };
+    }
+
+    const signed = await issueJoinvillePreviewPayload({
+      setup,
+      document,
+      customerDocument: customer?.document || "",
+      customerCity: customer?.city,
+    });
+
+    return {
+      providerKey: "joinville",
+      providerLabel: "NF-em Joinville",
+      ready: true,
+      helper: "Rascunho preparado para emissão automática no webservice municipal de Joinville.",
+      missingFields: [],
+      municipalCode,
+      serviceCode: document.serviceCode || defaultServiceCode,
+      dpsId: signed.documentId,
+      digest: signed.digest,
+      xmlPreview: summarizeXml(signed.xml),
+    };
+  }
+
+  await ensureDemoCommerceSeeded();
+  const context = await getCurrentWorkspaceContext();
+  const dbDocument = await prisma.nfseDocument.findFirst({
+    where: {
+      id,
+      workspaceId: context.workspaceId,
+      deletedAt: null,
+    },
+    include: {
+      customer: true,
+      order: true,
+    },
+  });
+
+  if (!dbDocument) {
+    return null;
+  }
+
+  const missingFields = [
+    ...readiness.missingFields,
+    !municipalCode ? "codigo IBGE do municipio emissor" : null,
+    !municipalRegistration ? "inscricao municipal de Joinville" : null,
+    !defaultServiceCode ? "codigo do servico padrao" : null,
+    !normalizeDocumentDigits(dbDocument.customer.document).length ? "documento do cliente" : null,
+  ].filter((item): item is string => !!item);
+
+  if (missingFields.length > 0) {
+    return {
+      providerKey: "joinville",
+      providerLabel: "NF-em Joinville",
+      ready: false,
+      helper: `Antes de emitir via Joinville, complete: ${missingFields.join(", ")}.`,
+      missingFields,
+    };
+  }
+
+  const signed = await issueJoinvillePreviewPayload({
+    setup,
+    document: {
+      id: dbDocument.id,
+      customer: dbDocument.customer.name,
+      orderId: dbDocument.orderId,
+      serviceAmount: formatCurrency(Number(dbDocument.serviceAmount)),
+      status: mapDbNfseStatus(dbDocument.status),
+      serviceDescription: dbDocument.order.internalNotes || setup.serviceDescription,
+      serviceCode: undefined,
+    },
+    customerDocument: dbDocument.customer.document || "",
+    customerCity: dbDocument.customer.city || undefined,
+  });
+
+  return {
+    providerKey: "joinville",
+    providerLabel: "NF-em Joinville",
+    ready: true,
+    helper: "Rascunho preparado para emissão automática no webservice municipal de Joinville.",
+    missingFields: [],
+    municipalCode,
+    serviceCode: defaultServiceCode,
+    dpsId: signed.documentId,
+    digest: signed.digest,
+    xmlPreview: summarizeXml(signed.xml),
+  };
+}
+
+async function issueJoinvillePreviewPayload(input: {
+  setup: Awaited<ReturnType<typeof getWorkspaceSetup>>;
+  document: Pick<NfseDocument, "id" | "customer" | "orderId" | "serviceAmount" | "status" | "serviceDescription" | "serviceCode">;
+  customerDocument: string;
+  customerCity?: string;
+}) {
+  return issueJoinvillePreviewPayloadInternal(input);
+}
+
+async function issueJoinvillePreviewPayloadInternal(input: {
+  setup: Awaited<ReturnType<typeof getWorkspaceSetup>>;
+  document: Pick<NfseDocument, "id" | "customer" | "orderId" | "serviceAmount" | "status" | "serviceDescription" | "serviceCode">;
+  customerDocument: string;
+  customerCity?: string;
+}) {
+  const { buildSignedJoinvilleRpsXml } = await import("@/lib/nfse-joinville-provider");
+
+  return buildSignedJoinvilleRpsXml({
+    issuer: {
+      name: input.setup.legalName || input.setup.tradeName,
+      document: input.setup.document,
+      city: input.setup.city,
+      state: input.setup.state,
+    },
+    customer: {
+      name: input.document.customer,
+      document: input.customerDocument,
+      city: input.customerCity,
+      state: input.setup.state,
+    },
+    serviceDescription: input.document.serviceDescription || input.setup.serviceDescription || "Servico operacional",
+    serviceAmount: normalizeAmountNumber(input.document.serviceAmount),
+    issueDate: new Date(),
+    municipalCode: input.setup.municipalCode || "",
+    serviceCode: input.document.serviceCode || input.setup.defaultFiscalServiceCode || process.env.NFSE_NATIONAL_SERVICE_CODE?.trim() || "",
+    number: deriveDpsNumber(input.document.id, new Date()),
+  });
+}
+
 export async function getNfseNationalIssuePreview(id: string): Promise<NfseNationalIssuePreview | null> {
   const readiness = await getFiscalSetupReadiness();
   const setup = await getWorkspaceSetup();
+  const provider = resolveNfseProvider(setup.city, setup.state);
+
+  if (provider.key === "joinville") {
+    return getNfseJoinvilleIssuePreview(id);
+  }
+
   const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
   const municipalCode = setup.municipalCode?.trim();
   const defaultServiceCode = setup.defaultFiscalServiceCode?.trim() || process.env.NFSE_NATIONAL_SERVICE_CODE?.trim() || "";
 
   if (municipalityStatus && !municipalityStatus.aderenteEmissorNacional) {
     return {
+      providerKey: "national",
+      providerLabel: "NFS-e Nacional",
       ready: false,
       helper: "Seu município de estabelecimento ainda não possui convênio ativo para emissão pública no Emissor Nacional.",
       missingFields: ["municipio habilitado no emissor nacional"],
@@ -528,6 +699,8 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
 
     if (missingFields.length > 0) {
       return {
+        providerKey: "national",
+        providerLabel: "NFS-e Nacional",
         ready: false,
         helper: `Antes de emitir no ambiente nacional, complete: ${missingFields.join(", ")}.`,
         missingFields,
@@ -558,6 +731,8 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
     });
 
     return {
+      providerKey: "national",
+      providerLabel: "NFS-e Nacional",
       ready: true,
       helper: "Rascunho preparado para envio como DPS assinada ao ambiente nacional.",
       missingFields: [],
@@ -597,6 +772,8 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
 
   if (missingFields.length > 0) {
     return {
+      providerKey: "national",
+      providerLabel: "NFS-e Nacional",
       ready: false,
       helper: `Antes de emitir no ambiente nacional, complete: ${missingFields.join(", ")}.`,
       missingFields,
@@ -627,6 +804,8 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
   });
 
   return {
+    providerKey: "national",
+    providerLabel: "NFS-e Nacional",
     ready: true,
     helper: "Rascunho preparado para envio como DPS assinada ao ambiente nacional.",
     missingFields: [],
@@ -640,6 +819,8 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
 
 export async function issueNfseNationalDocument(id: string, options?: NfseIssueOptions): Promise<NfseDocument | null> {
   const preview = await getNfseNationalIssuePreview(id);
+  const setup = await getWorkspaceSetup();
+  const provider = resolveNfseProvider(setup.city, setup.state);
 
   if (!preview) {
     return null;
@@ -649,9 +830,111 @@ export async function issueNfseNationalDocument(id: string, options?: NfseIssueO
     return updateNfseStatus(id, "Erro", preview.helper);
   }
 
-  const setup = await getWorkspaceSetup();
   const municipalCode = setup.municipalCode?.trim();
   const serviceCode = options?.serviceCode?.trim() || setup.defaultFiscalServiceCode?.trim() || process.env.NFSE_NATIONAL_SERVICE_CODE?.trim() || "";
+
+  if (provider.key === "joinville") {
+    if (isLocalDataMode()) {
+      const data = await readDemoWorkspaceData();
+      const document = data.nfseDocuments.find((item) => item.id === id);
+      const customer = document ? data.customers.find((item) => item.name === document.customer) : null;
+
+      if (!document || !customer?.document) {
+        return updateNfseStatus(id, "Erro", "Cliente local sem documento fiscal para simular a emissão em Joinville.");
+      }
+
+      await issueJoinvillePreviewPayload({
+        setup,
+        document,
+        customerDocument: customer.document,
+        customerCity: customer.city,
+      });
+
+      document.serviceCode = serviceCode;
+      await writeDemoWorkspaceData(data);
+
+      return updateNfseStatus(id, "Emitida", "Simulação local concluída. RPS municipal de Joinville preparado para envio real.");
+    }
+
+    await ensureDemoCommerceSeeded();
+    const context = await getCurrentWorkspaceContext();
+    const dbDocument = await prisma.nfseDocument.findFirst({
+      where: {
+        id,
+        workspaceId: context.workspaceId,
+        deletedAt: null,
+      },
+      include: {
+        customer: true,
+        order: true,
+      },
+    });
+
+    if (!dbDocument) {
+      return null;
+    }
+
+    try {
+      const response = await issueJoinvilleRps({
+        issuer: {
+          name: setup.legalName || setup.tradeName,
+          document: setup.document,
+          city: setup.city,
+          state: setup.state,
+        },
+        customer: {
+          name: dbDocument.customer.name,
+          document: dbDocument.customer.document || "",
+          city: dbDocument.customer.city || undefined,
+          state: dbDocument.customer.state || undefined,
+        },
+        serviceDescription: dbDocument.order.internalNotes || setup.serviceDescription,
+        serviceAmount: Number(dbDocument.serviceAmount),
+        issueDate: new Date(),
+        municipalCode: municipalCode || "",
+        serviceCode,
+        number: deriveDpsNumber(dbDocument.id, dbDocument.createdAt),
+      });
+
+      const updated = await prisma.nfseDocument.update({
+        where: { id: dbDocument.id },
+        data: {
+          status: "ISSUED",
+          version: {
+            increment: 1,
+          },
+          issuedAt: response.issuedAt ? new Date(response.issuedAt) : new Date(),
+          externalId: response.number || `JOINVILLE-${dbDocument.id.slice(0, 8).toUpperCase()}`,
+          verificationCode: response.verificationCode || undefined,
+          errorMessage: null,
+        },
+        include: {
+          customer: true,
+          order: true,
+        },
+      });
+
+      await recordAuditEvent({
+        action: "nfse.joinville.issued",
+        entityType: "nfse",
+        entityId: updated.id,
+        payload: {
+          summary: `Documento fiscal enviado para o webservice municipal de Joinville para ${updated.customer.name}.`,
+          metadata: {
+            customer: updated.customer.name,
+            nfseNumber: response.number || null,
+            verificationCode: response.verificationCode || null,
+          },
+        },
+        context,
+      });
+
+      return toNfseView(updated);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Falha desconhecida ao emitir na NF-em Joinville.";
+      return updateNfseStatus(id, "Erro", message);
+    }
+  }
 
   if (isLocalDataMode()) {
     const data = await readDemoWorkspaceData();

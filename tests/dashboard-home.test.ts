@@ -10,7 +10,12 @@ import {
   getDashboardPriorityLabel,
 } from "@/lib/dashboard-home";
 import { mapOperationalAlertsToNavigationSignals } from "@/lib/dashboard-navigation-signals";
-import { getEvolutionStateLabel, getSetupHealthTone } from "@/lib/setup-page-helpers";
+import {
+  getEvolutionOperationalSummary,
+  getEvolutionStateLabel,
+  getNfseMunicipalityBlockSummary,
+  getSetupHealthTone,
+} from "@/lib/setup-page-helpers";
 
 test("dashboard priority helpers map labels and classes consistently", () => {
   assert.equal(getDashboardPriorityLabel("critical"), "Prioridade crítica");
@@ -158,4 +163,40 @@ test("setup page helpers keep integration state copy stable", () => {
   assert.equal(getEvolutionStateLabel(undefined), "desconhecido");
   assert.equal(getSetupHealthTone({ ok: true }), "split-panel success");
   assert.equal(getSetupHealthTone({ ok: false, warning: true }), "split-panel");
+});
+
+test("setup page helpers classify evolution operational readiness", () => {
+  assert.deepEqual(getEvolutionOperationalSummary({
+    integrationEnabled: true,
+    probeReachable: true,
+    instanceState: "open",
+  }), {
+    tone: "success",
+    title: "WhatsApp pronto para rotina",
+    description: "A API responde e a instância principal já está aberta para operação real.",
+  });
+
+  assert.deepEqual(getEvolutionOperationalSummary({
+    integrationEnabled: true,
+    probeReachable: true,
+    instanceState: "close",
+  }), {
+    tone: "warning",
+    title: "WhatsApp configurado, mas desconectado",
+    description: "A API responde, porém a instância principal está fechada e precisa ser reconectada.",
+  });
+});
+
+test("setup page helpers explain municipal blockage for nfse automatic issuance", () => {
+  assert.deepEqual(getNfseMunicipalityBlockSummary({
+    city: "JOINVILLE",
+    state: "SC",
+    statusConvenio: "Conveniado Ativo",
+    aderenteAmbienteNacional: true,
+    aderenteEmissorNacional: false,
+  }), {
+    tone: "warning",
+    title: "Bloqueio municipal para emissão automática",
+    description: "JOINVILLE/SC está com convênio conveniado ativo, mas ainda sem liberação no Emissor Nacional.",
+  });
 });

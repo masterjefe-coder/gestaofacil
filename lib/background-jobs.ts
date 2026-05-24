@@ -301,19 +301,38 @@ export async function listBackgroundJobStats() {
     };
   }
 
-  const [pendingCount, runningCount, failedCount, completedCount] = await Promise.all([
-    backgroundJobDeps.prisma.backgroundJob.count({ where: { status: "PENDING" } }),
-    backgroundJobDeps.prisma.backgroundJob.count({ where: { status: "RUNNING" } }),
-    backgroundJobDeps.prisma.backgroundJob.count({ where: { status: "FAILED" } }),
-    backgroundJobDeps.prisma.backgroundJob.count({ where: { status: "COMPLETED" } }),
-  ]);
+  try {
+    const [pendingCount, runningCount, failedCount, completedCount] = await Promise.all([
+      backgroundJobDeps.prisma.backgroundJob.count({ where: { status: "PENDING" } }),
+      backgroundJobDeps.prisma.backgroundJob.count({ where: { status: "RUNNING" } }),
+      backgroundJobDeps.prisma.backgroundJob.count({ where: { status: "FAILED" } }),
+      backgroundJobDeps.prisma.backgroundJob.count({ where: { status: "COMPLETED" } }),
+    ]);
 
-  return {
-    pendingCount,
-    runningCount,
-    failedCount,
-    completedCount,
-  };
+    return {
+      pendingCount,
+      runningCount,
+      failedCount,
+      completedCount,
+    };
+  } catch (error) {
+    const isMissingTable =
+      typeof error === "object"
+      && error !== null
+      && "code" in error
+      && error.code === "P2021";
+
+    if (isMissingTable) {
+      return {
+        pendingCount: 0,
+        runningCount: 0,
+        failedCount: 0,
+        completedCount: 0,
+      };
+    }
+
+    throw error;
+  }
 }
 
 export function resetBackgroundJobsForTests() {

@@ -68,9 +68,22 @@ function normalizeEnvironment(value: string | undefined): NfseNationalEnvironmen
   return value === "production" ? "production" : "restricted";
 }
 
+function readChunkedEnv(baseKey: string) {
+  const parts = Object.entries(process.env)
+    .filter(([key, value]) => key.startsWith(`${baseKey}_PART_`) && typeof value === "string" && value.trim())
+    .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true }))
+    .map(([, value]) => value!.trim());
+
+  if (parts.length > 0) {
+    return parts.join("");
+  }
+
+  return process.env[baseKey]?.trim();
+}
+
 function getCertificateSource() {
-  const certPfxBase64 = process.env.NFSE_NATIONAL_CERT_PFX_BASE64?.trim();
-  const certPfxPath = process.env.NFSE_NATIONAL_CERT_PFX_PATH?.trim();
+  const certPfxBase64 = readChunkedEnv("NFSE_NATIONAL_CERT_PFX_BASE64") || readChunkedEnv("NFSE_JOINVILLE_CERT_PFX_BASE64");
+  const certPfxPath = process.env.NFSE_NATIONAL_CERT_PFX_PATH?.trim() || process.env.NFSE_JOINVILLE_CERT_PFX_PATH?.trim();
 
   if (certPfxBase64) {
     return {
@@ -133,7 +146,7 @@ export function getNfseEmissionModeSummary(): NfseEmissionModeSummary {
 }
 
 export async function inspectNfseNationalCertificate(): Promise<NfseNationalCertificateInspection> {
-  const certPassphrase = process.env.NFSE_NATIONAL_CERT_PASSPHRASE?.trim();
+  const certPassphrase = process.env.NFSE_NATIONAL_CERT_PASSPHRASE?.trim() || process.env.NFSE_JOINVILLE_CERT_PASSPHRASE?.trim();
   const certPfxBase64 = await resolveCertificatePfxBase64();
 
   if (!certPfxBase64 || !certPassphrase) {
@@ -168,7 +181,7 @@ export async function inspectNfseNationalCertificate(): Promise<NfseNationalCert
 }
 
 export function getNfseNationalIntegrationStatus(): NfseNationalIntegrationStatus {
-  const enabled = process.env.NFSE_NATIONAL_ENABLED === "true";
+  const enabled = process.env.NFSE_NATIONAL_ENABLED?.trim().toLowerCase() === "true";
   const environment = normalizeEnvironment(process.env.NFSE_NATIONAL_ENVIRONMENT);
   const municipalCode = process.env.NFSE_NATIONAL_MUNICIPAL_CODE?.trim();
   const certificate = getCertificateSource();

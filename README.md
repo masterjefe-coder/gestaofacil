@@ -119,6 +119,18 @@ Variaveis de ambiente minimas na Vercel:
 - `GESTAO_FACIL_DATA_MODE=database`
 - `HEALTHCHECK_TOKEN` opcional para expor diagnostico detalhado em `/api/health` sem sessao autenticada
 
+Pre-flight recomendado antes de qualquer deploy:
+
+```bash
+npm run readiness
+```
+
+Se quiser tratar qualquer alerta como bloqueador:
+
+```bash
+npm run readiness -- --strict
+```
+
 Observacoes de seguranca:
 
 - `AUTH_DEMO_EMAIL` e `AUTH_DEMO_PASSWORD` devem ficar restritos ao modo local/demo e nao devem ser divulgados como acesso de producao
@@ -150,6 +162,7 @@ Variaveis para convite por email:
 
 Variaveis para integrar a NFS-e Nacional:
 
+- `NFSE_PROVIDER=auto`, `national` ou `joinville`
 - `NFSE_NATIONAL_ENABLED=true`
 - `NFSE_NATIONAL_ENVIRONMENT=restricted` ou `production`
 - `NFSE_NATIONAL_MUNICIPAL_CODE` com o codigo IBGE do municipio emissor
@@ -159,12 +172,24 @@ Variaveis para integrar a NFS-e Nacional:
 - `NFSE_NATIONAL_CERT_PASSPHRASE` com a senha do certificado
 - `NFSE_NATIONAL_TIMEOUT_MS` opcional
 
+Variaveis para o provider municipal de Joinville:
+
+- `NFSE_JOINVILLE_ENABLED=true`
+- `NFSE_JOINVILLE_ENVIRONMENT=production` ou `homologation`
+- `NFSE_JOINVILLE_MUNICIPAL_REGISTRATION` com a inscricao municipal do emitente
+- `NFSE_JOINVILLE_RPS_SERIES=3000` para envio via webservice
+- `NFSE_JOINVILLE_CERT_PFX_BASE64` ou `NFSE_JOINVILLE_CERT_PFX_PATH`
+- `NFSE_JOINVILLE_CERT_PASSPHRASE`
+- `NFSE_JOINVILLE_TIMEOUT_MS` opcional
+
 Observacao:
 
 - os endpoints oficiais usados no projeto seguem a publicacao do Portal NFS-e para `SEFIN Nacional` e `Parâmetros Municipais`
 - a conexao oficial no projeto hoje ja testa o endpoint de convenio municipal e prepara o client para `POST /nfse`, `GET /nfse/{chaveAcesso}` e `GET /dps/{id}`
 - a tela fiscal agora tambem monta uma DPS assinada por certificado A1 e tenta emitir direto no ambiente nacional quando o setup do emitente e do cliente estiver completo
 - a emissao automatica agora so fica disponivel quando o municipio do estabelecimento estiver com `AderenteEmissorNacional = Sim` na base oficial publica da NFS-e
+- para `Joinville/SC`, o projeto agora tambem suporta o caminho municipal `NF-em`, com webservice proprio da prefeitura, usado quando `NFSE_PROVIDER=joinville` ou `auto` com provider municipal habilitado
+- no ambiente atual validado em `2026-05-24`, `JOINVILLE/SC` ainda aparece com `Conveniado Ativo`, mas `AderenteEmissorNacional = Nao`; por isso a emissao automatica segue bloqueada por regra municipal e nao por falha do app
 - clientes sem certificado podem continuar no fluxo de emissao assistida, abrindo o portal oficial da NFS-e a partir do painel fiscal
 
 Checklist de deploy:
@@ -175,7 +200,8 @@ Checklist de deploy:
 4. cadastrar as variaveis de ambiente
 5. criar o banco no `Neon`
 6. preferir `npm run db:deploy` com as migrations versionadas; usar `npm run db:push` apenas em ambiente de desenvolvimento controlado
-7. abrir `/onboarding` para criar o primeiro usuario real do workspace
+7. rodar `npm run readiness` para validar ambiente e integrações
+8. abrir `/onboarding` para criar o primeiro usuario real do workspace
 
 Observacao:
 

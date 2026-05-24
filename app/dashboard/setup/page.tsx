@@ -36,12 +36,18 @@ import {
   getEvolutionConnectionState,
   probeEvolutionApi,
 } from "@/lib/evolution-api";
+import { getResolvedNfsePortalUrls, resolveNfseProvider } from "@/lib/nfse-provider";
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
 import { listWorkspaceInvites } from "@/lib/workspace-invite-repository";
 import { getWorkspaceAsaasConnection, getWorkspaceAsaasOnboardingSnapshot } from "@/lib/asaas-workspace";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getFiscalSetupReadiness } from "@/lib/nfse-repository";
-import { getEvolutionStateLabel, getSetupHealthTone } from "@/lib/setup-page-helpers";
+import {
+  getEvolutionOperationalSummary,
+  getEvolutionStateLabel,
+  getNfseMunicipalityBlockSummary,
+  getSetupHealthTone,
+} from "@/lib/setup-page-helpers";
 import { readSetupPageFlashState, type SetupSearchParams } from "@/lib/setup-page-state";
 import { formatSubscriptionDate, getSubscriptionStatusLabel } from "@/lib/subscription";
 import { getWorkspaceSubscription } from "@/lib/workspace-subscription-repository";
@@ -102,11 +108,17 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   ]);
   const flash = readSetupPageFlashState(params);
   const operationalFocus = params?.operationalFocus || "";
-  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const nfseProvider = resolveNfseProvider(setup.city || "", setup.state || "");
+  const nfsePortalUrls = getResolvedNfsePortalUrls(setup.city || "", setup.state || "");
+  const municipalityStatus = nfseProvider.key === "national"
+    ? await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "")
+    : null;
   const view = buildSetupPageViewModel({
     workspaceRole: context.workspaceRole,
     setupSlug: setup.slug,
     subscription,
+    companyCity: setup.city,
+    companyState: setup.state,
     fiscalReady: fiscalReadiness.ready,
     evolutionReachable: evolutionProbe.reachable,
     evolutionInstances,
@@ -117,6 +129,18 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const selectedEvolutionInstanceState = selectedEvolutionInstanceName
     ? await getEvolutionConnectionState(selectedEvolutionInstanceName).catch(() => null)
     : null;
+  const evolutionOperationalSummary = getEvolutionOperationalSummary({
+    integrationEnabled: view.evolutionIntegration.enabled,
+    probeReachable: evolutionProbe.reachable,
+    instanceState: selectedEvolutionInstanceState?.instance?.state || view.workspaceEvolutionInstance?.status,
+  });
+  const municipalityBlockSummary = getNfseMunicipalityBlockSummary({
+    city: municipalityStatus?.city,
+    state: municipalityStatus?.state,
+    statusConvenio: municipalityStatus?.statusConvenio,
+    aderenteAmbienteNacional: municipalityStatus?.aderenteAmbienteNacional,
+    aderenteEmissorNacional: municipalityStatus?.aderenteEmissorNacional,
+  });
   const evolutionSignals = summarizeOperationalSignals(evolutionAuditEntries);
   const fiscalSignals = summarizeOperationalSignals(fiscalAuditEntries);
   const asaasSignals = summarizeOperationalSignals([
@@ -380,13 +404,21 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       <section className="section-split">
         <article className="split-panel">
           <span className="section-label">Emissão assistida</span>
-          <h2>Mesmo sem certificado, dá para seguir com apoio manual</h2>
+          <h2>
+            {view.nfseIntegration.provider.key === "joinville"
+              ? "Mesmo sem automação total, o portal municipal mantém a operação fluindo"
+              : "Mesmo sem certificado, dá para seguir com apoio manual"}
+          </h2>
           <p>{view.emissionModes.assisted.helper}</p>
         </article>
 
         <article className={view.nfseIntegration.ready ? "split-panel success" : "split-panel"}>
           <span className="section-label">Emissão automática</span>
-          <h2>Com certificado, a emissão fica mais automática</h2>
+          <h2>
+            {view.nfseIntegration.provider.key === "joinville"
+              ? "Com inscrição municipal e certificado, Joinville pode emitir direto pelo webservice"
+              : "Com certificado, a emissão fica mais automática"}
+          </h2>
           <p>{view.emissionModes.automatic.helper}</p>
         </article>
       </section>
@@ -416,10 +448,10 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
       </section>
 
       <section className="section-split">
-        <article className={evolutionProbe.reachable ? "split-panel success" : "split-panel"}>
+        <article className={evolutionOperationalSummary.tone === "success" ? "split-panel success" : "split-panel"}>
           <span className="section-label">Status do WhatsApp</span>
           <h2>Conexão do canal principal</h2>
-          <p>{evolutionProbe.summary}</p>
+          <p>{evolutionOperationalSummary.description}</p>
         </article>
 
         <article className={view.asaasIntegration.webhookConfigured ? "split-panel success" : "split-panel"}>
@@ -483,7 +515,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               {view.fiscalHealthOk
                 ? "O setup fiscal já sustenta emissão com menos atrito."
                 : view.nfseIntegration.enabled
-                  ? "Parte do setup existe, mas ainda faltam dados ou readiness do emissor."
+                  ? view.nfseIntegration.provider.key === "joinville"
+                    ? "O provider municipal de Joinville já está mapeado, mas ainda faltam dados finais do emissor."
+                    : "Parte do setup existe, mas ainda faltam dados ou readiness do emissor."
                   : "O fluxo ainda depende mais da emissão assistida do que da automação."}
             </p>
           </article>
@@ -646,14 +680,17 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         ) : null}
 
         {selectedEvolutionInstanceName ? (
-          <div className="auth-hint">
-            <strong>Número principal escolhido</strong>
+          <div className={evolutionOperationalSummary.tone === "success" ? "auth-hint" : "auth-hint fiscal-warning"}>
+            <strong>{evolutionOperationalSummary.title}</strong>
             <span>
               {selectedEvolutionInstanceName}
               {selectedEvolutionInstanceState?.instance?.state
                 ? ` · estado ${getEvolutionStateLabel(selectedEvolutionInstanceState.instance.state)}`
                 : ""}
             </span>
+            <small className="muted-text">
+              {evolutionOperationalSummary.description}
+            </small>
             <small className="muted-text">
               {view.isUsingWorkspaceEvolutionInstance
                 ? "A tela já está usando o número principal desta empresa."
@@ -980,7 +1017,44 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         ) : null}
       </section>
 
-      {municipalityStatus ? (
+      {view.nfseIntegration.provider.key === "joinville" ? (
+        <section className="data-panel">
+          <div className="card-header">
+            <div>
+              <span className="section-label">Município emissor</span>
+              <h2>Joinville está operando pelo webservice municipal NF-em</h2>
+            </div>
+          </div>
+
+          <div className={view.nfseIntegration.ready ? "auth-hint" : "auth-hint fiscal-warning"}>
+            <strong>
+              {view.nfseIntegration.ready
+                ? "Provider municipal pronto para validação operacional"
+                : "Fluxo municipal detectado, mas ainda faltam dados do emissor"}
+            </strong>
+            <span>
+              Para Joinville/SC, a emissão automática do projeto segue pelo provedor municipal NF-em em vez do Emissor
+              Nacional direto.
+            </span>
+            <small className="muted-text">
+              Portal oficial:{" "}
+              <Link href={nfsePortalUrls.issueUrl} target="_blank" rel="noreferrer">
+                abrir NF-em de Joinville
+              </Link>
+              {" "}ou{" "}
+              <Link href={nfsePortalUrls.loginUrl} target="_blank" rel="noreferrer">
+                acessar login municipal
+              </Link>
+              .
+            </small>
+            {!view.nfseIntegration.ready ? (
+              <small className="muted-text">
+                Pendências atuais: {view.nfseIntegration.missing.join(", ") || "revisar dados do emissor municipal"}.
+              </small>
+            ) : null}
+          </div>
+        </section>
+      ) : municipalityStatus ? (
         <section className="data-panel">
           <div className="card-header">
             <div>
@@ -1005,6 +1079,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               {municipalityStatus.publication ? ` Publicação: ${municipalityStatus.publication}.` : ""}
               {municipalityStatus.startDate ? ` Vigência: ${municipalityStatus.startDate}.` : ""}
             </small>
+            {municipalityBlockSummary ? (
+              <small className="muted-text">{municipalityBlockSummary.description}</small>
+            ) : null}
             <small className="muted-text">
               Fonte oficial:{" "}
               <Link href={municipalityStatus.sourceUrl} target="_blank" rel="noreferrer">

@@ -18,13 +18,28 @@ A base de assinatura por workspace tambem ja existe, faltando ligar a recorrenci
 
 O principal restante agora ja nao e base de produto, e sim validacao real das integracoes criticas em producao.
 
+Antes de qualquer deploy ou piloto novo:
+
+```bash
+npm run readiness
+```
+
+Estado validado em `2026-05-24`:
+
+- `Asaas`: operacional no ambiente
+- `Evolution`: operacional com a instancia real `ofertas-do-ton` em `open`
+- `Email`: operacional com `Resend`
+- `NFS-e`: configurada e com certificado valido, mas ainda dependente de municipio com `AderenteEmissorNacional = Sim`
+
 ## Ordem recomendada
 
-1. validar a primeira conta ou subconta Asaas criada pelo setup
-2. validar a primeira cobranca real por workspace
-3. validar webhook real do Asaas com baixa automatica
-4. validar a primeira NFS-e real ponta a ponta
-5. depois aprofundar analitica por periodo e tendencias
+1. rodar `npm run readiness` e zerar os `FAIL`
+2. validar a primeira conta ou subconta Asaas criada pelo setup
+3. validar a primeira cobranca real por workspace
+4. validar webhook real do Asaas com baixa automatica
+5. validar a operacao real da Evolution/WhatsApp
+6. validar a primeira NFS-e real ponta a ponta em municipio piloto liberado no Emissor Nacional
+7. depois aprofundar analitica por periodo e tendencias
 
 Observacao:
 
@@ -47,9 +62,12 @@ npm run typecheck
 npm run lint
 npm run build
 npm run db:generate
+npm run readiness
 ```
 
-## Credenciais demo
+## Credenciais demo locais
 
 - email: `demo@gestaofacil.local`
 - senha: `gestao123`
+
+Use apenas em ambiente local quando `GESTAO_FACIL_ENABLE_PUBLIC_DEMO=true`. Não fazem parte do fluxo de produção.

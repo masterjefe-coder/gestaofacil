@@ -93,7 +93,7 @@ const rateLimiters = {
 };
 
 function isDistributedRateLimitEnabled() {
-  return process.env.RATE_LIMIT_DISTRIBUTED_ENABLED === "1";
+  return process.env.RATE_LIMIT_DISTRIBUTED_ENABLED?.trim() === "1";
 }
 
 /**

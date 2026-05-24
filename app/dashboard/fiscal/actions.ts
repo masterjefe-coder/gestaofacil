@@ -9,6 +9,8 @@ import {
   issueNfseNationalDocument,
   updateNfseStatus,
 } from "@/lib/nfse-repository";
+import { resolveNfseProvider } from "@/lib/nfse-provider";
+import { testNfseJoinvilleConnectivity } from "@/lib/nfse-joinville-provider";
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { testNfseNationalConnectivity } from "@/lib/nfse-national-provider";
 import { inspectNfseNationalCertificate } from "@/lib/nfse-national-provider";
@@ -118,7 +120,10 @@ export async function markNfseErrorAction(formData: FormData) {
 export async function testNfseNationalConnectivityAction() {
   await requireFiscalAccess();
   const setup = await getWorkspaceSetup();
-  const result = await testNfseNationalConnectivity(setup.municipalCode);
+  const provider = resolveNfseProvider(setup.city, setup.state);
+  const result = provider.key === "joinville"
+    ? await testNfseJoinvilleConnectivity()
+    : await testNfseNationalConnectivity(setup.municipalCode);
 
   const status = result.status ? String(result.status) : "";
   const message = result.ok

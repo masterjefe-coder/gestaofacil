@@ -5,6 +5,7 @@ dist
 .env
 .env.local
 .env.vercel
+.env.vercel*
 .env.*.local
 npm-debug.log*
 yarn-debug.log*
