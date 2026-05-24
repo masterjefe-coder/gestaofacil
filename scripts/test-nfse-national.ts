@@ -1,14 +1,17 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
 import { decodeNfseXmlGZipB64 } from "@/lib/nfse-national-client";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { buildSignedDpsPayload, inspectNfseNationalCertificate, testNfseNationalConnectivity } from "@/lib/nfse-national-provider";
 import { readDemoWorkspaceData } from "@/lib/demo-store";
-import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 
 function loadEnvFile(filePath: string) {
+  if (!existsSync(filePath)) {
+    return;
+  }
+
   const content = readFileSync(filePath, "utf8");
 
   for (const rawLine of content.split(/\r?\n/)) {
@@ -49,6 +52,45 @@ function getArgValue(flag: string) {
   return process.argv[index + 1];
 }
 
+async function resolveFiscalSetup() {
+  const data = await readDemoWorkspaceData();
+
+  return {
+    legalName:
+      getArgValue("--legalName")
+      || process.env.NFSE_REFERENCE_LEGAL_NAME?.trim()
+      || data.company.legalName,
+    tradeName:
+      getArgValue("--tradeName")
+      || process.env.NFSE_REFERENCE_TRADE_NAME?.trim()
+      || data.company.tradeName,
+    document:
+      getArgValue("--issuerDocument")
+      || process.env.NFSE_REFERENCE_DOCUMENT?.trim()
+      || data.company.document,
+    city:
+      getArgValue("--city")
+      || process.env.NFSE_REFERENCE_CITY?.trim()
+      || data.company.city,
+    state:
+      getArgValue("--state")
+      || process.env.NFSE_REFERENCE_STATE?.trim()
+      || data.company.state,
+    municipalCode:
+      getArgValue("--municipalCode")
+      || process.env.NFSE_NATIONAL_MUNICIPAL_CODE?.trim()
+      || data.company.municipalCode,
+    serviceDescription:
+      getArgValue("--serviceDescription")
+      || process.env.NFSE_REFERENCE_SERVICE_DESCRIPTION?.trim()
+      || data.company.serviceDescription,
+    defaultFiscalServiceCode:
+      getArgValue("--serviceCode")
+      || process.env.NFSE_NATIONAL_SERVICE_CODE?.trim()
+      || data.company.defaultFiscalServiceCode,
+  };
+}
+
 function issueViaWindowsHttpClient(payloadPath: string) {
   const script = `
 $envFile = Join-Path (Get-Location) '.env.local'
@@ -82,19 +124,16 @@ try {
 
 async function main() {
   loadEnvFile(path.join(process.cwd(), ".env.local"));
-  const overrideMunicipalCode = getArgValue("--municipalCode");
-  const overrideCity = getArgValue("--city");
-  const overrideState = getArgValue("--state");
   const overrideCustomerName = getArgValue("--customerName");
   const overrideCustomerDocument = getArgValue("--customerDocument");
 
   const certificate = await inspectNfseNationalCertificate();
   printBlock("CERTIFICADO", certificate);
 
-  const setup = await getWorkspaceSetup();
-  const municipalCode = overrideMunicipalCode || setup.municipalCode;
-  const municipalCity = overrideCity || setup.city;
-  const municipalState = overrideState || setup.state;
+  const setup = await resolveFiscalSetup();
+  const municipalCode = setup.municipalCode;
+  const municipalCity = setup.city;
+  const municipalState = setup.state;
   printBlock("SETUP", {
     legalName: setup.legalName,
     document: setup.document,

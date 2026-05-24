@@ -72,7 +72,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <div className="auth-hero-points">
             <div className="auth-hero-point">Acesso centralizado por workspace</div>
             <div className="auth-hero-point">Base pronta para contas reais</div>
-            <div className="auth-hero-point">Fluxo simples para demo e onboarding</div>
+            <div className="auth-hero-point">Fluxo simples para onboarding e operação real</div>
           </div>
         </article>
 

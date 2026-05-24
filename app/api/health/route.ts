@@ -5,7 +5,7 @@ import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { getLogger } from "@/lib/api-logger";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { getEvolutionIntegrationStatus } from "@/lib/evolution-api";
-import { getNfseNationalIntegrationStatus } from "@/lib/nfse-national-provider";
+import { getResolvedNfseIntegrationStatus } from "@/lib/nfse-provider";
 import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
 import { timingSafeCompare } from "@/lib/security-crypto";
 
@@ -47,7 +47,10 @@ export async function GET(request: Request) {
   const localMode = isLocalDataMode();
   const evolution = getEvolutionIntegrationStatus();
   const asaas = getAsaasIntegrationStatus();
-  const nfse = getNfseNationalIntegrationStatus();
+  const nfse = getResolvedNfseIntegrationStatus(
+    process.env.NFSE_REFERENCE_CITY?.trim(),
+    process.env.NFSE_REFERENCE_STATE?.trim(),
+  );
 
   requestLogger.info("Health check served with integration details", {
     mode: localMode ? "local" : "database",
@@ -79,6 +82,7 @@ export async function GET(request: Request) {
           enabled: nfse.enabled,
           ready: nfse.ready,
           environment: nfse.environment,
+          provider: nfse.provider.key,
         },
       },
     }),

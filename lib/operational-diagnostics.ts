@@ -3,10 +3,8 @@ import { listBackgroundJobStats } from "@/lib/background-jobs";
 import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { getEvolutionIntegrationStatus, probeEvolutionApi } from "@/lib/evolution-api";
-import {
-  getNfseNationalIntegrationStatus,
-  inspectNfseNationalCertificate,
-} from "@/lib/nfse-national-provider";
+import { inspectNfseNationalCertificate } from "@/lib/nfse-national-provider";
+import { getResolvedNfseIntegrationStatus } from "@/lib/nfse-provider";
 import { getRateLimiterStats } from "@/lib/rate-limit";
 import { REQUEST_ID_HEADER } from "@/lib/request-tracing";
 
@@ -87,6 +85,7 @@ export type OperationalDiagnosticsSnapshot = {
       enabled: boolean;
       ready: boolean;
       environment: string;
+      provider: string;
       hasCertificate: boolean;
       certificateSource?: "base64" | "path";
       missing: string[];
@@ -128,7 +127,7 @@ export const operationalDiagnosticsDeps = {
   getRateLimiterStats,
   getAsaasIntegrationStatus,
   getEvolutionIntegrationStatus,
-  getNfseNationalIntegrationStatus,
+  getResolvedNfseIntegrationStatus,
   inspectNfseNationalCertificate,
   isLocalDataMode,
   listBackgroundJobStats,
@@ -140,7 +139,10 @@ export async function buildOperationalDiagnosticsSnapshot(
 ): Promise<OperationalDiagnosticsSnapshot> {
   const asaas = operationalDiagnosticsDeps.getAsaasIntegrationStatus();
   const evolution = operationalDiagnosticsDeps.getEvolutionIntegrationStatus();
-  const nfse = operationalDiagnosticsDeps.getNfseNationalIntegrationStatus();
+  const nfse = operationalDiagnosticsDeps.getResolvedNfseIntegrationStatus(
+    process.env.NFSE_REFERENCE_CITY?.trim(),
+    process.env.NFSE_REFERENCE_STATE?.trim(),
+  );
   const localMode = operationalDiagnosticsDeps.isLocalDataMode();
   const databaseConfigured = Boolean(process.env.DATABASE_URL?.trim());
   const appBaseUrlConfigured = Boolean(process.env.APP_BASE_URL?.trim());
@@ -235,8 +237,8 @@ export async function buildOperationalDiagnosticsSnapshot(
       "nfse-readiness",
       nfse.ready ? "ok" : "warning",
       nfse.ready
-        ? "NFS-e Nacional pronta para operacao automatica."
-        : `NFS-e Nacional pendente: ${nfse.missing.join(", ") || "revisar configuracao do ambiente"}.`,
+        ? `${nfse.provider.label} pronta para operacao automatica.`
+        : `${nfse.provider.label} pendente: ${nfse.missing.join(", ") || "revisar configuracao do ambiente"}.`,
     ),
     buildCheck(
       "nfse-certificate",
@@ -322,6 +324,7 @@ export async function buildOperationalDiagnosticsSnapshot(
         enabled: nfse.enabled,
         ready: nfse.ready,
         environment: nfse.environment,
+        provider: nfse.provider.key,
         hasCertificate: nfse.hasCertificate,
         certificateSource: nfse.certificateSource,
         missing: nfse.missing,

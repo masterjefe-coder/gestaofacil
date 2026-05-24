@@ -55,6 +55,7 @@ function buildSnapshot(
         enabled: true,
         ready: false,
         environment: "homologacao",
+        provider: "national",
         hasCertificate: true,
         certificateSource: "path",
         missing: ["cnae"],

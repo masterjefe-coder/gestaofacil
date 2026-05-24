@@ -2,7 +2,7 @@
 
 ## Data
 
-2026-05-20
+2026-05-24
 
 ## O que ja foi feito
 
@@ -71,6 +71,7 @@
 - o fiscal agora ja conhece o ambiente oficial da NFS-e Nacional com configuracao por ambiente, assinatura de DPS e teste de conectividade
 - o produto agora ja separa emissao assistida via portal oficial e emissao automatica com certificado
 - a emissao automatica agora consulta a base oficial publica de municipios aderentes e so libera emissao quando o estabelecimento estiver com `AderenteEmissorNacional = Sim`
+- o projeto agora tambem possui provider municipal inicial para `Joinville/SC`, usando o webservice `NF-em` da prefeitura quando configurado
 - o teste oficial da NFS-e Nacional agora ja avancou alem de certificado e schema, chegando ate regras de negocio reais do emitente e do municipio
 - dashboard, clientes, orcamentos, cobrancas e fiscal agora ja persistem foco de fila por modulo
 - central de relatorios em `/dashboard/reports` agora consolida resumo executivo, comercial, financeiro, clientes e fiscal
@@ -84,10 +85,18 @@
 - a base de assinatura SaaS agora ja existe por workspace, com plano, ciclo, status e referencia pronta para recorrencia futura
 - testes automatizados minimos agora ja existem para utilitarios criticos
 - endpoint `/api/health` criado
+- endpoint `/api/diagnostics` criado com snapshot operacional autenticado
+- webhooks autenticados de `Asaas` e `Evolution` criados
+- rotas operacionais de `Evolution` para status e pairing adicionadas
+- fluxo de convites de workspace criado com aceite por link
+- recuperacao e redefinicao de senha adicionadas
+- governanca de repositorio adicionada com `CI`, `CODEOWNERS` e template de PR
+- pre-flight de producao adicionado em `npm run readiness`
+- `npm run readiness` agora tambem valida estado real da instancia principal da Evolution e elegibilidade municipal da NFS-e automatica
 - schema Prisma inicial criado em `prisma/schema.prisma`
 - `.env.example` e scripts de banco adicionados
 - estrutura visual preparada para evoluir o MVP
-- `typecheck`, `lint`, `build` e `prisma validate` validados com sucesso
+- `test`, `typecheck`, `lint`, `build` e `prisma validate` validados com sucesso
 
 ## Rotas atuais
 
@@ -104,13 +113,24 @@
 - `/dashboard/reports`
 - `/dashboard/reports/print`
 - `/dashboard/setup`
+- `/convite`
+- `/recuperar-senha`
+- `/redefinir-senha`
+- `/checkout`
+- `/integracoes`
 - `/api/customers`
 - `/api/quotes`
 - `/api/charges`
 - `/api/orders`
 - `/api/setup`
 - `/api/auth/[...nextauth]`
+- `/api/auth/logout-track`
+- `/api/asaas/webhook`
+- `/api/evolution/webhook`
+- `/api/evolution/status`
+- `/api/evolution/pairing`
 - `/api/health`
+- `/api/diagnostics`
 - `/api/reports/export`
 
 ## Decisao de produto consolidada
@@ -135,7 +155,9 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 
 - o banco ja esta modelado, mas ainda nao conectado a um ambiente real de producao
 - ainda nao ha integracoes externas fechadas ponta a ponta
+- o app ja expoe um snapshot operacional autenticado para diagnosticar runtime, integrações e resiliência
 - a autenticacao atual usa Auth.js com provider de credenciais demo e login real por banco quando configurado
+- a producao atual ja esta alinhada com a instancia real `ofertas-do-ton`; o modo demo publico segue desabilitado
 - o dashboard principal ja nao depende de pipeline e agenda mockados
 - o produto agora ja tem um modulo explicito de pedidos entre orcamento e cobranca
 - cobrancas ja podem carregar data real alem do texto operacional
@@ -148,6 +170,8 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 - a automacao atual abre canais externos com mensagem pronta, mas ainda nao confirma entrega real por integracao
 - o Asaas por workspace agora ja esta pronto estruturalmente, mas ainda depende da primeira validacao real ponta a ponta
 - o bloco fiscal atual agora ja prepara DPS assinada, assina, envia ao endpoint oficial correto e bloqueia a emissao automatica quando o municipio do estabelecimento nao estiver habilitado no Emissor Nacional
+- a validacao real mais recente em `2026-05-24` confirmou `JOINVILLE/SC` com `Conveniado Ativo`, mas `AderenteEmissorNacional = Nao`; a emissao automatica segue travada por regra municipal e nao por erro de codigo
 - a emissao real final ainda depende da habilitacao oficial do municipio e da coerencia cadastral do estabelecimento do CNPJ na base nacional
 - a camada de relatorios atual ainda trabalha em snapshot operacional; historico por periodo e tendencias ainda nao entraram
 - o workspace local serve como ambiente de produto enquanto o banco real nao entra
+- antes de qualquer abertura real, o fluxo recomendado agora inclui `npm run readiness`; hoje o ambiente passa com `16 PASS`, `2 WARN`, `0 FAIL`, e os dois `WARN` restantes sao fiscais e municipais

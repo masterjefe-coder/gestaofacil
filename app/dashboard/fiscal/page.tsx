@@ -23,10 +23,11 @@ import { readDashboardQueuePreference } from "@/lib/dashboard-queue-preferences"
 import { getWorkspaceSetup } from "@/lib/workspace-settings-repository";
 import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import {
-  getNfseEmissionModeSummary,
-  getNfseNationalIntegrationStatus,
-  getNfseNationalPortalUrls,
-} from "@/lib/nfse-national-provider";
+  getResolvedNfseEmissionModeSummary,
+  getResolvedNfseIntegrationStatus,
+  getResolvedNfsePortalUrls,
+} from "@/lib/nfse-provider";
+import { getNfseMunicipalityBlockSummary } from "@/lib/setup-page-helpers";
 import { getWorkspaceModuleCapabilities } from "@/lib/workspace-access";
 
 type FiscalPageProps = {
@@ -59,9 +60,16 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
   const issuePreviewMap = new Map(issuePreviews);
   const params = await searchParams;
   const operationalFocus = params?.operationalFocus || "";
-  const integrationStatus = getNfseNationalIntegrationStatus();
-  const emissionModes = getNfseEmissionModeSummary();
-  const portalUrls = getNfseNationalPortalUrls();
+  const integrationStatus = getResolvedNfseIntegrationStatus(setup.city, setup.state);
+  const emissionModes = getResolvedNfseEmissionModeSummary(setup.city, setup.state);
+  const portalUrls = getResolvedNfsePortalUrls(setup.city, setup.state);
+  const municipalityBlockSummary = getNfseMunicipalityBlockSummary({
+    city: municipalityStatus?.city,
+    state: municipalityStatus?.state,
+    statusConvenio: municipalityStatus?.statusConvenio,
+    aderenteAmbienteNacional: municipalityStatus?.aderenteAmbienteNacional,
+    aderenteEmissorNacional: municipalityStatus?.aderenteEmissorNacional,
+  });
   const fiscalInsights = buildFiscalInsights(documents, issuePreviewMap);
   const draftCount = documents.filter((document) => document.status === "Rascunho").length;
   const readyCount = documents.filter((document) => document.status === "Pronta").length;
@@ -357,7 +365,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
           <strong>{integrationStatus.ready ? "Tudo pronto para emitir" : "Ainda faltam alguns ajustes"}</strong>
           <span>{integrationStatus.helper}</span>
           <small className="muted-text">
-            Ambiente: {integrationStatus.environment === "production" ? "produção" : "produção restrita"}.
+            Ambiente: {integrationStatus.environment === "production" ? "produção" : integrationStatus.environment === "homologation" ? "homologação" : "produção restrita"}.
             {setup.municipalCode ? ` Município configurado: ${setup.municipalCode}.` : " Município ainda não configurado."}
           </small>
           {integrationStatus.certificateSource ? (
@@ -367,15 +375,19 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
           ) : null}
           <small className="muted-text">
             {integrationStatus.ready
-              ? "A emissão agora usa DPS assinada e envio direto ao endpoint oficial /nfse."
-              : "Além do certificado, defina código de serviço e série para montar a DPS oficial."}
+              ? integrationStatus.provider.key === "joinville"
+                ? "A emissão agora usa o webservice municipal NF-em de Joinville."
+                : "A emissão agora usa DPS assinada e envio direto ao endpoint oficial /nfse."
+              : integrationStatus.provider.key === "joinville"
+                ? "Além do certificado, configure inscrição municipal e série RPS para o provider municipal."
+                : "Além do certificado, defina código de serviço e série para montar a DPS oficial."}
           </small>
           {!integrationStatus.ready ? (
             <small className="muted-text">Pendências: {integrationStatus.missing.join(", ")}</small>
           ) : null}
         </div>
 
-        {municipalityStatus ? (
+        {integrationStatus.provider.key === "national" && municipalityStatus ? (
           <div className={municipalityStatus.aderenteEmissorNacional ? "auth-hint" : "auth-hint fiscal-warning"}>
             <strong>
               {municipalityStatus.aderenteEmissorNacional
@@ -392,6 +404,9 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
               {municipalityStatus.publication ? ` Publicação: ${municipalityStatus.publication}.` : ""}
               {municipalityStatus.startDate ? ` Vigência: ${municipalityStatus.startDate}.` : ""}
             </small>
+            {municipalityBlockSummary ? (
+              <small className="muted-text">{municipalityBlockSummary.description}</small>
+            ) : null}
             <small className="muted-text">
               Fonte oficial:{" "}
               <Link href={municipalityStatus.sourceUrl} target="_blank" rel="noreferrer">
@@ -399,10 +414,17 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
               </Link>
             </small>
           </div>
-        ) : setup.city && setup.state ? (
+        ) : integrationStatus.provider.key === "national" && setup.city && setup.state ? (
           <div className="auth-hint fiscal-warning">
             <strong>Município sem correspondência na base pública</strong>
             <span>Não encontrei {setup.city}/{setup.state} na planilha oficial atual de municípios aderentes.</span>
+          </div>
+        ) : integrationStatus.provider.key === "joinville" ? (
+          <div className="auth-hint">
+            <strong>Provider municipal ativo</strong>
+            <span>
+              Joinville/SC está operando pelo webservice municipal NF-em, que já se integra ao ambiente nacional sem depender do Emissor Nacional público.
+            </span>
           </div>
         ) : null}
 
@@ -583,7 +605,10 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                     <span>{issuePreviewMap.get(document.id)?.helper}</span>
                   </div>
                 ) : null}
-                {fiscalAccess.canManage && document.status !== "Emitida" && integrationStatus.ready && municipalityStatus?.aderenteEmissorNacional ? (
+                {fiscalAccess.canManage
+                && document.status !== "Emitida"
+                && integrationStatus.ready
+                && (integrationStatus.provider.key === "joinville" || municipalityStatus?.aderenteEmissorNacional) ? (
                   <form action={issueNfseNationalAction} className="follow-up-form">
                     <input type="hidden" name="id" value={document.id} />
                     <label className="form-span-2">
@@ -597,11 +622,15 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                       />
                     </label>
                     <button type="submit" className="primary-link">
-                      Emitir no portal oficial
+                      {integrationStatus.provider.key === "joinville" ? "Emitir via Joinville" : "Emitir no portal oficial"}
                     </button>
                   </form>
                 ) : null}
-                {document.status !== "Emitida" && integrationStatus.ready && municipalityStatus && !municipalityStatus.aderenteEmissorNacional ? (
+                {document.status !== "Emitida"
+                && integrationStatus.ready
+                && integrationStatus.provider.key === "national"
+                && municipalityStatus
+                && !municipalityStatus.aderenteEmissorNacional ? (
                   <div className="auth-hint fiscal-warning">
                     <strong>Emissão automática indisponível</strong>
                     <span>Seu município de estabelecimento ainda não possui convênio ativo para emissão pública no Emissor Nacional.</span>

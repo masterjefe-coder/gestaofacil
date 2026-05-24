@@ -89,7 +89,11 @@ export class AsaasApiError extends Error {
 }
 
 function getAsaasConfig() {
-  const apiKey = process.env.ASAAS_API_KEY?.trim();
+  const apiKey =
+    process.env.ASAAS_API_KEY?.trim()
+    || (process.env.ASAAS_API_KEY_BASE64?.trim()
+      ? Buffer.from(process.env.ASAAS_API_KEY_BASE64.trim(), "base64").toString("utf8").trim()
+      : "");
   const environment = (process.env.ASAAS_ENVIRONMENT?.trim().toLowerCase() === "production" ? "production" : "sandbox") as AsaasEnvironment;
   const baseUrl = environment === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
   const enabled = Boolean(apiKey);
@@ -103,7 +107,12 @@ function getAsaasConfig() {
 }
 
 function getAsaasConfigForApiKey(apiKeyOverride?: string) {
-  const apiKey = apiKeyOverride?.trim() || process.env.ASAAS_API_KEY?.trim();
+  const apiKey =
+    apiKeyOverride?.trim()
+    || process.env.ASAAS_API_KEY?.trim()
+    || (process.env.ASAAS_API_KEY_BASE64?.trim()
+      ? Buffer.from(process.env.ASAAS_API_KEY_BASE64.trim(), "base64").toString("utf8").trim()
+      : "");
   const environment = (process.env.ASAAS_ENVIRONMENT?.trim().toLowerCase() === "production" ? "production" : "sandbox") as AsaasEnvironment;
   const baseUrl = environment === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
   const enabled = Boolean(apiKey);

@@ -35,5 +35,5 @@ Depois do deploy, o `Gestao Facil` pode apontar para a API via:
 
 - versão ativa: `evoapicloud/evolution-api:v2.3.7`
 - endpoint público validado: `http://3.91.115.172:8081`
-- instância criada: `gestao-facil-demo`
+- instância operacional atual: `ofertas-do-ton`
 - webhook validado: `https://www.gestaofacilsistemas.com.br/api/evolution/webhook`
