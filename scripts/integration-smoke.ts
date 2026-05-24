@@ -7,7 +7,10 @@ import {
   getEvolutionIntegrationStatus,
   probeEvolutionApi,
 } from "@/lib/evolution-api";
-import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
+import {
+  getNfseNationalMunicipalityStatus,
+  listNfseNationalCoverageGaps,
+} from "@/lib/nfse-national-municipal-status";
 import {
   getNfseNationalIntegrationStatus,
   inspectNfseNationalCertificate,
@@ -176,7 +179,18 @@ async function runNfseChecks() {
   const demoWorkspace = readDemoWorkspaceSnapshot();
   const city = getArgValue("--city") || demoWorkspace?.company?.city || "";
   const state = getArgValue("--state") || demoWorkspace?.company?.state || "";
-  const provider = resolveNfseProvider(city, state);
+  const municipalityStatus = city && state
+    ? await getNfseNationalMunicipalityStatus(city, state).catch((error) => ({
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+      }))
+    : null;
+  const provider = resolveNfseProvider(
+    city,
+    state,
+    municipalityStatus && "aderenteEmissorNacional" in municipalityStatus
+      ? { municipalityStatus }
+      : undefined,
+  );
   const status = provider.key === "joinville" ? getNfseJoinvilleIntegrationStatus() : getNfseNationalIntegrationStatus();
   printTitle("NFSE");
   printJson({
@@ -190,11 +204,7 @@ async function runNfseChecks() {
   const connectivity = provider.key === "joinville"
     ? await testNfseJoinvilleConnectivity()
     : await testNfseNationalConnectivity();
-  const municipalityStatus = provider.key === "national" && city && state
-    ? await getNfseNationalMunicipalityStatus(city, state).catch((error) => ({
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      }))
-    : null;
+  const coverageGapPreview = await listNfseNationalCoverageGaps(12).catch(() => []);
 
   printJson({
     certificate,
@@ -208,6 +218,12 @@ async function runNfseChecks() {
         || null,
     },
     municipalityStatus,
+    firstWaveMunicipalGaps: coverageGapPreview.map((item) => ({
+      city: item.city,
+      state: item.state,
+      population: item.population,
+      statusConvenio: item.statusConvenio,
+    })),
   });
 
   if (provider.key === "national" && municipalityStatus && "aderenteEmissorNacional" in municipalityStatus && isJoinvilleReference(city, state) && municipalityStatus.aderenteEmissorNacional === false) {
@@ -215,7 +231,8 @@ async function runNfseChecks() {
   }
 
   const municipalityBlocksAutomaticIssuance =
-    municipalityStatus
+    provider.key === "national"
+    && municipalityStatus
     && typeof municipalityStatus === "object"
     && "aderenteEmissorNacional" in municipalityStatus
     && municipalityStatus.aderenteEmissorNacional === false;

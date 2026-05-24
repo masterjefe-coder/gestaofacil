@@ -4,6 +4,7 @@ import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { getEvolutionIntegrationStatus, probeEvolutionApi } from "@/lib/evolution-api";
 import { inspectNfseNationalCertificate } from "@/lib/nfse-national-provider";
+import { getNfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getResolvedNfseIntegrationStatus } from "@/lib/nfse-provider";
 import { getRateLimiterStats } from "@/lib/rate-limit";
 import { REQUEST_ID_HEADER } from "@/lib/request-tracing";
@@ -128,6 +129,7 @@ export const operationalDiagnosticsDeps = {
   getAsaasIntegrationStatus,
   getEvolutionIntegrationStatus,
   getResolvedNfseIntegrationStatus,
+  getNfseNationalMunicipalityStatus,
   inspectNfseNationalCertificate,
   isLocalDataMode,
   listBackgroundJobStats,
@@ -139,9 +141,18 @@ export async function buildOperationalDiagnosticsSnapshot(
 ): Promise<OperationalDiagnosticsSnapshot> {
   const asaas = operationalDiagnosticsDeps.getAsaasIntegrationStatus();
   const evolution = operationalDiagnosticsDeps.getEvolutionIntegrationStatus();
+  const nfseReferenceCity = process.env.NFSE_REFERENCE_CITY?.trim();
+  const nfseReferenceState = process.env.NFSE_REFERENCE_STATE?.trim();
+  const municipalityStatus = await operationalDiagnosticsDeps.getNfseNationalMunicipalityStatus(
+    nfseReferenceCity || "",
+    nfseReferenceState || "",
+  );
   const nfse = operationalDiagnosticsDeps.getResolvedNfseIntegrationStatus(
-    process.env.NFSE_REFERENCE_CITY?.trim(),
-    process.env.NFSE_REFERENCE_STATE?.trim(),
+    nfseReferenceCity,
+    nfseReferenceState,
+    {
+      municipalityStatus,
+    },
   );
   const localMode = operationalDiagnosticsDeps.isLocalDataMode();
   const databaseConfigured = Boolean(process.env.DATABASE_URL?.trim());

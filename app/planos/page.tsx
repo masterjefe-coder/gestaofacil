@@ -39,9 +39,8 @@ export default function PricingPage() {
           <span className="section-label">Planos do Gestão Fácil</span>
           <h1>Preço claro para vender, cobrar e emitir sem empilhar ferramenta.</h1>
           <p className="hero-text">
-            O posicionamento aqui é simples: menos ERP genérico, mais operação fluida.
-            O Gestão Fácil foi desenhado para empresas de serviço que precisam de
-            consistência comercial, financeira e fiscal em uma base mais elegante.
+            O posicionamento aqui é simples: menos ERP genérico, mais rotina resolvida.
+            Escolha o plano pelo estágio da operação e mantenha previsibilidade com preço fixo.
           </p>
           <div className="hero-actions">
             <Link href="/checkout" className="primary-link">
@@ -65,11 +64,11 @@ export default function PricingPage() {
       <section className="home-section home-pricing-section">
         <div className="home-section-heading">
           <span className="section-label">Escolha de plano</span>
-          <h2>Planos públicos para começar online e uma camada Enterprise para cenários fora do padrão.</h2>
+          <h2>Comece no plano que combina com o volume atual e suba quando a operação pedir.</h2>
         </div>
         <div className="home-pricing-grid">
           {pricingPlans.map((plan) => (
-            <article key={plan.name} className="home-pricing-card">
+            <article key={plan.name} className={plan.code === "PROFESSIONAL" ? "home-pricing-card home-pricing-card-featured" : "home-pricing-card"}>
               <div className="home-pricing-top">
                 <span className="dashboard-kicker">{plan.badge}</span>
                 <h3>{plan.name}</h3>
@@ -78,6 +77,12 @@ export default function PricingPage() {
               <strong className="home-price">{plan.price}</strong>
               <span className="home-price-note">{plan.annualPrice}</span>
               <p className="muted-text">{plan.audience}</p>
+              {plan.code === "PROFESSIONAL" ? (
+                <div className="auth-hint">
+                  <strong>Plano recomendado</strong>
+                  <span>Melhor equilíbrio para equipes pequenas com rotina comercial e financeira ativa.</span>
+                </div>
+              ) : null}
               <div className="pricing-list-block">
                 <strong>Estrutura</strong>
                 <ul className="stack-list pricing-stack-list">
@@ -126,7 +131,7 @@ export default function PricingPage() {
       <section className="home-section">
         <div className="home-section-heading">
           <span className="section-label">Posicionamento</span>
-          <h2>O plano certo é o que organiza a rotina sem carregar custo e complexidade desnecessários.</h2>
+          <h2>O plano certo organiza a rotina sem carregar custo, setup ou complexidade desnecessários.</h2>
         </div>
         <div className="home-card-grid">
           {pricingPositioning.map((item) => (

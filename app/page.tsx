@@ -68,6 +68,12 @@ const conversionNotes = [
   "Implantação pensada para operação de serviço",
 ];
 
+const conversionAssurances = [
+  "Sem cartão no trial",
+  "Preço fixo por plano",
+  "Troca de plano sem trauma",
+];
+
 const buyingSignals = [
   {
     title: "Para quem quer organizar rápido",
@@ -114,19 +120,19 @@ export default function HomePage() {
           <span className="eyebrow">Sistema premium para empresas de serviço</span>
           <BrandLogo className="hero-wordmark" priority />
           <h1 className="home-hero-title">
-            Um sistema que transmite clareza comercial e controle operacional logo na primeira tela.
+            Venda pelo WhatsApp, cobre no prazo e emita NFS-e no mesmo fluxo.
           </h1>
           <p className="home-hero-text">
-            O Gestão Fácil conecta atendimento, proposta, cobrança e nota em uma experiência mais atual,
-            mais compacta e preparada para vender confiança antes mesmo da demonstração.
+            O Gestão Fácil foi feito para empresas de serviço que precisam responder rápido, transformar proposta em recebimento
+            e deixar a nota pronta sem retrabalho nem excesso de sistema.
           </p>
 
           <div className="hero-actions">
-            <Link href="/planos" className="primary-link">
-              Ver planos e iniciar teste
+            <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
+              Iniciar teste grátis
             </Link>
-            <Link href="/planos" className="secondary-link">
-              Ver planos
+            <Link href="/#produto" className="secondary-link">
+              Ver como funciona
             </Link>
           </div>
 
@@ -174,7 +180,7 @@ export default function HomePage() {
 
             <div className="home-spotlight-card">
               <span className="section-label">Fluxo central</span>
-              <h2>Uma experiência que vende clareza antes mesmo da reunião comercial.</h2>
+              <h2>Uma operação pensada para reduzir atraso, retrabalho e perda de contexto.</h2>
               <ul className="stack-list home-execution-list">
                 {executionPillars.map((item) => (
                   <li key={item}>{item}</li>
@@ -198,7 +204,7 @@ export default function HomePage() {
       <section className="home-section home-conversion-strip fade-in-up">
         <div className="home-section-heading">
           <span className="section-label">Decisão mais fácil</span>
-          <h2>Menos objeção, mais contexto para começar o teste.</h2>
+          <h2>Menos objeção, mais motivo concreto para começar o teste.</h2>
         </div>
         <div className="home-conversion-grid">
           {buyingSignals.map((item) => (
@@ -214,6 +220,11 @@ export default function HomePage() {
                 <li key={item}>{item}</li>
               ))}
             </ul>
+            <div className="home-hero-notes home-hero-notes-strong" aria-label="Garantias comerciais">
+              {conversionAssurances.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
           </article>
         </div>
       </section>
@@ -266,9 +277,9 @@ export default function HomePage() {
       <section id="planos" className="home-section home-pricing-section">
         <div className="home-section-heading">
           <span className="section-label">Planos</span>
-          <h2>Oferta organizada para reforçar valor, clareza e decisão rápida.</h2>
+          <h2>Planos pensados para o estágio da operação, não para empurrar feature sem contexto.</h2>
           <p>
-            Os planos entram como continuação natural da proposta, com menos ruído e mais percepção de estrutura.
+            Comece leve, avance quando o volume pedir e mantenha previsibilidade com preço fixo por plano.
           </p>
         </div>
 
@@ -286,7 +297,7 @@ export default function HomePage() {
               <strong className="home-price">{plan.price}</strong>
               <span className="home-price-note">{plan.annualPrice}</span>
               <div className="home-plan-audience">
-                <strong>Melhor para</strong>
+                <strong>{plan.code === "PROFESSIONAL" ? "Mais escolhido" : "Melhor para"}</strong>
                 <span>{plan.audience}</span>
               </div>
               <ul className="stack-list home-plan-list">
@@ -333,13 +344,13 @@ export default function HomePage() {
           <span className="section-label">Pronto para testar</span>
           <h2>Se a operação já está rodando, o próximo ganho é organizar melhor o mesmo volume.</h2>
           <p>
-            O plano Profissional concentra o melhor equilíbrio para equipes pequenas que querem vender,
-            cobrar e emitir com mais controle sem perder velocidade.
+            O plano Profissional concentra o melhor equilíbrio para equipes pequenas que já vendem,
+            cobram e emitem com frequência e querem mais previsibilidade sem virar ERP pesado.
           </p>
         </div>
         <div className="home-closing-actions">
-          <Link href="/planos" className="primary-link">
-            Escolher plano e iniciar teste
+          <Link href="/checkout?plan=PROFESSIONAL" className="primary-link">
+            Iniciar teste no Profissional
           </Link>
           <Link href="/contato" className="secondary-link">
             Falar com a equipe

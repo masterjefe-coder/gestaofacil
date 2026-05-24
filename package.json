@@ -11,6 +11,7 @@
     "test": "tsx --test tests/**/*.test.ts",
     "readiness": "tsx scripts/production-readiness.ts",
     "smoke:integrations": "tsx scripts/integration-smoke.ts",
+    "nfse:municipal-priority": "tsx scripts/nfse-municipal-priority.ts",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

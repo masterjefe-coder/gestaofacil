@@ -1,5 +1,6 @@
 import { getNfseEmissionModeSummary, getNfseNationalIntegrationStatus, getNfseNationalPortalUrls } from "@/lib/nfse-national-provider";
 import { getNfseJoinvilleIntegrationStatus, getNfseJoinvillePortalUrls } from "@/lib/nfse-joinville-provider";
+import type { NfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 
 export type NfseProviderKey = "national" | "joinville";
 
@@ -7,6 +8,17 @@ export type NfseProviderResolution = {
   key: NfseProviderKey;
   label: string;
   reason: string;
+};
+
+type NfseProviderContext = {
+  municipalityStatus?: Pick<NfseNationalMunicipalityStatus, "aderenteEmissorNacional"> | null;
+};
+
+type MunicipalProviderDefinition = {
+  key: Exclude<NfseProviderKey, "national">;
+  label: string;
+  isEnabled: () => boolean;
+  matches: (city?: string, state?: string) => boolean;
 };
 
 function normalizeProviderKey(value: string | undefined): NfseProviderKey | "auto" {
@@ -25,9 +37,32 @@ function isJoinville(city: string | undefined, state: string | undefined) {
   return (city || "").trim().toLowerCase() === "joinville" && (state || "").trim().toUpperCase() === "SC";
 }
 
-export function resolveNfseProvider(city?: string, state?: string): NfseProviderResolution {
+const municipalProviders: MunicipalProviderDefinition[] = [
+  {
+    key: "joinville",
+    label: "NF-em Joinville",
+    isEnabled: () => process.env.NFSE_JOINVILLE_ENABLED?.trim().toLowerCase() === "true",
+    matches: isJoinville,
+  },
+];
+
+export function listKnownMunicipalNfseProviders() {
+  return municipalProviders.map((provider) => ({
+    key: provider.key,
+    label: provider.label,
+    enabled: provider.isEnabled(),
+  }));
+}
+
+export function getSupportedMunicipalNfseProvider(city?: string, state?: string) {
+  return municipalProviders.find((provider) => provider.isEnabled() && provider.matches(city, state)) || null;
+}
+
+export function resolveNfseProvider(city?: string, state?: string, context?: NfseProviderContext): NfseProviderResolution {
   const configuredProvider = normalizeProviderKey(process.env.NFSE_PROVIDER?.trim().toLowerCase());
-  const joinvilleEnabled = process.env.NFSE_JOINVILLE_ENABLED?.trim().toLowerCase() === "true";
+  const municipalProvider = getSupportedMunicipalNfseProvider(city, state);
+  const municipalitySupportsNational = context?.municipalityStatus?.aderenteEmissorNacional === true;
+  const municipalityBlocksNational = context?.municipalityStatus?.aderenteEmissorNacional === false;
 
   if (configuredProvider === "joinville") {
     return {
@@ -45,11 +80,19 @@ export function resolveNfseProvider(city?: string, state?: string): NfseProvider
     };
   }
 
-  if (joinvilleEnabled && isJoinville(city, state)) {
+  if (municipalityBlocksNational && municipalProvider) {
     return {
-      key: "joinville",
-      label: "NF-em Joinville",
-      reason: "Joinville/SC detectada com provider municipal habilitado.",
+      key: municipalProvider.key,
+      label: municipalProvider.label,
+      reason: "O município ainda não está liberado no Emissor Nacional; fallback municipal habilitado automaticamente.",
+    };
+  }
+
+  if (municipalitySupportsNational) {
+    return {
+      key: "national",
+      label: "NFS-e Nacional",
+      reason: "Município liberado no Emissor Nacional; fluxo nacional permanece como padrão.",
     };
   }
 
@@ -60,8 +103,8 @@ export function resolveNfseProvider(city?: string, state?: string): NfseProvider
   };
 }
 
-export function getResolvedNfseIntegrationStatus(city?: string, state?: string) {
-  const provider = resolveNfseProvider(city, state);
+export function getResolvedNfseIntegrationStatus(city?: string, state?: string, context?: NfseProviderContext) {
+  const provider = resolveNfseProvider(city, state, context);
 
   if (provider.key === "joinville") {
     const status = getNfseJoinvilleIntegrationStatus();
@@ -80,8 +123,8 @@ export function getResolvedNfseIntegrationStatus(city?: string, state?: string) 
   };
 }
 
-export function getResolvedNfseEmissionModeSummary(city?: string, state?: string) {
-  const provider = resolveNfseProvider(city, state);
+export function getResolvedNfseEmissionModeSummary(city?: string, state?: string, context?: NfseProviderContext) {
+  const provider = resolveNfseProvider(city, state, context);
 
   if (provider.key === "joinville") {
     const status = getNfseJoinvilleIntegrationStatus();
@@ -107,7 +150,7 @@ export function getResolvedNfseEmissionModeSummary(city?: string, state?: string
   return getNfseEmissionModeSummary();
 }
 
-export function getResolvedNfsePortalUrls(city?: string, state?: string) {
-  const provider = resolveNfseProvider(city, state);
+export function getResolvedNfsePortalUrls(city?: string, state?: string, context?: NfseProviderContext) {
+  const provider = resolveNfseProvider(city, state, context);
   return provider.key === "joinville" ? getNfseJoinvillePortalUrls() : getNfseNationalPortalUrls();
 }

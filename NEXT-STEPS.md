@@ -29,7 +29,7 @@ Estado validado em `2026-05-24`:
 - `Asaas`: operacional no ambiente
 - `Evolution`: operacional com a instancia real `ofertas-do-ton` em `open`
 - `Email`: operacional com `Resend`
-- `NFS-e`: configurada e com certificado valido, mas ainda dependente de municipio com `AderenteEmissorNacional = Sim`
+- `NFS-e`: configurada com estrategia `national-first`; quando o municipio nao estiver liberado no Emissor Nacional, o produto pode cair para fallback municipal suportado
 
 ## Ordem recomendada
 
@@ -38,8 +38,9 @@ Estado validado em `2026-05-24`:
 3. validar a primeira cobranca real por workspace
 4. validar webhook real do Asaas com baixa automatica
 5. validar a operacao real da Evolution/WhatsApp
-6. validar a primeira NFS-e real ponta a ponta em municipio piloto liberado no Emissor Nacional
-7. depois aprofundar analitica por periodo e tendencias
+6. validar a primeira NFS-e real ponta a ponta no fluxo nacional
+7. ampliar o fallback municipal para a primeira leva de 10-15 municipios prioritarios em [NFSE-MUNICIPAL-PRIORITIES.md](./NFSE-MUNICIPAL-PRIORITIES.md)
+8. depois aprofundar analitica por periodo e tendencias
 
 Observacao:
 
@@ -48,6 +49,7 @@ Observacao:
 - a versao de impressao em PDF ja existe em [app/dashboard/reports/print/page.tsx](./app/dashboard/reports/print/page.tsx)
 - o modulo de pedidos ja existe em [app/dashboard/orders/page.tsx](./app/dashboard/orders/page.tsx)
 - a base comercial de precos, trial e segmentos agora esta em [PRICING.md](./PRICING.md)
+- a fila de municipios prioritarios para integracao municipal da NFS-e esta em [NFSE-MUNICIPAL-PRIORITIES.md](./NFSE-MUNICIPAL-PRIORITIES.md)
 - os filtros por modulo ja ficam persistidos para `customers`, `quotes`, `orders`, `billing` e `fiscal`
 - testes minimos ja existem e podem rodar com `npm test`
 

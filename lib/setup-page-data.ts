@@ -6,6 +6,7 @@ import {
   getResolvedNfseEmissionModeSummary,
   getResolvedNfseIntegrationStatus,
 } from "@/lib/nfse-provider";
+import type { NfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
 import { getBillingCycleLabel, getSubscriptionPlanPresentation, getTrialRemainingDays } from "@/lib/subscription";
 import { isTransactionalEmailConfigured } from "@/lib/transactional-email";
 
@@ -19,6 +20,7 @@ export function buildSetupPageViewModel(input: {
   };
   companyCity?: string;
   companyState?: string;
+  municipalityStatus?: Pick<NfseNationalMunicipalityStatus, "aderenteEmissorNacional"> | null;
   fiscalReady: boolean;
   evolutionReachable: boolean;
   evolutionInstances: Array<{ instanceName: string; status?: string }>;
@@ -26,8 +28,12 @@ export function buildSetupPageViewModel(input: {
   asaasIncidentEntries: Array<{ action: string }>;
 }) {
   const canManage = isLocalDataMode() || canManageWorkspace(input.workspaceRole);
-  const emissionModes = getResolvedNfseEmissionModeSummary(input.companyCity, input.companyState);
-  const nfseIntegration = getResolvedNfseIntegrationStatus(input.companyCity, input.companyState);
+  const emissionModes = getResolvedNfseEmissionModeSummary(input.companyCity, input.companyState, {
+    municipalityStatus: input.municipalityStatus,
+  });
+  const nfseIntegration = getResolvedNfseIntegrationStatus(input.companyCity, input.companyState, {
+    municipalityStatus: input.municipalityStatus,
+  });
   const evolutionIntegration = getEvolutionIntegrationStatus();
   const asaasIntegration = getAsaasIntegrationStatus();
   const transactionalEmailReady = isTransactionalEmailConfigured();

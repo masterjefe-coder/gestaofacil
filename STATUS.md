@@ -72,6 +72,8 @@
 - o produto agora ja separa emissao assistida via portal oficial e emissao automatica com certificado
 - a emissao automatica agora consulta a base oficial publica de municipios aderentes e so libera emissao quando o estabelecimento estiver com `AderenteEmissorNacional = Sim`
 - o projeto agora tambem possui provider municipal inicial para `Joinville/SC`, usando o webservice `NF-em` da prefeitura quando configurado
+- a arquitetura fiscal agora esta alinhada como `national-first`, com fallback municipal automatico quando a cidade nao estiver liberada no Emissor Nacional e o provider municipal existir
+- a fila inicial dos 15 principais municipios para fallback municipal ja esta registrada em `NFSE-MUNICIPAL-PRIORITIES.md`
 - o teste oficial da NFS-e Nacional agora ja avancou alem de certificado e schema, chegando ate regras de negocio reais do emitente e do municipio
 - dashboard, clientes, orcamentos, cobrancas e fiscal agora ja persistem foco de fila por modulo
 - central de relatorios em `/dashboard/reports` agora consolida resumo executivo, comercial, financeiro, clientes e fiscal
@@ -150,6 +152,7 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 3. validar a emissao nacional com certificado real e municipio piloto
 4. validar operacao real de WhatsApp em rotina
 5. so depois aprofundar analitica por periodo e tendencias
+6. pesquisar e integrar a primeira leva de 10-15 APIs municipais mais relevantes fora da cobertura pratica do Emissor Nacional
 
 ## Observacoes tecnicas
 
@@ -171,6 +174,7 @@ Gestao Facil sera um sistema comercial WhatsApp-first para pequenos negocios de 
 - o Asaas por workspace agora ja esta pronto estruturalmente, mas ainda depende da primeira validacao real ponta a ponta
 - o bloco fiscal atual agora ja prepara DPS assinada, assina, envia ao endpoint oficial correto e bloqueia a emissao automatica quando o municipio do estabelecimento nao estiver habilitado no Emissor Nacional
 - a validacao real mais recente em `2026-05-24` confirmou `JOINVILLE/SC` com `Conveniado Ativo`, mas `AderenteEmissorNacional = Nao`; a emissao automatica segue travada por regra municipal e nao por erro de codigo
+- a partir de `2026-05-24`, o projeto tambem ja passa a tratar fallback municipal como cobertura estrategica para os maiores municipios ainda nao liberados no Emissor Nacional; a fila inicial esta documentada em `NFSE-MUNICIPAL-PRIORITIES.md`
 - a emissao real final ainda depende da habilitacao oficial do municipio e da coerencia cadastral do estabelecimento do CNPJ na base nacional
 - a camada de relatorios atual ainda trabalha em snapshot operacional; historico por periodo e tendencias ainda nao entraram
 - o workspace local serve como ambiente de produto enquanto o banco real nao entra
