@@ -191,14 +191,6 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
             <span>Valor</span>
             <input name="amount" type="text" placeholder="Ex.: R$ 1.900" required />
           </label>
-          <label>
-            <span>Status</span>
-            <select name="status" defaultValue="Enviado">
-              <option value="Enviado">Enviado</option>
-              <option value="Aprovado">Aprovado</option>
-              <option value="Follow-up">Follow-up</option>
-            </select>
-          </label>
           <label className="form-span-2">
             <span>Prazo ou próximo passo</span>
             <input
@@ -207,14 +199,37 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
               placeholder="Ex.: Follow-up amanhã às 10h"
             />
           </label>
-          <label className="form-span-2">
-            <span>Resumo</span>
-            <input
-              name="summary"
-              type="text"
-              placeholder="Ex.: Proposta recorrente com setup inicial incluso."
-            />
-          </label>
+          <details className="guided-flow-card form-span-2">
+            <summary>
+              <div>
+                <span className="section-label">Ajustes extras</span>
+                <h3>Definir status inicial e resumo só quando precisar sair do fluxo padrão</h3>
+                <p>Na maior parte dos casos, a proposta já pode nascer como enviada e seguir a cadência depois.</p>
+              </div>
+              <span className="guided-flow-badge">Opcional</span>
+            </summary>
+
+            <div className="guided-flow-body">
+              <div className="inline-form">
+                <label>
+                  <span>Status</span>
+                  <select name="status" defaultValue="Enviado">
+                    <option value="Enviado">Enviado</option>
+                    <option value="Aprovado">Aprovado</option>
+                    <option value="Follow-up">Follow-up</option>
+                  </select>
+                </label>
+                <label className="form-span-2">
+                  <span>Resumo</span>
+                  <input
+                    name="summary"
+                    type="text"
+                    placeholder="Ex.: Proposta recorrente com setup inicial incluso."
+                  />
+                </label>
+              </div>
+            </div>
+          </details>
           <button type="submit" className="primary-link form-submit">
             Salvar orçamento
           </button>
@@ -413,63 +428,73 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
         )}
       </section>
 
-      <section className="cards-grid quote-grid">
-        {filteredQuoteInsights.map((quote) => (
-          <article key={quote.quoteId} className="dashboard-card">
-            <span className="dashboard-kicker">{quote.priorityLabel}</span>
-            <h3>{quote.title}</h3>
-            <p>{quote.customer}</p>
-            <strong className="quote-amount">{quote.amount}</strong>
-            <p>{quote.summary}</p>
-            <small className="muted-text">{quote.cadenceLabel}</small>
-            <small className="muted-text">Execução: {quote.executionLabel}</small>
-            <small className="muted-text">Etapa concluída: {quote.completedStepLabel}</small>
-            <small className="muted-text">Próxima etapa: {quote.nextStepLabel}</small>
-            <small className="muted-text">{quote.dueLabel}</small>
-            <small className="muted-text">{quote.helper}</small>
-            {quote.customerStatus ? (
-              <small className="muted-text">Cliente: {quote.customerStatus}{quote.customerOpenAmount ? ` · Em aberto ${quote.customerOpenAmount}` : ""}</small>
-            ) : null}
-            <div className="dashboard-actions">
-              {quote.status !== "Follow-up" && quote.status !== "Aprovado" ? (
-                <form action={advanceQuoteCadenceAction} className="card-action">
+      <details className="guided-flow-card">
+        <summary>
+          <div>
+            <span className="section-label">Carteira completa</span>
+            <h3>Ver todas as propostas do recorte atual</h3>
+            <p>Abra esse bloco quando quiser varrer a lista inteira sem poluir a leitura principal da página.</p>
+          </div>
+          <span className="guided-flow-badge">{filteredQuoteInsights.length} item(ns)</span>
+        </summary>
+
+        <div className="guided-flow-body">
+          <div className="cards-grid quote-grid">
+            {filteredQuoteInsights.map((quote) => (
+              <article key={quote.quoteId} className="dashboard-card">
+                <span className="dashboard-kicker">{quote.priorityLabel}</span>
+                <h3>{quote.title}</h3>
+                <p>{quote.customer}</p>
+                <strong className="quote-amount">{quote.amount}</strong>
+                <p>{quote.summary}</p>
+                <small className="muted-text">{quote.cadenceLabel}</small>
+                <small className="muted-text">Próxima etapa: {quote.nextStepLabel}</small>
+                <small className="muted-text">{quote.dueLabel}</small>
+                {quote.customerStatus ? (
+                  <small className="muted-text">Cliente: {quote.customerStatus}{quote.customerOpenAmount ? ` · Em aberto ${quote.customerOpenAmount}` : ""}</small>
+                ) : null}
+                <div className="dashboard-actions">
+                  {quote.status !== "Follow-up" && quote.status !== "Aprovado" ? (
+                    <form action={advanceQuoteCadenceAction} className="card-action">
+                      <input type="hidden" name="id" value={quote.quoteId} />
+                      <input type="hidden" name="status" value="Follow-up" />
+                      <input type="hidden" name="dueLabel" value="Follow-up comercial em andamento" />
+                      <input type="hidden" name="summary" value="Proposta puxada para cadência ativa no painel." />
+                      <button type="submit" className="secondary-link">
+                        Follow-up
+                      </button>
+                    </form>
+                  ) : null}
+                  {quote.status !== "Aprovado" ? (
+                    <form action={advanceQuoteCadenceAction} className="card-action">
+                      <input type="hidden" name="id" value={quote.quoteId} />
+                      <input type="hidden" name="status" value="Aprovado" />
+                      <input type="hidden" name="dueLabel" value="Aprovado e pronto para cobrança" />
+                      <input type="hidden" name="summary" value="Aprovação registrada direto na fila comercial." />
+                      <button type="submit" className="primary-link">
+                        Aprovar
+                      </button>
+                    </form>
+                  ) : (
+                    <form action={generateDashboardChargeFromQuoteAction} className="card-action">
+                      <input type="hidden" name="id" value={quote.quoteId} />
+                      <button type="submit" className="primary-link">
+                        Cobrança
+                      </button>
+                    </form>
+                  )}
+                </div>
+                <form action={deleteQuoteAction} className="card-action">
                   <input type="hidden" name="id" value={quote.quoteId} />
-                  <input type="hidden" name="status" value="Follow-up" />
-                  <input type="hidden" name="dueLabel" value="Follow-up comercial em andamento" />
-                  <input type="hidden" name="summary" value="Proposta puxada para cadência ativa no painel." />
-                  <button type="submit" className="secondary-link">
-                    Follow-up
+                  <button type="submit" className="ghost-button">
+                    Remover
                   </button>
                 </form>
-              ) : null}
-              {quote.status !== "Aprovado" ? (
-                <form action={advanceQuoteCadenceAction} className="card-action">
-                  <input type="hidden" name="id" value={quote.quoteId} />
-                  <input type="hidden" name="status" value="Aprovado" />
-                  <input type="hidden" name="dueLabel" value="Aprovado e pronto para cobrança" />
-                  <input type="hidden" name="summary" value="Aprovação registrada direto na fila comercial." />
-                  <button type="submit" className="primary-link">
-                    Aprovar
-                  </button>
-                </form>
-              ) : (
-                <form action={generateDashboardChargeFromQuoteAction} className="card-action">
-                  <input type="hidden" name="id" value={quote.quoteId} />
-                  <button type="submit" className="primary-link">
-                    Cobrança
-                  </button>
-                </form>
-              )}
-            </div>
-            <form action={deleteQuoteAction} className="card-action">
-              <input type="hidden" name="id" value={quote.quoteId} />
-              <button type="submit" className="ghost-button">
-                Remover
-              </button>
-            </form>
-          </article>
-        ))}
-      </section>
+              </article>
+            ))}
+          </div>
+        </div>
+      </details>
 
       <section className="section-grid tinted">
         <div>

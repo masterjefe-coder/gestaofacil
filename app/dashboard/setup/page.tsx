@@ -324,25 +324,13 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
 
         {view.canManage ? (
           <form action={updateWorkspaceSetupAction} className="inline-form">
-            <label>
-              <span>Nome interno da empresa</span>
-              <input name="name" type="text" defaultValue={setup.name} required />
-            </label>
-            <label>
-              <span>Identificador interno</span>
-              <input name="slug" type="text" defaultValue={setup.slug} required />
-            </label>
             <label className="form-span-2">
-              <span>Nicho</span>
-              <input name="niche" type="text" defaultValue={setup.niche} />
+              <span>Nome fantasia</span>
+              <input name="tradeName" type="text" defaultValue={setup.tradeName} required />
             </label>
             <label className="form-span-2">
               <span>Razão social</span>
               <input name="legalName" type="text" defaultValue={setup.legalName} />
-            </label>
-            <label className="form-span-2">
-              <span>Nome fantasia</span>
-              <input name="tradeName" type="text" defaultValue={setup.tradeName} required />
             </label>
             <label>
               <span>Documento</span>
@@ -356,39 +344,66 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <span>UF</span>
               <input name="state" type="text" defaultValue={setup.state} />
             </label>
-            <label className="form-span-2">
-              <span>Descrição padrão de serviços</span>
-              <input
-                name="serviceDescription"
-                type="text"
-                defaultValue={setup.serviceDescription}
-              />
-            </label>
-            <label>
-              <span>Código da cidade</span>
-              <input value={setup.municipalCode || ""} type="text" readOnly />
-            </label>
-            <label>
-              <span>Código padrão do serviço</span>
-              <input
-                name="defaultFiscalServiceCode"
-                type="text"
-                defaultValue={setup.defaultFiscalServiceCode || ""}
-                placeholder="Ex.: 17.02"
-              />
-            </label>
-            <label className="form-span-2">
-              <span>Chave Pix padrão</span>
-              <input name="defaultPixKey" type="text" defaultValue={setup.defaultPixKey} />
-            </label>
-            <label className="form-span-2">
-              <span>Mensagem padrão de cobrança</span>
-              <input
-                name="defaultPaymentMessage"
-                type="text"
-                defaultValue={setup.defaultPaymentMessage}
-              />
-            </label>
+            <details className="guided-flow-card form-span-2">
+              <summary>
+                <div>
+                  <span className="section-label">Configuração avançada</span>
+                  <h3>Ver campos internos, fiscais e padrões operacionais</h3>
+                  <p>Abra só quando precisar mexer em identificadores, defaults de emissão ou mensagens padrão.</p>
+                </div>
+                <span className="guided-flow-badge">Opcional</span>
+              </summary>
+
+              <div className="guided-flow-body">
+                <div className="inline-form">
+                  <label>
+                    <span>Nome interno da empresa</span>
+                    <input name="name" type="text" defaultValue={setup.name} required />
+                  </label>
+                  <label>
+                    <span>Identificador interno</span>
+                    <input name="slug" type="text" defaultValue={setup.slug} required />
+                  </label>
+                  <label className="form-span-2">
+                    <span>Nicho</span>
+                    <input name="niche" type="text" defaultValue={setup.niche} />
+                  </label>
+                  <label className="form-span-2">
+                    <span>Descrição padrão de serviços</span>
+                    <input
+                      name="serviceDescription"
+                      type="text"
+                      defaultValue={setup.serviceDescription}
+                    />
+                  </label>
+                  <label>
+                    <span>Código da cidade</span>
+                    <input value={setup.municipalCode || ""} type="text" readOnly />
+                  </label>
+                  <label>
+                    <span>Código padrão do serviço</span>
+                    <input
+                      name="defaultFiscalServiceCode"
+                      type="text"
+                      defaultValue={setup.defaultFiscalServiceCode || ""}
+                      placeholder="Ex.: 17.02"
+                    />
+                  </label>
+                  <label className="form-span-2">
+                    <span>Chave Pix padrão</span>
+                    <input name="defaultPixKey" type="text" defaultValue={setup.defaultPixKey} />
+                  </label>
+                  <label className="form-span-2">
+                    <span>Mensagem padrão de cobrança</span>
+                    <input
+                      name="defaultPaymentMessage"
+                      type="text"
+                      defaultValue={setup.defaultPaymentMessage}
+                    />
+                  </label>
+                </div>
+              </div>
+            </details>
             <button type="submit" className="primary-link form-submit">
               Salvar configurações
             </button>
@@ -399,52 +414,6 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <span>Apenas perfis com permissão de gestão podem alterar estes dados e convidar pessoas.</span>
           </div>
         )}
-      </section>
-
-      <section className="section-split">
-        <article className="split-panel">
-          <span className="section-label">Emissão assistida</span>
-          <h2>
-            {view.nfseIntegration.provider.key === "joinville"
-              ? "Mesmo sem automação total, o portal municipal mantém a operação fluindo"
-              : "Mesmo sem certificado, dá para seguir com apoio manual"}
-          </h2>
-          <p>{view.emissionModes.assisted.helper}</p>
-        </article>
-
-        <article className={view.nfseIntegration.ready ? "split-panel success" : "split-panel"}>
-          <span className="section-label">Emissão automática</span>
-          <h2>
-            {view.nfseIntegration.provider.key === "joinville"
-              ? "Com inscrição municipal e certificado, Joinville pode emitir direto pelo webservice"
-              : "Com certificado, a emissão fica mais automática"}
-          </h2>
-          <p>{view.emissionModes.automatic.helper}</p>
-        </article>
-      </section>
-
-      <section className="section-split">
-        <article className={subscription.status === "TRIALING" ? "split-panel success" : "split-panel"}>
-          <span className="section-label">Assinatura da empresa</span>
-          
-          <h2>{view.subscriptionPlan.name} em {view.billingCycleLabel.toLowerCase()}</h2>
-          <p>
-            Status atual: {getSubscriptionStatusLabel(subscription.status)}.
-            {view.trialRemainingDays !== null ? ` Restam ${view.trialRemainingDays} dia(s) no trial.` : ""}
-          </p>
-        </article>
-
-        <article className={view.evolutionIntegration.enabled ? "split-panel success" : "split-panel"}>
-          <span className="section-label">WhatsApp da empresa</span>
-          <h2>Canal pronto para mensagens, lembretes e respostas</h2>
-          <p>{view.evolutionIntegration.helper}</p>
-        </article>
-
-        <article className={view.asaasIntegration.enabled ? "split-panel success" : "split-panel"}>
-          <span className="section-label">Recebimentos</span>
-          <h2>Conta pronta para Pix, boleto, cartão e links de pagamento</h2>
-          <p>{view.asaasIntegration.helper}</p>
-        </article>
       </section>
 
       <section className="section-split">
@@ -599,16 +568,6 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           ))}
         </div>
 
-        <div className="auth-hint">
-          <strong>O que já fica pronto agora</strong>
-          <span>
-            Trial de 14 dias, plano por empresa e base pronta para recorrência.
-          </span>
-          <small className="muted-text">
-            A cobrança recorrente automática ainda será ligada na próxima etapa, mas a modelagem já nasce alinhada.
-          </small>
-        </div>
-
         {view.canManage ? (
           <div className="hero-actions">
             {!subscription.asaasSubscriptionId ? (
@@ -665,14 +624,29 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 required
               />
             </label>
-            <label>
-              <span>Número opcional</span>
-              <input
-                name="instanceNumber"
-                type="text"
-                placeholder="Ex.: 5511999998888"
-              />
-            </label>
+            <details className="guided-flow-card form-span-2">
+              <summary>
+                <div>
+                  <span className="section-label">Ajuste extra</span>
+                  <h3>Informar número só quando precisar pré-configurar a conexão</h3>
+                  <p>Na maior parte dos casos, basta criar a conexão e parear depois.</p>
+                </div>
+                <span className="guided-flow-badge">Opcional</span>
+              </summary>
+
+              <div className="guided-flow-body">
+                <div className="inline-form">
+                  <label>
+                    <span>Número opcional</span>
+                    <input
+                      name="instanceNumber"
+                      type="text"
+                      placeholder="Ex.: 5511999998888"
+                    />
+                  </label>
+                </div>
+              </div>
+            </details>
             <button type="submit" className="primary-link form-submit">
               Criar conexão
             </button>
@@ -783,29 +757,6 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               ? "Quando o cliente paga, o sistema já consegue receber a confirmação sozinho."
               : "Ainda falta concluir a ligação automática para o sistema saber sozinho quando o cliente paga."}
           </span>
-        </div>
-
-        <div className="cards-grid quote-grid">
-          <article className="dashboard-card">
-            <span className="dashboard-kicker">Mais simples</span>
-            <h3>Criar a conta de recebimento por aqui</h3>
-            <p>O sistema prepara a conta da empresa e já deixa a cobrança pronta para uso.</p>
-            <small className="muted-text">Melhor para quem quer começar rápido sem mexer em muita configuração.</small>
-          </article>
-
-          <article className="dashboard-card">
-            <span className="dashboard-kicker">Se já tiver conta</span>
-            <h3>Conectar uma conta existente</h3>
-            <p>Use quando a empresa já recebe por fora e só precisa ligar essa conta ao sistema.</p>
-            <small className="muted-text">Nesse caso, basta informar a chave da conta uma vez.</small>
-          </article>
-
-          <article className="dashboard-card">
-            <span className="dashboard-kicker">Automação</span>
-            <h3>Criação da cobrança e baixa automática</h3>
-            <p>Depois da conexão, o sistema cria a cobrança na conta certa e marca o pagamento sozinho quando o cliente paga.</p>
-            <small className="muted-text">A ideia é reduzir retrabalho e acompanhamento manual.</small>
-          </article>
         </div>
 
         <SetupAsaasFlashMessages state={flash} />
@@ -983,30 +934,43 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             </div>
 
             {workspaceAsaasOnboarding.pendingDocuments.length > 0 ? (
-              <div className="report-table">
-                <div className="report-table-head report-table-head-2">
-                  <span>Etapa de onboarding</span>
-                  <span>Ação</span>
+              <details className="guided-flow-card">
+                <summary>
+                  <div>
+                    <span className="section-label">Pendências da conta</span>
+                    <h3>Ver etapas que ainda faltam no onboarding</h3>
+                    <p>Abra esse bloco só se precisar concluir documentação ou revisar ações pendentes.</p>
+                  </div>
+                  <span className="guided-flow-badge">{workspaceAsaasOnboarding.pendingDocuments.length} item(ns)</span>
+                </summary>
+
+                <div className="guided-flow-body">
+                  <div className="report-table">
+                    <div className="report-table-head report-table-head-2">
+                      <span>Etapa de onboarding</span>
+                      <span>Ação</span>
+                    </div>
+                    {workspaceAsaasOnboarding.pendingDocuments.map((item, index) => (
+                      <article key={`${item.type}-${index}`} className="report-table-row report-table-row-2">
+                        <div>
+                          <strong>{item.type}</strong>
+                          <span>{item.status || (item.pending ? "Pendente" : "Em análise")}</span>
+                        </div>
+                        <div>
+                          <span>{item.action || "Acompanhar no Asaas"}</span>
+                          {item.url ? (
+                            <Link href={item.url} target="_blank" rel="noreferrer" className="secondary-link">
+                              Abrir etapa
+                            </Link>
+                          ) : (
+                            <small className="muted-text">Sem link retornado agora</small>
+                          )}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
                 </div>
-                {workspaceAsaasOnboarding.pendingDocuments.map((item, index) => (
-                  <article key={`${item.type}-${index}`} className="report-table-row report-table-row-2">
-                    <div>
-                      <strong>{item.type}</strong>
-                      <span>{item.status || (item.pending ? "Pendente" : "Em análise")}</span>
-                    </div>
-                    <div>
-                      <span>{item.action || "Acompanhar no Asaas"}</span>
-                      {item.url ? (
-                        <Link href={item.url} target="_blank" rel="noreferrer" className="secondary-link">
-                          Abrir etapa
-                        </Link>
-                      ) : (
-                        <small className="muted-text">Sem link retornado agora</small>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
+              </details>
             ) : (
               <div className="auth-hint">
                 <strong>Sem etapas pendentes visíveis agora</strong>
@@ -1220,30 +1184,43 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </article>
         </div>
 
-        <div className="data-table">
-          <div className="data-table-head">
-            <span>Quando</span>
-            <span>Evento</span>
-            <span>Responsável</span>
-            <span>Canal</span>
-            <span>Resumo</span>
+        <details className="guided-flow-card">
+          <summary>
+            <div>
+              <span className="section-label">Histórico de acesso</span>
+              <h3>Ver eventos recentes de login, bloqueio e recuperação</h3>
+              <p>Abra quando precisar investigar segurança, suporte ou comportamento de acesso.</p>
+            </div>
+            <span className="guided-flow-badge">Detalhar</span>
+          </summary>
+
+          <div className="guided-flow-body">
+            <div className="data-table">
+              <div className="data-table-head">
+                <span>Quando</span>
+                <span>Evento</span>
+                <span>Responsável</span>
+                <span>Canal</span>
+                <span>Resumo</span>
+              </div>
+              {accessEvents.map((entry) => (
+                <article key={entry.id} className="data-table-row">
+                  <span>{entry.createdAt}</span>
+                  <div>
+                    <strong>{entry.title}</strong>
+                    <small>{entry.tone === "warning" ? "Atenção" : entry.tone === "positive" ? "Confirmado" : "Informativo"}</small>
+                  </div>
+                  <div>
+                    <strong>{entry.actorName}</strong>
+                    <small>{entry.actorEmail}</small>
+                  </div>
+                  <span>{entry.deviceLabel || "Workspace"}</span>
+                  <span>{entry.summary}</span>
+                </article>
+              ))}
+            </div>
           </div>
-          {accessEvents.map((entry) => (
-            <article key={entry.id} className="data-table-row">
-              <span>{entry.createdAt}</span>
-              <div>
-                <strong>{entry.title}</strong>
-                <small>{entry.tone === "warning" ? "Atenção" : entry.tone === "positive" ? "Confirmado" : "Informativo"}</small>
-              </div>
-              <div>
-                <strong>{entry.actorName}</strong>
-                <small>{entry.actorEmail}</small>
-              </div>
-              <span>{entry.deviceLabel || "Workspace"}</span>
-              <span>{entry.summary}</span>
-            </article>
-          ))}
-        </div>
+        </details>
       </section>
 
       <section id="team-section" className="data-panel">
@@ -1342,266 +1319,256 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </>
         )}
 
-        <div className="data-table">
-          <div className="data-table-head">
-            <span>Convite</span>
-            <span>Papel</span>
-            <span>Status</span>
-            <span>Entrega</span>
-            <span>Expira em</span>
-            <span>Ações</span>
+        <details className="guided-flow-card">
+          <summary>
+            <div>
+              <span className="section-label">Convites e equipe</span>
+              <h3>Ver convites recentes e pessoas com acesso</h3>
+              <p>Abra para acompanhar entrega, revisar papéis ou agir sobre um acesso específico.</p>
+            </div>
+            <span className="guided-flow-badge">Detalhar</span>
+          </summary>
+
+          <div className="guided-flow-body">
+            <div className="data-table">
+              <div className="data-table-head">
+                <span>Convite</span>
+                <span>Papel</span>
+                <span>Status</span>
+                <span>Entrega</span>
+                <span>Expira em</span>
+                <span>Ações</span>
+              </div>
+              {invites.length > 0 ? invites.map((invite) => (
+                <article key={invite.id} className="data-table-row">
+                  <div>
+                    <strong>{invite.name || invite.email}</strong>
+                    <small>{invite.email}</small>
+                  </div>
+                  <span>{invite.role}</span>
+                  <span>{invite.status}</span>
+                  <div>
+                    <strong>{invite.deliveryStatus}</strong>
+                    <small>{invite.lastSentAt ? `Último envio: ${invite.lastSentAt}` : "Sem envio automático registrado"}</small>
+                    {invite.lastDeliveryError ? <small>{invite.lastDeliveryError}</small> : null}
+                  </div>
+                  <span>{invite.expiresAt}</span>
+                  <div className="cards-grid">
+                    {invite.inviteUrl ? (
+                      <InviteLinkField inviteUrl={invite.inviteUrl} />
+                    ) : (
+                      <small className="muted-text">Link indisponível neste ambiente</small>
+                    )}
+                    {view.canManage ? (
+                      <>
+                        {invite.status === "Pendente" ? (
+                          <form action={resendWorkspaceInviteAction} className="row-action">
+                            <input type="hidden" name="inviteId" value={invite.id} />
+                            <button type="submit" className="ghost-button">
+                              Reenviar email
+                            </button>
+                          </form>
+                        ) : null}
+                        {invite.status === "Expirado" || invite.status === "Revogado" ? (
+                          <form action={renewWorkspaceInviteAction} className="row-action">
+                            <input type="hidden" name="inviteId" value={invite.id} />
+                            <button type="submit" className="ghost-button">
+                              Renovar convite
+                            </button>
+                          </form>
+                        ) : null}
+                        {invite.status === "Pendente" ? (
+                          <form action={revokeWorkspaceInviteAction} className="row-action">
+                            <input type="hidden" name="inviteId" value={invite.id} />
+                            <button type="submit" className="ghost-button">
+                              Revogar convite
+                            </button>
+                          </form>
+                        ) : null}
+                      </>
+                    ) : (
+                      <small className="muted-text">Sem ação disponível</small>
+                    )}
+                  </div>
+                </article>
+              )) : (
+                <article className="data-table-row">
+                  <span>Nenhum convite recente</span>
+                  <span>-</span>
+                  <span>-</span>
+                  <span>-</span>
+                  <span>-</span>
+                  <small className="muted-text">Os próximos convites aparecem aqui para copiar, acompanhar ou revogar.</small>
+                </article>
+              )}
+            </div>
+
+            <div className="data-table">
+              <div className="data-table-head">
+                <span>Usuário</span>
+                <span>Email</span>
+                <span>Acesso</span>
+                <span>Entrou em</span>
+                <span>Ações</span>
+              </div>
+              {members.map((member) => (
+                <article key={member.id} className="data-table-row">
+                  <div>
+                    <strong>{member.name}</strong>
+                    <small>{member.isCurrentUser ? "Você" : member.role}</small>
+                  </div>
+                  <span>{member.email}</span>
+                  <span>{member.role}</span>
+                  <span>{member.joinedAt}</span>
+                  <div>
+                    {view.canManage && !view.localMode ? (
+                      <div className="cards-grid">
+                        <form action={updateWorkspaceMemberRoleAction} className="inline-form">
+                          <input type="hidden" name="membershipId" value={member.id} />
+                          <label>
+                            <span>Papel</span>
+                            <select name="memberRole" defaultValue={member.role}>
+                              <option value="MEMBER">Operação</option>
+                              <option value="ADMIN">Gestão</option>
+                              <option value="OWNER">Responsável</option>
+                            </select>
+                          </label>
+                          <button type="submit" className="ghost-button">
+                            Atualizar papel
+                          </button>
+                        </form>
+
+                        <form action={resetWorkspaceMemberPasswordAction} className="inline-form">
+                          <input type="hidden" name="membershipId" value={member.id} />
+                          <label>
+                            <span>Nova senha</span>
+                            <input
+                              name="memberPasswordReset"
+                              type="password"
+                              placeholder="Mínimo de 8 caracteres"
+                              minLength={8}
+                              required
+                            />
+                          </label>
+                          <button type="submit" className="ghost-button">
+                            Redefinir senha
+                          </button>
+                        </form>
+
+                        <form action={removeWorkspaceMemberAction} className="row-action">
+                          <input type="hidden" name="membershipId" value={member.id} />
+                          <button type="submit" className="ghost-button">
+                            Remover usuário
+                          </button>
+                        </form>
+                      </div>
+                    ) : (
+                      <small className="muted-text">Sem ações disponíveis</small>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
-          {invites.length > 0 ? invites.map((invite) => (
-            <article key={invite.id} className="data-table-row">
-              <div>
-                <strong>{invite.name || invite.email}</strong>
-                <small>{invite.email}</small>
-              </div>
-              <span>{invite.role}</span>
-              <span>{invite.status}</span>
-              <div>
-                <strong>{invite.deliveryStatus}</strong>
-                <small>{invite.lastSentAt ? `Último envio: ${invite.lastSentAt}` : "Sem envio automático registrado"}</small>
-                {invite.lastDeliveryError ? <small>{invite.lastDeliveryError}</small> : null}
-              </div>
-              <span>{invite.expiresAt}</span>
-              <div className="cards-grid">
-                {invite.inviteUrl ? (
-                  <InviteLinkField inviteUrl={invite.inviteUrl} />
-                ) : (
-                  <small className="muted-text">Link indisponível neste ambiente</small>
-                )}
-                {view.canManage ? (
-                  <>
-                    {invite.status === "Pendente" ? (
-                      <form action={resendWorkspaceInviteAction} className="row-action">
-                        <input type="hidden" name="inviteId" value={invite.id} />
-                        <button type="submit" className="ghost-button">
-                          Reenviar email
-                        </button>
-                      </form>
-                    ) : null}
-                    {invite.status === "Expirado" || invite.status === "Revogado" ? (
-                      <form action={renewWorkspaceInviteAction} className="row-action">
-                        <input type="hidden" name="inviteId" value={invite.id} />
-                        <button type="submit" className="ghost-button">
-                          Renovar convite
-                        </button>
-                      </form>
-                    ) : null}
-                    {invite.status === "Pendente" ? (
-                      <form action={revokeWorkspaceInviteAction} className="row-action">
-                        <input type="hidden" name="inviteId" value={invite.id} />
-                        <button type="submit" className="ghost-button">
-                          Revogar convite
-                        </button>
-                      </form>
-                    ) : null}
-                  </>
-                ) : (
-                  <small className="muted-text">Sem ação disponível</small>
-                )}
-              </div>
-            </article>
-          )) : (
-            <article className="data-table-row">
-              <span>Nenhum convite recente</span>
-              <span>-</span>
-              <span>-</span>
-              <span>-</span>
-              <span>-</span>
-              <small className="muted-text">Os próximos convites aparecem aqui para copiar, acompanhar ou revogar.</small>
-            </article>
-          )}
+        </details>
+      </section>
+
+      <section className="data-panel">
+        <div className="card-header">
+          <div>
+            <span className="section-label">Histórico e detalhes</span>
+            <h2>Leituras que valem mais para suporte, auditoria e implantação</h2>
+          </div>
         </div>
 
-        <div className="data-table">
-          <div className="data-table-head">
-            <span>Usuário</span>
-            <span>Email</span>
-            <span>Acesso</span>
-            <span>Entrou em</span>
-            <span>Ações</span>
-          </div>
-          {members.map((member) => (
-            <article key={member.id} className="data-table-row">
-              <div>
-                <strong>{member.name}</strong>
-                <small>{member.isCurrentUser ? "Você" : member.role}</small>
+        <details className="guided-flow-card">
+          <summary>
+            <div>
+              <span className="section-label">Mudanças e sinais</span>
+              <h3>Ver histórico da empresa, WhatsApp, cobrança e assinatura</h3>
+              <p>Abra quando precisar investigar o que mudou ou conferir movimentos recentes do workspace.</p>
+            </div>
+            <span className="guided-flow-badge">Detalhar</span>
+          </summary>
+
+          <div className="guided-flow-body">
+            <div className="data-table">
+              <div className="data-table-head">
+                <span>Quando</span>
+                <span>Responsável</span>
+                <span>Evento</span>
+                <span>Resumo</span>
               </div>
-              <span>{member.email}</span>
-              <span>{member.role}</span>
-              <span>{member.joinedAt}</span>
-              <div>
-                {view.canManage && !view.localMode ? (
-                  <div className="cards-grid">
-                    <form action={updateWorkspaceMemberRoleAction} className="inline-form">
-                      <input type="hidden" name="membershipId" value={member.id} />
-                      <label>
-                        <span>Papel</span>
-                        <select name="memberRole" defaultValue={member.role}>
-                          <option value="MEMBER">Operação</option>
-                          <option value="ADMIN">Gestão</option>
-                          <option value="OWNER">Responsável</option>
-                        </select>
-                      </label>
-                      <button type="submit" className="ghost-button">
-                        Atualizar papel
-                      </button>
-                    </form>
+              {auditEntries.map((entry) => (
+                <article key={entry.id} className="data-table-row">
+                  <span>{entry.createdAt}</span>
+                  <div>
+                    <strong>{entry.actorName}</strong>
+                    <small>{entry.actorEmail}</small>
+                  </div>
+                  <span>{entry.action}</span>
+                  <span>{entry.summary}</span>
+                </article>
+              ))}
+            </div>
 
-                    <form action={resetWorkspaceMemberPasswordAction} className="inline-form">
-                      <input type="hidden" name="membershipId" value={member.id} />
-                      <label>
-                        <span>Nova senha</span>
-                        <input
-                          name="memberPasswordReset"
-                          type="password"
-                          placeholder="Mínimo de 8 caracteres"
-                          minLength={8}
-                          required
-                        />
-                      </label>
-                      <button type="submit" className="ghost-button">
-                        Redefinir senha
-                      </button>
-                    </form>
+            <div className="data-table">
+              <div className="data-table-head">
+                <span>Quando</span>
+                <span>Origem</span>
+                <span>Evento</span>
+                <span>Resumo</span>
+              </div>
+              {evolutionAuditEntries.map((entry) => (
+                <article key={entry.id} className="data-table-row">
+                  <span>{entry.createdAt}</span>
+                  <div>
+                    <strong>{entry.actorName}</strong>
+                    <small>{entry.actorEmail}</small>
+                  </div>
+                  <span>{entry.action}</span>
+                  <span>{entry.summary}</span>
+                </article>
+              ))}
+            </div>
 
-                    <form action={removeWorkspaceMemberAction} className="row-action">
-                      <input type="hidden" name="membershipId" value={member.id} />
-                      <button type="submit" className="ghost-button">
-                        Remover usuário
-                      </button>
-                    </form>
+            <div className="section-split">
+              <article className="split-panel">
+                <span className="section-label">Ciclo da cobrança</span>
+                <h2>Últimos eventos do Asaas no workspace</h2>
+                {asaasLifecycleEntries.length > 0 ? (
+                  <div className="dashboard-mini-list">
+                    {asaasLifecycleEntries.slice(0, 3).map((entry) => (
+                      <article key={entry.id}>
+                        <strong>{entry.action}</strong>
+                        <p>{entry.summary}</p>
+                      </article>
+                    ))}
                   </div>
                 ) : (
-                  <small className="muted-text">Sem ações disponíveis</small>
+                  <p>Nenhum evento recente de conexão, troca de conta ou criação de subconta foi registrado ainda.</p>
                 )}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+              </article>
 
-      <section className="section-split">
-        <article className="split-panel success">
-          <span className="section-label">Por que isso importa</span>
-          <h2>Quando a base está redonda, a operação fica mais leve.</h2>
-          <p>
-            Esses dados ajudam cobrança, atendimento, equipe e emissão a funcionarem sem retrabalho.
-          </p>
-        </article>
-
-        <article className="split-panel">
-          <span className="section-label">Próximo uso</span>
-          <h2>Mais consistência no comercial e no financeiro</h2>
-          <p>
-            Nome da empresa, cobrança e descrição de serviço aparecem nos lugares certos para economizar tempo e passar mais confiança.
-          </p>
-        </article>
-      </section>
-
-      <section className="data-panel">
-        <div className="card-header">
-          <div>
-            <span className="section-label">Histórico recente</span>
-            <h2>Últimas mudanças feitas na empresa</h2>
-          </div>
-        </div>
-
-        <div className="data-table">
-          <div className="data-table-head">
-            <span>Quando</span>
-            <span>Responsável</span>
-            <span>Evento</span>
-            <span>Resumo</span>
-          </div>
-          {auditEntries.map((entry) => (
-            <article key={entry.id} className="data-table-row">
-              <span>{entry.createdAt}</span>
-              <div>
-                <strong>{entry.actorName}</strong>
-                <small>{entry.actorEmail}</small>
-              </div>
-              <span>{entry.action}</span>
-              <span>{entry.summary}</span>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="data-panel">
-        <div className="card-header">
-          <div>
-            <span className="section-label">Atividade WhatsApp</span>
-            <h2>Últimos sinais recebidos do WhatsApp</h2>
-          </div>
-        </div>
-
-        <div className="data-table">
-          <div className="data-table-head">
-            <span>Quando</span>
-            <span>Origem</span>
-            <span>Evento</span>
-            <span>Resumo</span>
-          </div>
-          {evolutionAuditEntries.map((entry) => (
-            <article key={entry.id} className="data-table-row">
-              <span>{entry.createdAt}</span>
-              <div>
-                <strong>{entry.actorName}</strong>
-                <small>{entry.actorEmail}</small>
-              </div>
-              <span>{entry.action}</span>
-              <span>{entry.summary}</span>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="section-split">
-        <article className="split-panel">
-          <span className="section-label">Ciclo da cobrança</span>
-          <h2>Últimos eventos do Asaas no workspace</h2>
-          {asaasLifecycleEntries.length > 0 ? (
-            <div className="dashboard-mini-list">
-              {asaasLifecycleEntries.slice(0, 3).map((entry) => (
-                <article key={entry.id}>
-                  <strong>{entry.action}</strong>
-                  <p>{entry.summary}</p>
-                </article>
-              ))}
+              <article className="split-panel">
+                <span className="section-label">Ciclo da assinatura</span>
+                <h2>Últimos movimentos do plano do workspace</h2>
+                {subscriptionAuditEntries.length > 0 ? (
+                  <div className="dashboard-mini-list">
+                    {subscriptionAuditEntries.slice(0, 3).map((entry) => (
+                      <article key={entry.id}>
+                        <strong>{entry.action}</strong>
+                        <p>{entry.summary}</p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p>Os próximos eventos da assinatura vão aparecer aqui quando o checkout ou a recorrência começarem a rodar.</p>
+                )}
+              </article>
             </div>
-          ) : (
-            <p>Nenhum evento recente de conexão, troca de conta ou criação de subconta foi registrado ainda.</p>
-          )}
-        </article>
-
-        <article className="split-panel">
-          <span className="section-label">Ciclo da assinatura</span>
-          <h2>Últimos movimentos do plano do workspace</h2>
-          {subscriptionAuditEntries.length > 0 ? (
-            <div className="dashboard-mini-list">
-              {subscriptionAuditEntries.slice(0, 3).map((entry) => (
-                <article key={entry.id}>
-                  <strong>{entry.action}</strong>
-                  <p>{entry.summary}</p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p>Os próximos eventos da assinatura vão aparecer aqui quando o checkout ou a recorrência começarem a rodar.</p>
-          )}
-        </article>
-      </section>
-
-      <section className="data-panel">
-        <div className="card-header">
-          <div>
-            <span className="section-label">Detalhes avançados</span>
-            <h2>Informações técnicas só quando você precisar</h2>
           </div>
-        </div>
+        </details>
 
         <details className="guided-flow-card">
           <summary>

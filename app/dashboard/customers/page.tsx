@@ -208,10 +208,6 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
             <input name="phone" type="text" placeholder="Ex.: 5511999998888" />
           </label>
           <label>
-            <span>CPF/CNPJ</span>
-            <input name="document" type="text" placeholder="Opcional para emissão rápida" />
-          </label>
-          <label>
             <span>Segmento</span>
             <input name="segment" type="text" placeholder="Ex.: Assistência técnica" required />
           </label>
@@ -227,14 +223,33 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
               <option value="Recorrente">Recorrente</option>
             </select>
           </label>
-          <label className="form-span-2">
-            <span>Observação</span>
-            <input
-              name="note"
-              type="text"
-              placeholder="Ex.: Quer proposta recorrente e prefere contato por WhatsApp."
-            />
-          </label>
+          <details className="guided-flow-card form-span-2">
+            <summary>
+              <div>
+                <span className="section-label">Campos extras</span>
+                <h3>Adicionar documento e observações só quando fizer sentido</h3>
+                <p>Abra esse bloco quando precisar deixar o cliente mais preparado para fiscal ou contexto comercial.</p>
+              </div>
+              <span className="guided-flow-badge">Opcional</span>
+            </summary>
+
+            <div className="guided-flow-body">
+              <div className="inline-form">
+                <label>
+                  <span>CPF/CNPJ</span>
+                  <input name="document" type="text" placeholder="Opcional para emissão rápida" />
+                </label>
+                <label className="form-span-2">
+                  <span>Observação</span>
+                  <input
+                    name="note"
+                    type="text"
+                    placeholder="Ex.: Quer proposta recorrente e prefere contato por WhatsApp."
+                  />
+                </label>
+              </div>
+            </div>
+          </details>
           <button type="submit" className="primary-link form-submit">
             Salvar cliente
           </button>
@@ -519,7 +534,6 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
           <div className="auth-hint">
             <strong>Timeline ainda vazia</strong>
             <span>Quando clientes acumularem propostas, cobranças, mensagens e fiscal, a visão 360 começa a aparecer aqui.</span>
-            <span>Quando clientes acumularem propostas, cobranças, mensagens e notas, a visão completa começa a aparecer aqui.</span>
           </div>
         )}
       </section>

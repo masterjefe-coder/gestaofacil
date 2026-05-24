@@ -258,24 +258,6 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
           </div>
         </div>
 
-        <div className="stats-row">
-          <article className="stat-card">
-            <span>Prontas</span>
-            <strong>{fiscalInsights.summary.readyCount}</strong>
-            <p>Documentos já aptos para seguir o fluxo de emissão sem bloqueio estrutural.</p>
-          </article>
-          <article className="stat-card">
-            <span>Revisão</span>
-            <strong>{fiscalInsights.summary.reviewCount}</strong>
-            <p>Itens com erro operacional que pedem revisão humana antes de nova tentativa.</p>
-          </article>
-          <article className="stat-card">
-            <span>Emitidas</span>
-            <strong>{fiscalInsights.summary.issuedCount}</strong>
-            <p>Documentos já concluídos e fora da fila do dia.</p>
-          </article>
-        </div>
-
         {filteredFiscalItems.length > 0 ? (
           <div className="cards-grid quote-grid">
             {filteredFiscalItems.slice(0, 4).map((item) => (
@@ -364,27 +346,52 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className={integrationStatus.ready ? "auth-hint" : "auth-hint fiscal-warning"}>
           <strong>{integrationStatus.ready ? "Tudo pronto para emitir" : "Ainda faltam alguns ajustes"}</strong>
           <span>{integrationStatus.helper}</span>
-          <small className="muted-text">
-            Ambiente: {integrationStatus.environment === "production" ? "produção" : integrationStatus.environment === "homologation" ? "homologação" : "produção restrita"}.
-            {setup.municipalCode ? ` Município configurado: ${setup.municipalCode}.` : " Município ainda não configurado."}
-          </small>
-          {integrationStatus.certificateSource ? (
-            <small className="muted-text">
-              Certificado carregado via {integrationStatus.certificateSource === "path" ? "arquivo local" : "base64"}.
-            </small>
-          ) : null}
-          <small className="muted-text">
-            {integrationStatus.ready
-              ? integrationStatus.provider.key === "joinville"
-                ? "A emissão agora usa o webservice municipal NF-em de Joinville."
-                : "A emissão agora usa DPS assinada e envio direto ao endpoint oficial /nfse."
-              : integrationStatus.provider.key === "joinville"
-                ? "Além do certificado, configure inscrição municipal e série RPS para o provider municipal."
-                : "Além do certificado, defina código de serviço e série para montar a DPS oficial."}
-          </small>
-          {!integrationStatus.ready ? (
-            <small className="muted-text">Pendências: {integrationStatus.missing.join(", ")}</small>
-          ) : null}
+          <details className="guided-flow-card">
+            <summary>
+              <div>
+                <span className="section-label">Detalhes técnicos</span>
+                <h3>Ver ambiente, certificado e pendências específicas</h3>
+                <p>Abra esse bloco só para diagnóstico mais fino da integração fiscal.</p>
+              </div>
+              <span className="guided-flow-badge">Opcional</span>
+            </summary>
+
+            <div className="guided-flow-body">
+              <div className="dashboard-mini-list">
+                <article>
+                  <strong>Ambiente</strong>
+                  <p>
+                    {integrationStatus.environment === "production" ? "produção" : integrationStatus.environment === "homologation" ? "homologação" : "produção restrita"}.
+                    {setup.municipalCode ? ` Município configurado: ${setup.municipalCode}.` : " Município ainda não configurado."}
+                  </p>
+                </article>
+                {integrationStatus.certificateSource ? (
+                  <article>
+                    <strong>Certificado</strong>
+                    <p>Carregado via {integrationStatus.certificateSource === "path" ? "arquivo local" : "base64"}.</p>
+                  </article>
+                ) : null}
+                <article>
+                  <strong>Modo de emissão</strong>
+                  <p>
+                    {integrationStatus.ready
+                      ? integrationStatus.provider.key === "joinville"
+                        ? "A emissão usa o webservice municipal NF-em de Joinville."
+                        : "A emissão usa DPS assinada e envio direto ao endpoint oficial /nfse."
+                      : integrationStatus.provider.key === "joinville"
+                        ? "Além do certificado, configure inscrição municipal e série RPS para o provider municipal."
+                        : "Além do certificado, defina código de serviço e série para montar a DPS oficial."}
+                  </p>
+                </article>
+                {!integrationStatus.ready ? (
+                  <article>
+                    <strong>Pendências</strong>
+                    <p>{integrationStatus.missing.join(", ")}</p>
+                  </article>
+                ) : null}
+              </div>
+            </div>
+          </details>
         </div>
 
         {integrationStatus.provider.key === "national" && municipalityStatus ? (
@@ -558,20 +565,65 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
                 <h3>{document.customer}</h3>
                 <strong className="quote-amount">{document.serviceAmount}</strong>
                 <p>{document.serviceDescription}</p>
-                <small className="muted-text">Pedido base: {document.orderId}</small>
-                {document.issuedAt ? <small className="muted-text">Emitida em: {document.issuedAt}</small> : null}
-                {document.verificationCode ? <small className="muted-text">Código: {document.verificationCode}</small> : null}
-                {document.externalId ? <small className="muted-text">Número externo: {document.externalId}</small> : null}
-                {document.errorMessage ? <small className="muted-text">Erro: {document.errorMessage}</small> : null}
-                {issuePreviewMap.get(document.id)?.dpsId ? (
-                  <small className="muted-text">DPS: {issuePreviewMap.get(document.id)?.dpsId}</small>
-                ) : null}
-                {issuePreviewMap.get(document.id)?.digest ? (
-                  <small className="muted-text">Hash: {issuePreviewMap.get(document.id)?.digest?.slice(0, 16)}</small>
-                ) : null}
-                <small className="muted-text">
-                  Código de serviço sugerido: {document.serviceCode || setup.defaultFiscalServiceCode || "informar antes da emissão"}.
-                </small>
+                <details className="guided-flow-card">
+                  <summary>
+                    <div>
+                      <span className="section-label">Detalhes do documento</span>
+                      <h3>Ver referências técnicas e dados complementares</h3>
+                      <p>Abra só quando precisar consultar identificadores, hash, DPS ou código de serviço.</p>
+                    </div>
+                    <span className="guided-flow-badge">Opcional</span>
+                  </summary>
+
+                  <div className="guided-flow-body">
+                    <div className="dashboard-mini-list">
+                      <article>
+                        <strong>Pedido base</strong>
+                        <p>{document.orderId}</p>
+                      </article>
+                      {document.issuedAt ? (
+                        <article>
+                          <strong>Emitida em</strong>
+                          <p>{document.issuedAt}</p>
+                        </article>
+                      ) : null}
+                      {document.verificationCode ? (
+                        <article>
+                          <strong>Código de verificação</strong>
+                          <p>{document.verificationCode}</p>
+                        </article>
+                      ) : null}
+                      {document.externalId ? (
+                        <article>
+                          <strong>Número externo</strong>
+                          <p>{document.externalId}</p>
+                        </article>
+                      ) : null}
+                      {document.errorMessage ? (
+                        <article>
+                          <strong>Erro atual</strong>
+                          <p>{document.errorMessage}</p>
+                        </article>
+                      ) : null}
+                      {issuePreviewMap.get(document.id)?.dpsId ? (
+                        <article>
+                          <strong>DPS</strong>
+                          <p>{issuePreviewMap.get(document.id)?.dpsId}</p>
+                        </article>
+                      ) : null}
+                      {issuePreviewMap.get(document.id)?.digest ? (
+                        <article>
+                          <strong>Hash</strong>
+                          <p>{issuePreviewMap.get(document.id)?.digest?.slice(0, 16)}</p>
+                        </article>
+                      ) : null}
+                      <article>
+                        <strong>Código de serviço sugerido</strong>
+                        <p>{document.serviceCode || setup.defaultFiscalServiceCode || "informar antes da emissão"}</p>
+                      </article>
+                    </div>
+                  </div>
+                </details>
                 <div className="dashboard-actions">
                   <Link href={portalUrls.issueUrl} className="ghost-button" target="_blank" rel="noreferrer">
                     Emitir via portal oficial
