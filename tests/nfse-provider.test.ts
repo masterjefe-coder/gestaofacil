@@ -30,10 +30,32 @@ test("resolveNfseProvider activates joinville provider automatically when enable
   process.env.NFSE_JOINVILLE_ENABLED = "true";
 
   try {
-    const provider = resolveNfseProvider("Joinville", "SC");
+    const provider = resolveNfseProvider("Joinville", "SC", {
+      municipalityStatus: {
+        aderenteEmissorNacional: false,
+      },
+    });
 
     assert.equal(provider.key, "joinville");
-    assert.match(provider.reason, /Joinville/i);
+    assert.match(provider.reason, /fallback municipal/i);
+  } finally {
+    restoreEnv();
+  }
+});
+
+test("resolveNfseProvider keeps national as default when municipality is covered by emissor nacional", () => {
+  process.env.NFSE_PROVIDER = "auto";
+  process.env.NFSE_JOINVILLE_ENABLED = "true";
+
+  try {
+    const provider = resolveNfseProvider("Joinville", "SC", {
+      municipalityStatus: {
+        aderenteEmissorNacional: true,
+      },
+    });
+
+    assert.equal(provider.key, "national");
+    assert.match(provider.reason, /Município liberado/i);
   } finally {
     restoreEnv();
   }

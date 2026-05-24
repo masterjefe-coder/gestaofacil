@@ -25,7 +25,7 @@ export function MarketingTopbar({
           <span className="topbar-badge">Operação premium para serviços</span>
           <BrandLogo className="topbar-wordmark" priority />
           <span className="topbar-brand-copy">
-            Vendas, cobrança e NFS-e em um fluxo mais elegante e mais direto.
+            Venda, cobrança e NFS-e no mesmo fluxo para a empresa operar com mais velocidade.
           </span>
         </Link>
         <div className="topbar-context-pill">

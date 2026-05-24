@@ -1,6 +1,6 @@
 export const proofNumbers = [
   { value: "14 dias", label: "de teste grátis sem cartão" },
-  { value: "1 fluxo", label: "do WhatsApp até a nota" },
+  { value: "1 fluxo", label: "da proposta ao recebimento e à nota" },
   { value: "Preço fixo", label: "sem cobrar por faturamento" },
 ];
 
@@ -125,23 +125,23 @@ export const pricingPlans = [
   },
   {
     code: "OPERATION",
-    name: "Operação",
+    name: "Escala",
     price: "R$ 349/mês",
     annualPrice: "R$ 3.490/ano",
-    badge: "Para crescer",
+    badge: "Maior capacidade",
     description: "Para operações mais puxadas, com equipe, mais volume de cobrança e necessidade de leitura executiva melhor.",
-    cta: "Assinar plano Operação",
+    cta: "Testar plano Escala",
     audience: "Operações com mais volume, multiatendimento ou mais de uma unidade",
     limits: [
       "até 8 usuários",
-      "até 2 unidades ou operações",
+      "até 2 unidades",
       "até 4 conexões WhatsApp",
       "até 1.500 cobranças por mês",
       "até 1.000 NFS-e por mês",
     ],
     features: [
       "Tudo do Profissional",
-      "Comparação por período quando liberada",
+      "Leitura executiva mais completa",
       "Onboarding assistido",
       "Prioridade operacional",
       "Base pronta para split futuro",

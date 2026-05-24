@@ -159,7 +159,12 @@ async function main() {
     || process.env.NFSE_REFERENCE_STATE?.trim()
     || workspaceSeed?.company?.state
     || "";
-  const nfseProvider = resolveNfseProvider(nfseReferenceCity, nfseReferenceState);
+  const nfseMunicipalityStatus = nfseReferenceCity && nfseReferenceState
+    ? await getNfseNationalMunicipalityStatus(nfseReferenceCity, nfseReferenceState).catch(() => null)
+    : null;
+  const nfseProvider = resolveNfseProvider(nfseReferenceCity, nfseReferenceState, {
+    municipalityStatus: nfseMunicipalityStatus,
+  });
   const nfse = nfseProvider.key === "joinville" ? getNfseJoinvilleIntegrationStatus() : getNfseNationalIntegrationStatus();
 
   addCheck(
@@ -322,11 +327,10 @@ async function main() {
     );
   }
 
-  const nfseMunicipalityStatus = nfseProvider.key === "national" && nfseReferenceCity && nfseReferenceState
-    ? await getNfseNationalMunicipalityStatus(nfseReferenceCity, nfseReferenceState).catch(() => null)
-    : null;
   const municipalityBlocksAutomaticIssuance = Boolean(
-    nfseMunicipalityStatus && !nfseMunicipalityStatus.aderenteEmissorNacional,
+    nfseProvider.key === "national"
+    && nfseMunicipalityStatus
+    && !nfseMunicipalityStatus.aderenteEmissorNacional,
   );
   const nfseConnectivity =
     nfse.ready && !municipalityBlocksAutomaticIssuance

@@ -36,7 +36,7 @@ import {
   getEvolutionConnectionState,
   probeEvolutionApi,
 } from "@/lib/evolution-api";
-import { getResolvedNfsePortalUrls, resolveNfseProvider } from "@/lib/nfse-provider";
+import { getResolvedNfsePortalUrls } from "@/lib/nfse-provider";
 import { listWorkspaceMembers } from "@/lib/workspace-membership-repository";
 import { listWorkspaceInvites } from "@/lib/workspace-invite-repository";
 import { getWorkspaceAsaasConnection, getWorkspaceAsaasOnboardingSnapshot } from "@/lib/asaas-workspace";
@@ -108,17 +108,17 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   ]);
   const flash = readSetupPageFlashState(params);
   const operationalFocus = params?.operationalFocus || "";
-  const nfseProvider = resolveNfseProvider(setup.city || "", setup.state || "");
-  const nfsePortalUrls = getResolvedNfsePortalUrls(setup.city || "", setup.state || "");
-  const municipalityStatus = nfseProvider.key === "national"
-    ? await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "")
-    : null;
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const nfsePortalUrls = getResolvedNfsePortalUrls(setup.city || "", setup.state || "", {
+    municipalityStatus,
+  });
   const view = buildSetupPageViewModel({
     workspaceRole: context.workspaceRole,
     setupSlug: setup.slug,
     subscription,
     companyCity: setup.city,
     companyState: setup.state,
+    municipalityStatus,
     fiscalReady: fiscalReadiness.ready,
     evolutionReachable: evolutionProbe.reachable,
     evolutionInstances,

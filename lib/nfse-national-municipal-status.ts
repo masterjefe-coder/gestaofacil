@@ -35,6 +35,10 @@ export type NfseNationalMunicipalityStatus = {
   checkedAt: string;
 };
 
+export type NfseNationalCoverageGap = NfseNationalMunicipalityStatus & {
+  population: number | null;
+};
+
 type MunicipalityStatusCache = {
   expiresAt: number;
   sourceUrl: string;
@@ -55,6 +59,25 @@ function normalizeText(value: string) {
 
 function isYes(value: string | undefined) {
   return normalizeText(value || "") === "SIM";
+}
+
+function parsePopulation(value: string | number | undefined) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    if (Number.isInteger(value)) {
+      return value;
+    }
+
+    return value < 10000 ? Math.round(value * 1000) : Math.round(value);
+  }
+
+  const raw = String(value || "").trim();
+  const digitsOnly = raw.replace(/\D/g, "");
+
+  if (!digitsOnly) {
+    return null;
+  }
+
+  return Number(digitsOnly);
 }
 
 async function resolveSpreadsheetUrl() {
@@ -145,4 +168,31 @@ export async function getNfseNationalMunicipalityStatus(city: string, state: str
     sourceUrl: cache.sourceUrl,
     checkedAt: new Date().toISOString(),
   };
+}
+
+export async function listNfseNationalCoverageGaps(limit?: number): Promise<NfseNationalCoverageGap[]> {
+  const cache = await loadMunicipalitySpreadsheet();
+  const checkedAt = new Date().toISOString();
+
+  const gaps = cache.rows
+    .filter((row) => isYes(row.AtivoNaBase) && !isYes(row.AderenteEmissorNacional))
+    .map((row) => ({
+      city: row.NomeMunicipio || "",
+      state: row.UF || "",
+      statusConvenio: row.StatusConvenioSEFIN || "Não informado",
+      aderenteAmbienteNacional: isYes(row.AderenteAmbienteNacional),
+      aderenteEmissorNacional: isYes(row.AderenteEmissorNacional),
+      aderenteMan: isYes(row.AderenteMAN),
+      ativoNaBase: isYes(row.AtivoNaBase),
+      ativoUltimoPeriodo: isYes(row.AtivoUltimoPeriodo),
+      publication: row.Publicação || undefined,
+      startDate: row["Início de Vigência"] || undefined,
+      sourceUrl: cache.sourceUrl,
+      checkedAt,
+      population: parsePopulation(row.Populacao),
+    }))
+    .filter((row) => row.city && row.state)
+    .sort((left, right) => (right.population || 0) - (left.population || 0));
+
+  return typeof limit === "number" && limit > 0 ? gaps.slice(0, limit) : gaps;
 }

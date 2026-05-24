@@ -60,9 +60,15 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
   const issuePreviewMap = new Map(issuePreviews);
   const params = await searchParams;
   const operationalFocus = params?.operationalFocus || "";
-  const integrationStatus = getResolvedNfseIntegrationStatus(setup.city, setup.state);
-  const emissionModes = getResolvedNfseEmissionModeSummary(setup.city, setup.state);
-  const portalUrls = getResolvedNfsePortalUrls(setup.city, setup.state);
+  const integrationStatus = getResolvedNfseIntegrationStatus(setup.city, setup.state, {
+    municipalityStatus,
+  });
+  const emissionModes = getResolvedNfseEmissionModeSummary(setup.city, setup.state, {
+    municipalityStatus,
+  });
+  const portalUrls = getResolvedNfsePortalUrls(setup.city, setup.state, {
+    municipalityStatus,
+  });
   const municipalityBlockSummary = getNfseMunicipalityBlockSummary({
     city: municipalityStatus?.city,
     state: municipalityStatus?.state,

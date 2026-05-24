@@ -656,16 +656,27 @@ async function issueJoinvillePreviewPayloadInternal(input: {
   });
 }
 
+async function resolveProviderForSetup(setup: Awaited<ReturnType<typeof getWorkspaceSetup>>) {
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const provider = resolveNfseProvider(setup.city, setup.state, {
+    municipalityStatus,
+  });
+
+  return {
+    municipalityStatus,
+    provider,
+  };
+}
+
 export async function getNfseNationalIssuePreview(id: string): Promise<NfseNationalIssuePreview | null> {
   const readiness = await getFiscalSetupReadiness();
   const setup = await getWorkspaceSetup();
-  const provider = resolveNfseProvider(setup.city, setup.state);
+  const { municipalityStatus, provider } = await resolveProviderForSetup(setup);
 
   if (provider.key === "joinville") {
     return getNfseJoinvilleIssuePreview(id);
   }
 
-  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
   const municipalCode = setup.municipalCode?.trim();
   const defaultServiceCode = setup.defaultFiscalServiceCode?.trim() || process.env.NFSE_NATIONAL_SERVICE_CODE?.trim() || "";
 
@@ -820,7 +831,7 @@ export async function getNfseNationalIssuePreview(id: string): Promise<NfseNatio
 export async function issueNfseNationalDocument(id: string, options?: NfseIssueOptions): Promise<NfseDocument | null> {
   const preview = await getNfseNationalIssuePreview(id);
   const setup = await getWorkspaceSetup();
-  const provider = resolveNfseProvider(setup.city, setup.state);
+  const providerKey = preview?.providerKey || "national";
 
   if (!preview) {
     return null;
@@ -833,7 +844,7 @@ export async function issueNfseNationalDocument(id: string, options?: NfseIssueO
   const municipalCode = setup.municipalCode?.trim();
   const serviceCode = options?.serviceCode?.trim() || setup.defaultFiscalServiceCode?.trim() || process.env.NFSE_NATIONAL_SERVICE_CODE?.trim() || "";
 
-  if (provider.key === "joinville") {
+  if (providerKey === "joinville") {
     if (isLocalDataMode()) {
       const data = await readDemoWorkspaceData();
       const document = data.nfseDocuments.find((item) => item.id === id);

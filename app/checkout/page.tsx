@@ -27,6 +27,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
   const selectedPlan = params?.plan && isSubscriptionPlanCode(params.plan) ? params.plan : null;
   const plan = selectedPlan ? pricingPlans.find((item) => item.code === selectedPlan) || pricingPlans[1] : null;
   const nextUrl = "/dashboard/setup?subscriptionIntent=1";
+  const planHighlights = plan ? plan.features.slice(0, 4) : [];
 
   if (session) {
     redirect(nextUrl);
@@ -40,10 +41,10 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
       <section className="auth-layout">
         <article className="auth-hero-panel">
           <span className="section-label">Assinatura do workspace</span>
-          <h1>{plan ? `Começar no plano ${plan.name}.` : "Escolha o plano e entre com mais clareza no trial."}</h1>
+          <h1>{plan ? `Começar no plano ${plan.name}.` : "Escolha o plano e entre no trial com mais clareza."}</h1>
           <p>
-            O workspace entra com 14 dias grátis, sem cartão, e já fica preparado
-            para ativar a assinatura recorrente no momento certo.
+            O workspace entra com 14 dias grátis, sem cartão, e já nasce pronto
+            para seguir o fluxo comercial, financeiro e fiscal sem travar a ativação.
           </p>
           <div className="auth-hero-points">
             <div className="auth-hero-point">Trial liberado sem cartão</div>
@@ -61,11 +62,20 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
                 <span>{plan.audience}</span>
               </div>
 
+              <div className="pricing-list-block">
+                <strong>O que você leva nesse plano</strong>
+                <ul className="stack-list pricing-stack-list">
+                  {planHighlights.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+
               <div className="auth-hint">
-                <strong>O que acontece depois</strong>
+                <strong>Risco baixo para começar</strong>
                 <span>
-                  Você cria o workspace, entra no sistema e cai direto na etapa de
-                  assinatura para concluir o vínculo com o Asaas sem perder o fluxo.
+                  Você cria o workspace, entra no sistema e segue para a ativação sem cartão,
+                  sem perder o fluxo e sem precisar fechar a assinatura antes de testar.
                 </span>
               </div>
 
