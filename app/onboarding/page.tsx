@@ -37,10 +37,10 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
         <article className="auth-hero-panel">
           <BrandLogo className="auth-wordmark" priority />
           <span className="section-label">Primeiro workspace</span>
-          <h1>Criar conta real no Gestão Fácil.</h1>
+          <h1>Criar conta real e entrar com o pé direito no Gestão Fácil.</h1>
           <p>
             Este fluxo abre um usuário real, cria o workspace principal e deixa
-            a empresa pronta para continuar no dashboard.
+            a empresa pronta para continuar no dashboard sem retrabalho de ativação.
           </p>
           <div className="auth-hero-points">
             <div className="auth-hero-point">Usuário, workspace e trial no mesmo fluxo</div>

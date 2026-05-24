@@ -77,8 +77,8 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
     <DashboardShell
       currentPath="/dashboard/customers"
       eyebrow="Clientes"
-      title="Cada cliente precisa ter histórico, contexto e próximo passo claro."
-      description="Aqui você acompanha relacionamento, oportunidades, cobranças e retomadas sem tratar cliente como cadastro parado."
+      title="Clientes precisam virar contexto acionável, não só cadastro."
+      description="Relacionamento, sinais do canal, propostas e cobranças aparecem juntos para a equipe agir sem perder tempo."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
@@ -101,7 +101,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         path="/dashboard/customers"
         currentView={queueView}
         title="Abrir a base no recorte certo"
-        helper="A tela lembra o último filtro usado pela equipe."
+        helper="A tela volta no recorte mais útil para a equipe."
         options={[
           { value: "all", label: "Tudo", count: engagement.items.length },
           { value: "hot", label: "Quentes", count: engagement.summary.hotCount },
@@ -157,11 +157,11 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
             <span className="section-label">Objetivo do módulo</span>
             <div className="dashboard-mini-list">
               <article>
-                <strong>Parar de tratar cliente como cadastro parado</strong>
-                <p>Histórico de conversa, proposta e cobrança precisa viver no mesmo lugar.</p>
+                <strong>Concentrar o contexto</strong>
+                <p>Conversa, proposta e cobrança precisam viver no mesmo lugar.</p>
               </article>
               <article>
-                <strong>Agir com contexto</strong>
+                <strong>Priorizar o próximo passo</strong>
                 <p>Follow-up e retomada entram com base em sinais reais, não na memória do time.</p>
               </article>
             </div>
@@ -194,7 +194,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         <div className="card-header">
           <div>
             <span className="section-label">Cadastro rápido</span>
-            <h2>Adicionar cliente sem sair do fluxo</h2>
+            <h2>Cadastrar cliente sem quebrar o ritmo</h2>
           </div>
         </div>
 

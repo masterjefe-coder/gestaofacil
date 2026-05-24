@@ -153,8 +153,8 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
     <DashboardShell
       currentPath="/dashboard/billing"
       eyebrow="Cobranças"
-      title="Receber no prazo precisa ser tão simples quanto criar a venda."
-      description="Aqui você acompanha quem precisa pagar, quem respondeu e o que vale fazer agora, sem planilha e sem adivinhação."
+      title="Receber no prazo precisa ser claro, previsível e rápido."
+      description="Cobranças, respostas e próximos passos ficam visíveis para o time agir sem planilha e sem adivinhação."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
@@ -185,7 +185,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         path="/dashboard/billing"
         currentView={queueView}
         title="Abrir a fila no recorte certo"
-        helper="A tela lembra o último filtro usado pela equipe."
+        helper="A tela volta no recorte financeiro mais útil para a equipe."
         options={[
           { value: "all", label: "Tudo", count: followUpActions.length },
           { value: "overdue", label: "SLA vencido", count: followUpSummary.slaOverdueCount },
@@ -248,7 +248,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                 <p>Receber deixa de ser correria e vira rotina visível do dia.</p>
               </article>
               <article>
-                <strong>Ler a resposta antes de insistir</strong>
+                <strong>Insistir menos, entender melhor</strong>
                 <p>Promessas, dúvidas e comprovantes entram na fila com mais contexto.</p>
               </article>
             </div>
@@ -282,7 +282,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Nova cobrança</span>
-            <h2>Cobrar a partir de uma venda aprovada ou criar manualmente</h2>
+            <h2>Criar cobrança a partir da venda ou manualmente</h2>
           </div>
         </div>
 

@@ -126,10 +126,15 @@ export async function DashboardShell({
 
       <section className="workspace-content">
         <header className="dashboard-hero">
-          <div>
+          <div className="dashboard-hero-copy-block">
             <span className="eyebrow">{eyebrow}</span>
             <h1>{title}</h1>
             <p>{description}</p>
+            <div className="dashboard-hero-meta">
+              <span>{setup.tradeName || setup.name}</span>
+              <span>{getWorkspaceRoleLabel(context.workspaceRole)}</span>
+              <span>{getSubscriptionStatusLabel(subscription.status)}</span>
+            </div>
           </div>
 
           {actions ? <div className="dashboard-actions">{actions}</div> : null}

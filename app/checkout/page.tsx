@@ -40,10 +40,10 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
       <section className="auth-layout">
         <article className="auth-hero-panel">
           <span className="section-label">Assinatura do workspace</span>
-          <h1>{plan ? `Começar no plano ${plan.name}.` : "Escolha o plano antes de iniciar o trial."}</h1>
+          <h1>{plan ? `Começar no plano ${plan.name}.` : "Escolha o plano e entre com mais clareza no trial."}</h1>
           <p>
-            O workspace entra com 14 dias grátis, sem cartão, e segue pronto
-            para ativar a assinatura recorrente no Asaas no momento certo.
+            O workspace entra com 14 dias grátis, sem cartão, e já fica preparado
+            para ativar a assinatura recorrente no momento certo.
           </p>
           <div className="auth-hero-points">
             <div className="auth-hero-point">Trial liberado sem cartão</div>
@@ -65,7 +65,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
                 <strong>O que acontece depois</strong>
                 <span>
                   Você cria o workspace, entra no sistema e cai direto na etapa de
-                  assinatura para concluir o vínculo com o Asaas quando quiser.
+                  assinatura para concluir o vínculo com o Asaas sem perder o fluxo.
                 </span>
               </div>
 
@@ -105,7 +105,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
 
               <div className="auth-hint">
                 <strong>Já é cliente?</strong>
-                <span>Entre com a sua conta para voltar direto ao workspace.</span>
+                <span>Entre com a sua conta para voltar direto ao workspace e continuar a ativação.</span>
               </div>
 
               <div className="hero-actions">

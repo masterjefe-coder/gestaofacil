@@ -36,10 +36,10 @@ export function MarketingFooter() {
       <div className="marketing-footer-band">
         <div className="marketing-footer-band-copy">
           <span className="section-label">Gestão Fácil Sistemas</span>
-          <h2>Um sistema mais claro para uma operação mais organizada.</h2>
+          <h2>Uma camada visual mais séria para vender melhor e operar com menos ruído.</h2>
           <p>
             O foco continua o mesmo: ajudar empresas de serviço a vender, cobrar
-            e emitir com menos atrito no dia real.
+            e emitir no mesmo fluxo, com aparência de produto maduro desde o primeiro clique.
           </p>
         </div>
         <div className="hero-actions marketing-footer-band-actions">
@@ -54,14 +54,14 @@ export function MarketingFooter() {
 
       <div className="marketing-footer-grid">
         <div className="marketing-footer-brand">
-          <span className="marketing-footer-badge">Operação, cobrança e fiscal no mesmo ritmo</span>
+          <span className="marketing-footer-badge">Comercial, financeiro e fiscal no mesmo compasso</span>
           <BrandLogo className="footer-wordmark" />
           <span className="marketing-footer-tag">
-            Venda, receba e emita no mesmo fluxo.
+            Venda, receba e emita com uma experiência mais compacta e mais profissional.
           </span>
           <p>
-            Gestão comercial, cobrança e NFS-e no mesmo fluxo para operações de
-            serviço que precisam de velocidade e clareza.
+            Feito para operações de serviço que querem clareza comercial, cobrança visível
+            e emissão fiscal sem retrabalho nem excesso de tela.
           </p>
           <div className="marketing-footer-inline-links">
             <Link href="/sobre">Sobre</Link>

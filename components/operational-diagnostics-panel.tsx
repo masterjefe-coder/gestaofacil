@@ -21,7 +21,7 @@ function getStatusTone(status: "ok" | "warning") {
 }
 
 function getStatusLabel(status: "ok" | "warning") {
-  return status === "ok" ? "Saudavel" : "Atencao";
+  return status === "ok" ? "Saudável" : "Atenção";
 }
 
 function formatTimestamp(value: string | null) {
@@ -41,10 +41,11 @@ function getProviderOutcomeLabel(value: "success" | "failure" | "circuit-open" |
   switch (value) {
     case "success":
       return "Ultima chamada saudavel";
+      
     case "failure":
-      return "Ultima chamada com falha";
+      return "Última chamada com falha";
     case "circuit-open":
-      return "Protecao aberta na ultima tentativa";
+      return "Proteção aberta na última tentativa";
     default:
       return "Sem chamada recente";
   }
@@ -72,7 +73,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
           <p>
             {snapshot.summary.warningCount === 0
               ? "Os sinais monitorados estao sem alerta estrutural agora."
-              : `${snapshot.summary.warningCount} alerta(s) pedem revisao antes de ampliar automacoes.`}
+              : `${snapshot.summary.warningCount} alerta(s) pedem revisão antes de ampliar automações.`}
           </p>
           <div className="ops-inline-meta">
             <span>{snapshot.summary.okCount} checks ok</span>
@@ -83,16 +84,17 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
 
         <article className={getStatusTone(snapshot.integrations.evolution.connectivity.reachable ? "ok" : "warning")}>
           <span className="section-label">WhatsApp</span>
-          <h2>{snapshot.integrations.evolution.connectivity.reachable ? "Conectado" : "Instavel"}</h2>
+          <h2>{snapshot.integrations.evolution.connectivity.reachable ? "Conectado" : "Instável"}</h2>
           <p>{snapshot.integrations.evolution.connectivity.summary}</p>
           <div className="ops-inline-meta">
-            <span>{snapshot.integrations.evolution.defaultInstanceConfigured ? "Instancia principal definida" : "Sem instancia padrao"}</span>
+            <span>{snapshot.integrations.evolution.defaultInstanceConfigured ? "Instância principal definida" : "Sem instância padrão"}</span>
             <span>Timeout {snapshot.integrations.evolution.timeoutMs}ms</span>
           </div>
         </article>
 
         <article className={getStatusTone(snapshot.integrations.asaas.webhookConfigured ? "ok" : "warning")}>
           <span className="section-label">Cobranca</span>
+          
           <h2>{snapshot.integrations.asaas.webhookConfigured ? "Webhook pronto" : "Webhook pendente"}</h2>
           <p>{snapshot.integrations.asaas.helper}</p>
           <div className="ops-inline-meta">
@@ -106,7 +108,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
           <h2>{snapshot.integrations.nfse.ready ? "Pronto" : "Parcial"}</h2>
           <p>
             {snapshot.integrations.nfse.certificateInspection.ok
-              ? "Certificado fiscal lido com sucesso para sustentar emissão automatica."
+              ? "Certificado fiscal lido com sucesso para sustentar emissão automática."
               : snapshot.integrations.nfse.certificateInspection.error || snapshot.integrations.nfse.helper}
           </p>
           <div className="ops-inline-meta">
@@ -119,7 +121,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
       <div className="section-split">
         <article className={getStatusTone(snapshot.resilience.openCircuitBreakerCount === 0 ? "ok" : "warning")}>
           <span className="section-label">Resiliência externa</span>
-          <h2>{snapshot.resilience.openCircuitBreakerCount === 0 ? "Estavel" : "Degradada"}</h2>
+          <h2>{snapshot.resilience.openCircuitBreakerCount === 0 ? "Estável" : "Degradada"}</h2>
           <p>
             {snapshot.resilience.openCircuitBreakerCount === 0
               ? snapshot.resilience.halfOpenCircuitBreakerCount > 0
@@ -152,7 +154,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
           <div className="ops-inline-meta">
             <span>{snapshot.runtime.healthTokenConfigured ? "Health token pronto" : "Health token ausente"}</span>
             <span>{snapshot.runtime.authSecretConfigured ? "Segredo de sessão ok" : "Segredo pendente"}</span>
-            <span>{snapshot.runtime.rateLimitMode === "distributed" ? "Rate limit distribuido" : "Rate limit local"}</span>
+            <span>{snapshot.runtime.rateLimitMode === "distributed" ? "Rate limit distribuído" : "Rate limit local"}</span>
             <span>Request ID base: {snapshot.requestId}</span>
           </div>
           <div className="hero-actions">
@@ -168,7 +170,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
 
       <article className="split-panel">
         <span className="section-label">Telemetria por provedor</span>
-        <h2>Como as integracoes estao se comportando na pratica</h2>
+        <h2>Como as integrações estão se comportando na prática</h2>
         {providers.length > 0 ? (
           <div className="ops-breaker-list">
             {providers.map(([name, state]) => (
@@ -179,7 +181,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
                   {state.successCount} sucesso(s) · {state.failureCount} falha(s) · {state.retriedCalls} com retry
                 </small>
                 <small>
-                  {state.lastDurationMs !== null ? `${state.lastDurationMs}ms na ultima chamada` : "Sem duracao recente"}
+                  {state.lastDurationMs !== null ? `${state.lastDurationMs}ms na última chamada` : "Sem duração recente"}
                   {state.lastStatusCode ? ` · status ${state.lastStatusCode}` : ""}
                 </small>
                 {state.lastErrorMessage ? <small>{state.lastErrorMessage}</small> : null}
@@ -196,9 +198,9 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
         <h2>Jobs operacionais em background</h2>
         <div className="ops-inline-meta">
           <span>{snapshot.resilience.jobs.pendingCount} pendente(s)</span>
-          <span>{snapshot.resilience.jobs.runningCount} em execucao</span>
+          <span>{snapshot.resilience.jobs.runningCount} em execução</span>
           <span>{snapshot.resilience.jobs.failedCount} falho(s)</span>
-          <span>{snapshot.resilience.jobs.completedCount} concluido(s)</span>
+          <span>{snapshot.resilience.jobs.completedCount} concluído(s)</span>
         </div>
         <p>
           {snapshot.resilience.jobs.failedCount > 0

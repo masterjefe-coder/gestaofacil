@@ -95,8 +95,8 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
     <DashboardShell
       currentPath="/dashboard/fiscal"
       eyebrow="Fiscal"
-      title="A nota precisa nascer do que já foi vendido e recebido."
-      description="Aqui você organiza o que já foi pago, o que já pode virar nota e o que ainda precisa de ajuste."
+      title="A nota precisa sair do fluxo certo, sem redigitar nem perder contexto."
+      description="Recebimentos, rascunhos, bloqueios e emissão ficam organizados para o time agir com mais segurança."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
@@ -127,7 +127,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         path="/dashboard/fiscal"
         currentView={queueView}
         title="Abrir a fila no recorte certo"
-        helper="A tela lembra o último filtro usado pela equipe."
+        helper="A tela volta no recorte fiscal mais útil para a equipe."
         options={[
           { value: "all", label: "Tudo", count: fiscalInsights.items.length },
           { value: "blocked", label: "Bloqueadas", count: fiscalInsights.summary.blockedCount },
@@ -185,11 +185,11 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
             <span className="section-label">Objetivo do módulo</span>
             <div className="dashboard-mini-list">
               <article>
-                <strong>Emitir sem redigitar</strong>
+                <strong>Emitir com continuidade</strong>
                 <p>A nota entra como continuação da venda recebida, não como outro sistema separado.</p>
               </article>
               <article>
-                <strong>Resolver cedo</strong>
+                <strong>Resolver antes da fila travar</strong>
                 <p>Dados da empresa e da cidade precisam aparecer antes da fila acumular erro.</p>
               </article>
             </div>
@@ -304,7 +304,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Modelos de emissão</span>
-            <h2>Formas de seguir com a emissão</h2>
+            <h2>Caminhos disponíveis para emitir</h2>
           </div>
         </div>
 
@@ -344,7 +344,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Integração oficial</span>
-            <h2>Conexão da emissão no sistema</h2>
+            <h2>Estado real da integração fiscal</h2>
           </div>
         </div>
 
@@ -469,7 +469,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Emissão rápida</span>
-            <h2>Emitir com nome, CPF/CNPJ e valor para cliente já cadastrado</h2>
+            <h2>Criar rascunho rápido para cliente já cadastrado</h2>
           </div>
         </div>
 

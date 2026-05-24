@@ -9,8 +9,8 @@ export default async function ReportsPage() {
     <DashboardShell
       currentPath="/dashboard/reports"
       eyebrow="Relatórios"
-      title="Ler a operação e exportar sem desmontar o fluxo."
-      description="Resumo executivo, cadência, comercial, financeiro e fiscal no mesmo lugar, com saída em Excel e PDF."
+      title="Ler a operação inteira sem desmontar o fluxo."
+      description="Comercial, clientes, financeiro e fiscal entram na mesma leitura executiva, com exportação pronta quando precisar."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
@@ -55,11 +55,11 @@ export default async function ReportsPage() {
             <span className="section-label">Objetivo do módulo</span>
             <div className="dashboard-mini-list">
               <article>
-                <strong>Ler sem navegar demais</strong>
+                <strong>Ler rápido</strong>
                 <p>Os sinais mais importantes aparecem reunidos em uma única tela executiva.</p>
               </article>
               <article>
-                <strong>Exportar sem desmontar a operação</strong>
+                <strong>Compartilhar sem retrabalho</strong>
                 <p>Excel e PDF entram como saída do painel, não como processo separado.</p>
               </article>
             </div>
@@ -91,7 +91,7 @@ export default async function ReportsPage() {
 
       <section className="auth-hint">
         <strong>Relatório operacional</strong>
-        <span>Gerado em {report.generatedAt}. Use a tela para leitura rápida, o Excel para análise e o PDF para envio tradicional.</span>
+        <span>Gerado em {report.generatedAt}. Use a tela para leitura rápida, o Excel para aprofundar e o PDF para compartilhar.</span>
       </section>
 
       <section className="stats-row">

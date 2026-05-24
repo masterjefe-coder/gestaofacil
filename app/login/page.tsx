@@ -33,11 +33,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <section className="auth-layout auth-layout-single">
           <section className="auth-card">
             <BrandLogo className="auth-wordmark" priority />
-            <span className="eyebrow">Sessão ativa</span>
-            <h1>Você já entrou no Gestão Fácil.</h1>
-            <p>
-              O dashboard já está disponível para continuar a configuração e operar o workspace.
-            </p>
+          <span className="eyebrow">Sessão ativa</span>
+          <h1>Você já entrou no Gestão Fácil.</h1>
+          <p>
+              O dashboard já está pronto para continuar a operação sem perder contexto.
+          </p>
             <div className="hero-actions">
               <Link href={callbackUrl} className="primary-link">
                 Continuar
@@ -66,13 +66,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <span className="section-label">Acesso ao workspace</span>
           <h1>Entrar no Gestão Fácil.</h1>
           <p>
-            Esta primeira camada de autenticação protege o dashboard e prepara o
-            terreno para a evolução de contas reais por workspace.
+            Entre no workspace com uma experiência mais direta, mais confiável e pronta
+            para operação real por empresa.
           </p>
           <div className="auth-hero-points">
             <div className="auth-hero-point">Acesso centralizado por workspace</div>
-            <div className="auth-hero-point">Base pronta para contas reais</div>
-            <div className="auth-hero-point">Fluxo simples para onboarding e operação real</div>
+            <div className="auth-hero-point">Fluxo enxuto para entrar e seguir</div>
+            <div className="auth-hero-point">Base pronta para operação real e equipe</div>
           </div>
         </article>
 

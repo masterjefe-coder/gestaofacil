@@ -155,8 +155,8 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     <DashboardShell
       currentPath="/dashboard/setup"
       eyebrow="Empresa"
-      title="Deixe a empresa pronta para vender, cobrar e atender sem atrito."
-      description="Aqui você organiza os dados principais, conecta os canais e deixa a operação mais prática para o dia a dia."
+      title="Deixe a empresa pronta para operar com clareza, automação e menos atrito."
+      description="Dados principais, cobrança, WhatsApp, equipe e fiscal ficam organizados em uma base mais sólida para o dia a dia."
       actions={
         <Link href="/dashboard" className="secondary-link">
           Voltar ao dashboard
@@ -168,14 +168,14 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <div className="dashboard-spotlight-header">
             <div>
               <span className="section-label">Leitura estrutural</span>
-              <h2>Essa área mostra se a empresa já está pronta para operar com segurança.</h2>
+              <h2>Essa área mostra o que já está pronto e o que ainda merece ajuste.</h2>
             </div>
             <span className={`dashboard-priority-badge ${fiscalReadiness.ready ? "priority-normal" : "priority-critical"}`}>
               {fiscalReadiness.ready ? "Tudo em ordem" : "Falta ajustar"}
             </span>
           </div>
           <p>
-            {fiscalReadiness.helper} Aqui ficam os dados da empresa, cobrança, WhatsApp e equipe no mesmo lugar.
+            {fiscalReadiness.helper} Aqui ficam os dados da empresa, cobrança, WhatsApp, equipe e sinais de operação no mesmo lugar.
           </p>
 
           <div className="dashboard-top-metrics">
@@ -207,11 +207,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <span className="section-label">Objetivo do módulo</span>
             <div className="dashboard-mini-list">
               <article>
-                <strong>Organizar a operação</strong>
-                <p>A empresa precisa ter dados, cobrança, WhatsApp e equipe bem alinhados para o trabalho fluir.</p>
+                <strong>Amarrar a operação</strong>
+                <p>Dados, cobrança, WhatsApp e equipe precisam estar alinhados para o trabalho fluir.</p>
               </article>
               <article>
-                <strong>Evitar travas depois</strong>
+                <strong>Antecipar travas</strong>
                 <p>Quando essa base está ajustada, você evita retrabalho na cobrança, no atendimento e na emissão.</p>
               </article>
             </div>
@@ -257,7 +257,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Resumo rápido</span>
-            <h2>O que já está pronto e o que ainda falta ajustar</h2>
+            <h2>O que já está pronto e o que ainda pede ajuste</h2>
           </div>
         </div>
 
@@ -541,7 +541,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Plano</span>
-            <h2>Plano da empresa e cobrança automática</h2>
+            <h2>Plano da empresa e cobrança recorrente</h2>
           </div>
         </div>
 

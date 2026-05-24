@@ -26,10 +26,10 @@ export default function HelpPage() {
       <section className="inner-hero">
         <div className="inner-hero-copy">
           <span className="section-label">Ajuda</span>
-          <h1>Uma central para explicar, destravar e dar segurança já no primeiro uso.</h1>
+          <h1>Uma central para explicar, destravar e dar segurança desde o primeiro uso.</h1>
           <p className="hero-text">
             A entrada ideal no Gestão Fácil precisa ser curta, clara e orientada
-            para ação. Esta central existe para reduzir fricção desde o início.
+            para ação. Esta central existe para reduzir fricção na ativação e na rotina inicial.
           </p>
           <div className="hero-actions">
             <Link href="/checkout" className="primary-link">
