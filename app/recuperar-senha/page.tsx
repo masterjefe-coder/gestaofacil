@@ -17,7 +17,7 @@ export default function RecoverPasswordPage() {
           <h1>Redefinir senha sem depender do suporte.</h1>
           <p>
             Esse fluxo prepara um link seguro para a própria pessoa recuperar o acesso
-            e voltar para o workspace com menos atrito operacional.
+            e voltar para o workspace com mais autonomia e menos atrito operacional.
           </p>
           <div className="auth-hero-points">
             <div className="auth-hero-point">Link temporário por email</div>

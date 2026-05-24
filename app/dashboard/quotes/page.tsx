@@ -48,8 +48,8 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
     <DashboardShell
       currentPath="/dashboard/quotes"
       eyebrow="Orçamentos"
-      title="O orçamento precisa vender, não ser apenas um PDF burocrático."
-      description="O MVP de orçamentos deve acelerar resposta, aumentar aprovação e diminuir retrabalho quando a venda andar."
+      title="Orçamento bom acelera decisão e puxa a venda para frente."
+      description="A equipe vê prioridade, calor comercial e próxima ação na mesma tela, sem transformar proposta em arquivo morto."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
@@ -72,7 +72,7 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
         path="/dashboard/quotes"
         currentView={queueView}
         title="Fixar a fila comercial mais útil"
-        helper="O módulo volta no mesmo recorte de proposta que você estava usando."
+        helper="O módulo volta no recorte comercial que fazia mais sentido para a equipe."
         options={[
           { value: "all", label: "Tudo", count: quoteInsights.items.length },
           { value: "hot", label: "Quentes", count: quoteInsights.summary.hotCount },
@@ -128,11 +128,11 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
             <span className="section-label">Objetivo do módulo</span>
             <div className="dashboard-mini-list">
               <article>
-                <strong>Fechar mais rápido</strong>
+                <strong>Fechar com menos atrito</strong>
                 <p>Dar contexto suficiente para a equipe agir sem caçar histórico.</p>
               </article>
               <article>
-                <strong>Evitar proposta fria</strong>
+                <strong>Manter a proposta viva</strong>
                 <p>O follow-up entra como rotina visível e não como memória do operador.</p>
               </article>
             </div>
@@ -165,7 +165,7 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Novo orçamento</span>
-            <h2>Montar proposta sem sair do ritmo comercial</h2>
+            <h2>Montar proposta sem perder velocidade</h2>
           </div>
         </div>
 
@@ -248,7 +248,7 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Cadência comercial</span>
-            <h2>Estados explícitos de execução da proposta</h2>
+            <h2>Estados claros para a proposta avançar</h2>
           </div>
         </div>
 
@@ -280,7 +280,7 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Fila comercial</span>
-            <h2>Quais propostas merecem ação primeiro</h2>
+            <h2>Quais propostas merecem resposta agora</h2>
           </div>
         </div>
 
@@ -353,7 +353,7 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Cadência assistida</span>
-            <h2>Mensagens prontas para destravar propostas sem sair do fluxo</h2>
+            <h2>Mensagens prontas para destravar a proposta</h2>
           </div>
         </div>
 
@@ -474,7 +474,7 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
       <section className="section-grid tinted">
         <div>
           <span className="section-label">Objetivos do módulo</span>
-          <h2>O cliente aprova mais rápido quando a proposta parece simples e pronta para agir.</h2>
+          <h2>Quando a proposta parece simples de entender, aprovar fica mais fácil.</h2>
         </div>
         <div className="cards-grid">
           {quoteGoals.map((item) => (

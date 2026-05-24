@@ -40,25 +40,25 @@ const heroSignals = [
 
 const executionPillars = [
   "WhatsApp, proposta e cobrança no mesmo contexto",
-  "Leitura executiva para o dono bater o olho e agir",
-  "Marca mais séria, com sensação de produto premium",
+  "Leitura executiva para decidir rápido sem excesso de tela",
+  "Marca mais séria, compacta e pronta para venda consultiva",
 ];
 
 const showcaseCards = [
   {
     eyebrow: "Comercial",
-    title: "Entrada clara para quem ainda vende no improviso",
-    text: "Responder rápido, transformar conversa em proposta e manter o follow-up vivo sem depender de memória.",
+    title: "Comercial mais organizado desde o primeiro contato",
+    text: "Responder rápido, virar proposta e manter o follow-up vivo sem depender de memória ou planilha paralela.",
   },
   {
     eyebrow: "Financeiro",
-    title: "Cobrança no centro da operação, não escondida em outro módulo",
-    text: "Pedidos aprovados viram recebimento sem retrabalho e com status visível para a equipe toda.",
+    title: "Cobrança no centro do fluxo, não escondida em outro sistema",
+    text: "Pedidos aprovados viram recebimento com status claro, menos atrito e mais previsibilidade para a equipe.",
   },
   {
     eyebrow: "Fiscal",
-    title: "Nota conectada ao que foi vendido e recebido",
-    text: "A emissão segue o fluxo da venda concluída, sem redigitação e sem atraso desnecessário.",
+    title: "Fiscal conectado ao que foi vendido e recebido",
+    text: "A emissão acompanha a operação real, reduz redigitação e deixa o fechamento mais fluido.",
   },
 ];
 
@@ -71,11 +71,11 @@ const conversionNotes = [
 const buyingSignals = [
   {
     title: "Para quem quer organizar rápido",
-    text: "Entra leve, sem travar a equipe com setup pesado ou linguagem de ERP.",
+    text: "Entra leve, sem travar a equipe com setup pesado, visual duro ou linguagem de ERP.",
   },
   {
     title: "Para quem já vende e quer previsibilidade",
-    text: "O fluxo comercial, financeiro e fiscal fica mais consistente sem multiplicar planilhas e sistemas.",
+    text: "O fluxo comercial, financeiro e fiscal fica mais consistente sem multiplicar planilhas, abas e sistemas.",
   },
 ];
 
@@ -114,11 +114,11 @@ export default function HomePage() {
           <span className="eyebrow">Sistema premium para empresas de serviço</span>
           <BrandLogo className="hero-wordmark" priority />
           <h1 className="home-hero-title">
-            A sua operação pode parecer organizada, rápida e profissional desde a primeira tela.
+            Um sistema que transmite clareza comercial e controle operacional logo na primeira tela.
           </h1>
           <p className="home-hero-text">
-            O Gestão Fácil conecta atendimento, proposta, cobrança e nota em uma experiência mais limpa,
-            direta e preparada para transmitir confiança comercial.
+            O Gestão Fácil conecta atendimento, proposta, cobrança e nota em uma experiência mais atual,
+            mais compacta e preparada para vender confiança antes mesmo da demonstração.
           </p>
 
           <div className="hero-actions">
@@ -158,7 +158,7 @@ export default function HomePage() {
               <BrandLogo variant="mark" className="home-panel-mark" />
               <div>
                 <strong>Painel executivo</strong>
-                <p>Menos poluição visual e mais direção para vender, cobrar e emitir.</p>
+                <p>Menos ruído visual e mais direção para vender, cobrar e emitir.</p>
               </div>
             </div>
 
@@ -174,7 +174,7 @@ export default function HomePage() {
 
             <div className="home-spotlight-card">
               <span className="section-label">Fluxo central</span>
-              <h2>Uma experiência que vende clareza antes mesmo da demonstração.</h2>
+              <h2>Uma experiência que vende clareza antes mesmo da reunião comercial.</h2>
               <ul className="stack-list home-execution-list">
                 {executionPillars.map((item) => (
                   <li key={item}>{item}</li>
@@ -198,7 +198,7 @@ export default function HomePage() {
       <section className="home-section home-conversion-strip fade-in-up">
         <div className="home-section-heading">
           <span className="section-label">Decisão mais fácil</span>
-          <h2>Menos objeção, mais clareza para começar o teste.</h2>
+          <h2>Menos objeção, mais contexto para começar o teste.</h2>
         </div>
         <div className="home-conversion-grid">
           {buyingSignals.map((item) => (

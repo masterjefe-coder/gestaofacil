@@ -55,7 +55,7 @@ export function AuthSignInForm({ callbackUrl = "/dashboard", showDemoHints = fal
         <div className="auth-form-section">
           <div className="auth-form-section-header">
             <strong>Entrar no workspace</strong>
-            <span>Use seu email de acesso e a senha definida no onboarding.</span>
+            <span>Use seu email de acesso e a senha definida no onboarding ou no convite.</span>
           </div>
           <label>
             <span>Email</span>
@@ -94,16 +94,18 @@ export function AuthSignInForm({ callbackUrl = "/dashboard", showDemoHints = fal
         </div>
       ) : null}
 
-      <div className="auth-hint">
-        <strong>Ainda não tem acesso?</strong>
-        <Link href={callbackUrl !== "/dashboard" ? `/onboarding?next=${encodeURIComponent(callbackUrl)}` : "/onboarding"}>
-          Criar conta e workspace real
-        </Link>
-      </div>
+      <div className="auth-form-support-grid">
+        <div className="auth-hint">
+          <strong>Ainda não tem acesso?</strong>
+          <Link href={callbackUrl !== "/dashboard" ? `/onboarding?next=${encodeURIComponent(callbackUrl)}` : "/onboarding"}>
+            Criar conta e workspace real
+          </Link>
+        </div>
 
-      <div className="auth-hint">
-        <strong>Esqueceu a senha?</strong>
-        <Link href="/recuperar-senha">Receber link de redefinição</Link>
+        <div className="auth-hint">
+          <strong>Esqueceu a senha?</strong>
+          <Link href="/recuperar-senha">Receber link de redefinição</Link>
+        </div>
       </div>
     </>
   );

@@ -30,9 +30,9 @@ export default function AboutPage() {
       <section className="inner-hero">
         <div className="inner-hero-copy">
           <span className="section-label">Sobre a empresa</span>
-          <h1>Gestão Fácil existe para transformar operação comercial em rotina confiável.</h1>
+          <h1>Gestão Fácil existe para transformar rotina comercial em operação mais confiável.</h1>
           <p className="hero-text">
-            A proposta não é empilhar módulos. É tirar fricção entre atendimento,
+            A proposta não é empilhar módulo. É reduzir a fricção entre atendimento,
             orçamento, cobrança e NFS-e para empresas de serviço que precisam
             girar rápido sem depender de improviso.
           </p>

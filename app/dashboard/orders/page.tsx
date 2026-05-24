@@ -55,8 +55,8 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
     <DashboardShell
       currentPath="/dashboard/orders"
       eyebrow="Pedidos"
-      title="A venda aprovada precisa virar execução clara, não memória da equipe."
-      description="Pedidos entram como ponte entre orçamento aprovado, cobrança e emissão, deixando a operação explícita no produto."
+      title="Venda aprovada precisa virar execução visível e organizada."
+      description="Pedidos conectam proposta, agenda, entrega e próximos passos sem depender da memória do time."
       actions={
         <>
           <Link href="/dashboard" className="secondary-link">
@@ -73,7 +73,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         path="/dashboard/orders"
         currentView={queueView}
         title="Fixar a fila operacional de pedidos"
-        helper="O módulo volta no mesmo recorte de execução usado pela equipe."
+        helper="O módulo volta no recorte operacional mais usado pela equipe."
         options={[
           { value: "all", label: "Tudo", count: orders.length },
           { value: "pending", label: "Pendentes", count: orders.filter((item) => item.status === "Pendente").length },
@@ -129,11 +129,11 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
             <span className="section-label">Objetivo do módulo</span>
             <div className="dashboard-mini-list">
               <article>
-                <strong>Tirar a execução da cabeça da equipe</strong>
+                <strong>Visualizar a operação</strong>
                 <p>Pedido vira estado operacional explícito e visível no sistema.</p>
               </article>
               <article>
-                <strong>Conectar venda e entrega</strong>
+                <strong>Ligar venda e entrega</strong>
                 <p>Aprovação comercial continua até conclusão e fiscal, sem buracos no fluxo.</p>
               </article>
             </div>
@@ -167,7 +167,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         <div className="card-header">
           <div>
             <span className="section-label">Gerar pedido</span>
-            <h2>Puxar execução a partir de proposta aprovada</h2>
+            <h2>Puxar a execução a partir do aprovado</h2>
           </div>
         </div>
 

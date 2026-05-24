@@ -37,11 +37,11 @@ export default function PricingPage() {
       <section className="inner-hero">
         <div className="inner-hero-copy">
           <span className="section-label">Planos do Gestão Fácil</span>
-          <h1>Preço claro para organizar venda, cobrança e NFS-e sem retrabalho.</h1>
+          <h1>Preço claro para vender, cobrar e emitir sem empilhar ferramenta.</h1>
           <p className="hero-text">
-            O objetivo aqui não é disputar com software genérico barato. O encaixe
-            do Gestão Fácil é entregar um fluxo mais direto para empresas de
-            serviço que precisam operar com mais consistência.
+            O posicionamento aqui é simples: menos ERP genérico, mais operação fluida.
+            O Gestão Fácil foi desenhado para empresas de serviço que precisam de
+            consistência comercial, financeira e fiscal em uma base mais elegante.
           </p>
           <div className="hero-actions">
             <Link href="/checkout" className="primary-link">
@@ -65,7 +65,7 @@ export default function PricingPage() {
       <section className="home-section home-pricing-section">
         <div className="home-section-heading">
           <span className="section-label">Escolha de plano</span>
-          <h2>Planos públicos para assinar online e Enterprise para operação sob desenho.</h2>
+          <h2>Planos públicos para começar online e uma camada Enterprise para cenários fora do padrão.</h2>
         </div>
         <div className="home-pricing-grid">
           {pricingPlans.map((plan) => (
@@ -124,6 +124,10 @@ export default function PricingPage() {
       </section>
 
       <section className="home-section">
+        <div className="home-section-heading">
+          <span className="section-label">Posicionamento</span>
+          <h2>O plano certo é o que organiza a rotina sem carregar custo e complexidade desnecessários.</h2>
+        </div>
         <div className="home-card-grid">
           {pricingPositioning.map((item) => (
             <article key={item.title} className="home-feature-card">
@@ -142,7 +146,7 @@ export default function PricingPage() {
       <section className="home-section">
         <div className="home-section-heading">
           <span className="section-label">FAQ</span>
-          <h2>O que normalmente pesa na decisão de entrada.</h2>
+          <h2>O que costuma pesar mais na decisão de entrada.</h2>
         </div>
         <div className="cards-grid faq-grid">
           {pricingFaqs.map((item) => (

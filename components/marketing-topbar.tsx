@@ -20,25 +20,37 @@ export function MarketingTopbar({
 }: MarketingTopbarProps) {
   return (
     <section className="site-topbar">
-      <Link href="/" aria-label="Gestão Fácil Sistemas" className="topbar-brand">
-        <span className="topbar-badge">Nova geração para serviços</span>
-        <BrandLogo className="topbar-wordmark" priority />
-        <span className="topbar-brand-copy">
-          CRM, cobrança e NFS-e para operações de serviço.
-        </span>
-      </Link>
-      <div className="topbar-actions">
-        {navItems.map((item) => (
-          <Link key={item.href} href={item.href} className="topbar-link">
-            {item.label}
+      <div className="topbar-brand-cluster">
+        <Link href="/" aria-label="Gestão Fácil Sistemas" className="topbar-brand">
+          <span className="topbar-badge">Operação premium para serviços</span>
+          <BrandLogo className="topbar-wordmark" priority />
+          <span className="topbar-brand-copy">
+            Vendas, cobrança e NFS-e em um fluxo mais elegante e mais direto.
+          </span>
+        </Link>
+        <div className="topbar-context-pill">
+          <span className="live-dot" />
+          <strong>Teste grátis por 14 dias</strong>
+          <small>Sem cartão e sem implantação pesada</small>
+        </div>
+      </div>
+
+      <div className="topbar-nav-shell">
+        <nav className="topbar-nav" aria-label="Navegação principal">
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href} className="topbar-link">
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="topbar-actions">
+          <Link href="/login" className="secondary-link topbar-ghost">
+            Entrar
           </Link>
-        ))}
-        <Link href="/login" className="topbar-link">
-          Entrar
-        </Link>
-        <Link href={ctaHref} className="primary-link topbar-cta">
-          {ctaLabel}
-        </Link>
+          <Link href={ctaHref} className="primary-link topbar-cta">
+            {ctaLabel}
+          </Link>
+        </div>
       </div>
     </section>
   );

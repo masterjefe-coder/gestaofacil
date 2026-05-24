@@ -78,8 +78,8 @@ export default async function DashboardPage() {
     <DashboardShell
       currentPath="/dashboard"
       eyebrow="Central da empresa"
-      title="Escolha a área certa e siga a operação sem ruído."
-      description="A tela inicial agora funciona como uma central de entrada: você vê a prioridade do dia e entra direto no módulo certo."
+      title="Uma central mais limpa para decidir rápido e operar melhor."
+      description="A home do workspace prioriza direção, contexto e entrada rápida nos módulos certos, sem poluir a operação."
       actions={(
         <>
           <Link href="/dashboard/setup" className="secondary-link">
@@ -175,11 +175,11 @@ export default async function DashboardPage() {
             <div className="dashboard-mini-list">
               <article>
                 <strong>Comece pelo módulo certo</strong>
-                <p>Clientes, orçamentos, pedidos, financeiro, notas, empresa e equipe ficam separados logo abaixo.</p>
+                <p>Clientes, vendas, cobrança, fiscal e empresa ficam organizados para entrar direto onde importa.</p>
               </article>
               <article>
                 <strong>Sem excesso na tela inicial</strong>
-                <p>A home agora mostra só direção, prioridade e atalhos, não a operação inteira de uma vez.</p>
+                <p>A home mostra direção, prioridade e atalhos, não a operação inteira despejada de uma vez.</p>
               </article>
             </div>
           </article>
@@ -200,10 +200,10 @@ export default async function DashboardPage() {
 
       <section className="data-panel data-panel-refined">
         <div className="card-header">
-          <div>
-            <span className="section-label">Áreas do sistema</span>
-            <h2>Entre direto no que você quer resolver</h2>
-          </div>
+            <div>
+              <span className="section-label">Áreas do sistema</span>
+              <h2>Entre direto no que precisa resolver agora</h2>
+            </div>
         </div>
 
         <div className="cards-grid quote-grid">
