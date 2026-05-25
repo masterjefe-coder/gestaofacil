@@ -64,6 +64,8 @@ Frase secundaria:
 - [HANDOFF-2026-05-20.md](./HANDOFF-2026-05-20.md): handoff operacional mais recente para continuar do ponto atual
 - [HANDOFF-2026-05-18.md](./HANDOFF-2026-05-18.md): handoff historico da primeira virada do projeto
 - [AWS-VM-ACCESS.md](./AWS-VM-ACCESS.md): copia local do acesso da VM AWS compartilhada com o `Bot-Trader`
+- [ORACLE-VM-ACCESS.md](./ORACLE-VM-ACCESS.md): copia local do acesso da VM Oracle compartilhada com o `GarimpeAI`
+- [ORACLE-MIGRATION.md](./ORACLE-MIGRATION.md): plano operacional para consolidar app e Evolution API na Oracle
 - [deploy/evolution/README.md](./deploy/evolution/README.md): stack reproduzivel da Evolution API para a Lightsail
 - [NEXT-STEPS.md](./NEXT-STEPS.md): ponto de entrada rapido para continuar
 - [CHECKLIST.md](./CHECKLIST.md): checklist objetiva do que ja esta pronto e do que falta

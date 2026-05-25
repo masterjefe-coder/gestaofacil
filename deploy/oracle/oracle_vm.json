@@ -1,0 +1,14 @@
+{
+  "provider": "oracle_cloud_infrastructure",
+  "region": "sa-saopaulo-1",
+  "availability_domain": "AD-1",
+  "instance_name": "vm-masterjefe",
+  "shape": "VM.Standard.A1.Flex",
+  "architecture": "aarch64",
+  "os": "Ubuntu 24.04 Minimal aarch64",
+  "public_ip": "147.15.59.187",
+  "username": "ubuntu",
+  "ssh_private_key_path": "C:\\Projetos\\ssh-key-2026-05-25.key",
+  "app_root": "/opt/apps/gestaofacil",
+  "notes": "VM Oracle compartilhada com o projeto GarimpeAI e preparada para futura migracao do Gestao Facil."
+}
