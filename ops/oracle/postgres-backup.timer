@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Gestao Facil Postgres Backup
+
+[Timer]
+OnCalendar=*-*-* 03:35:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

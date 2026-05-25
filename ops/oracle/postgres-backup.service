@@ -1,0 +1,11 @@
+[Unit]
+Description=Gestao Facil Postgres Backup
+After=postgresql.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/apps/gestaofacil
+ExecStart=/opt/apps/gestaofacil/shared/bin/postgres-backup.sh
