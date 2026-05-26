@@ -1,0 +1,12 @@
+{
+  "provider": "oracle_oci",
+  "region": "sa-saopaulo-1",
+  "availability_domain": "AD-1",
+  "instance_name": "vm-masterjefe",
+  "shape": "VM.Standard.A1.Flex",
+  "architecture": "aarch64",
+  "public_ip": "147.15.59.187",
+  "username": "ubuntu",
+  "ssh_private_key_path": "C:\\Projetos\\oci_recuperacao",
+  "app_root": "/opt/apps/gestaofacil"
+}

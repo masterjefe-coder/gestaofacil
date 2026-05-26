@@ -1,0 +1,18 @@
+[Unit]
+Description=Gestao Facil Next.js Web
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/apps/gestaofacil/web
+EnvironmentFile=/opt/apps/gestaofacil/shared/app.env
+Environment=NODE_ENV=production
+Environment=PORT=3002
+Environment=HOSTNAME=127.0.0.1
+ExecStart=/usr/bin/env node server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

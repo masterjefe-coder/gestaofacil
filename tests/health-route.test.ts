@@ -43,6 +43,7 @@ test("health route serves public status without diagnostics by default", async (
 
 test("health route serves detailed diagnostics for valid health token", async () => {
   await withEnv({
+    GESTAO_FACIL_DATA_MODE: "database",
     DATABASE_URL: "file:./test.db",
     APP_BASE_URL: "https://gestaofacil.app",
     HEALTHCHECK_TOKEN: "health-secret",
