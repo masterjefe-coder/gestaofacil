@@ -102,6 +102,7 @@ test("diagnostics route returns operational snapshot for valid health token", as
   await withEnv({
     NODE_ENV: "production",
     HEALTHCHECK_TOKEN: "health-secret",
+    GESTAO_FACIL_DATA_MODE: "database",
     APP_BASE_URL: "https://gestaofacil.app",
     AUTH_SECRET: "auth-secret",
     DATABASE_URL: "file:./test.db",
