@@ -61,14 +61,14 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
     <section className="data-panel">
       <div className="card-header">
         <div>
-          <span className="section-label">Diagnostico operacional</span>
-          <h2>Leitura viva do runtime e das integrações</h2>
+          <span className="section-label">Operação</span>
+          <h2>Saúde do runtime e das integrações</h2>
         </div>
       </div>
 
       <div className="ops-diagnostics-grid">
         <article className={getStatusTone(snapshot.status)}>
-          <span className="section-label">Panorama</span>
+          <span className="section-label">Resumo</span>
           <h2>{getStatusLabel(snapshot.status)}</h2>
           <p>
             {snapshot.summary.warningCount === 0
@@ -93,7 +93,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
         </article>
 
         <article className={getStatusTone(snapshot.integrations.asaas.webhookConfigured ? "ok" : "warning")}>
-          <span className="section-label">Cobranca</span>
+          <span className="section-label">Cobrança</span>
           
           <h2>{snapshot.integrations.asaas.webhookConfigured ? "Webhook pronto" : "Webhook pendente"}</h2>
           <p>{snapshot.integrations.asaas.helper}</p>
@@ -120,7 +120,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
 
       <div className="section-split">
         <article className={getStatusTone(snapshot.resilience.openCircuitBreakerCount === 0 ? "ok" : "warning")}>
-          <span className="section-label">Resiliência externa</span>
+          <span className="section-label">Proteções</span>
           <h2>{snapshot.resilience.openCircuitBreakerCount === 0 ? "Estável" : "Degradada"}</h2>
           <p>
             {snapshot.resilience.openCircuitBreakerCount === 0
@@ -145,7 +145,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
         </article>
 
         <article className="split-panel">
-          <span className="section-label">Correlação e acesso</span>
+          <span className="section-label">Rastreio</span>
           <h2>Request tracing ativo</h2>
           <p>
             Toda resposta operacional ecoa <code>{snapshot.requestTracing.header}</code>, o que ajuda a ligar rota,
@@ -169,8 +169,8 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
       </div>
 
       <article className="split-panel">
-        <span className="section-label">Telemetria por provedor</span>
-        <h2>Como as integrações estão se comportando na prática</h2>
+        <span className="section-label">Provedores</span>
+        <h2>Telemetria curta por serviço</h2>
         {providers.length > 0 ? (
           <div className="ops-breaker-list">
             {providers.map(([name, state]) => (
@@ -194,8 +194,8 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
       </article>
 
       <article className="split-panel">
-        <span className="section-label">Fila assíncrona</span>
-        <h2>Jobs operacionais em background</h2>
+        <span className="section-label">Jobs</span>
+        <h2>Fila em background</h2>
         <div className="ops-inline-meta">
           <span>{snapshot.resilience.jobs.pendingCount} pendente(s)</span>
           <span>{snapshot.resilience.jobs.runningCount} em execução</span>
@@ -212,8 +212,8 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
       </article>
 
       <article className="split-panel">
-        <span className="section-label">Checks principais</span>
-        <h2>O que sustenta a operação agora</h2>
+        <span className="section-label">Checks</span>
+        <h2>O que sustenta a operação</h2>
         <div className="ops-check-list">
           {topChecks.map((check) => (
             <div key={check.key} className={`ops-check-item ${check.level === "ok" ? "ok" : "warning"}`}>
@@ -226,7 +226,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
 
       <div className="section-split">
         <article className={getOperationalSignalToneClass(signals.evolution.primaryTone)}>
-          <span className="section-label">Último sinal do WhatsApp</span>
+          <span className="section-label">Último sinal</span>
           <h2>{signals.evolution.primary ? "Atividade recente recebida" : "Sem evento recente"}</h2>
           <p>{signals.evolution.primary ? signals.evolution.primary.summary : "Nenhum evento recente da Evolution foi auditado neste workspace."}</p>
           {signals.evolution.primary ? (
@@ -239,7 +239,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
         </article>
 
         <article className={getOperationalSignalToneClass(signals.asaas.primaryTone)}>
-          <span className="section-label">Último sinal da cobrança</span>
+          <span className="section-label">Cobrança</span>
           <h2>{signals.asaas.primary ? "Leitura recente disponível" : "Sem incidente recente"}</h2>
           <p>
             {signals.asaas.primary
@@ -258,7 +258,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
 
       <div className="section-split">
         <article className={getOperationalSignalToneClass(signals.fiscal.primaryTone)}>
-          <span className="section-label">Último sinal fiscal</span>
+          <span className="section-label">Fiscal</span>
           <h2>{signals.fiscal.primary ? "Movimento fiscal recente" : "Sem movimento recente"}</h2>
           <p>
             {signals.fiscal.primary
@@ -275,7 +275,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
         </article>
 
         <article className={getOperationalSignalToneClass(signals.subscription.primaryTone)}>
-          <span className="section-label">Último sinal da assinatura</span>
+          <span className="section-label">Assinatura</span>
           <h2>{signals.subscription.primary ? "Movimento recente registrado" : "Sem movimento recente"}</h2>
           <p>
             {signals.subscription.primary
@@ -294,7 +294,7 @@ export function OperationalDiagnosticsPanel({ snapshot, signals }: OperationalDi
 
       {warningChecks.length > 0 ? (
         <article className="split-panel">
-          <span className="section-label">Próximas ações</span>
+          <span className="section-label">Ações</span>
           <h2>Onde atacar primeiro</h2>
           <div className="ops-actions-list">
             {warningChecks.map((check) => {

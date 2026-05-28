@@ -19,10 +19,14 @@ test("timingSafeCompare matches equal values and rejects different ones", () => 
 test("verifyWebhookTimestamp accepts recent timestamps and rejects invalid ones", () => {
   const recentIso = new Date().toISOString();
   const recentUnix = Math.floor(Date.now() / 1000);
+  const recentUnixString = String(recentUnix);
+  const recentUnixMsString = String(Date.now());
   const expiredIso = new Date(Date.now() - 10 * 60 * 1000).toISOString();
 
   assert.equal(verifyWebhookTimestamp(recentIso), true);
   assert.equal(verifyWebhookTimestamp(recentUnix), true);
+  assert.equal(verifyWebhookTimestamp(recentUnixString), true);
+  assert.equal(verifyWebhookTimestamp(recentUnixMsString), true);
   assert.equal(verifyWebhookTimestamp(expiredIso, 300), false);
   assert.equal(verifyWebhookTimestamp("invalid-date"), false);
 });

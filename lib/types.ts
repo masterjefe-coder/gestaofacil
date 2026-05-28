@@ -37,6 +37,7 @@ export type CompanyProfile = {
   city: string;
   state: string;
   municipalCode?: string;
+  evolutionInstanceName?: string;
   serviceDescription: string;
   defaultFiscalServiceCode?: string;
   defaultPixKey: string;

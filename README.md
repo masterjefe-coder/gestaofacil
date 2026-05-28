@@ -114,10 +114,10 @@ Toda decisao de produto deve responder:
 
 Stack recomendada:
 
-- `Vercel` para o app `Next.js`
-- `Neon` para `Postgres`
+- `Next.js` em VM ou container dedicado
+- `Postgres` gerenciado
 
-Variaveis de ambiente minimas na Vercel:
+Variaveis de ambiente minimas no ambiente de producao:
 
 - `DATABASE_URL`
 - `AUTH_SECRET`
@@ -200,14 +200,12 @@ Observacao:
 
 Checklist de deploy:
 
-1. importar o repositorio na `Vercel`
-2. deixar `Framework Preset` como `Next.js`
-3. deixar `Output Directory` vazio
-4. cadastrar as variaveis de ambiente
-5. criar o banco no `Neon`
-6. preferir `npm run db:deploy` com as migrations versionadas; usar `npm run db:push` apenas em ambiente de desenvolvimento controlado
-7. rodar `npm run readiness` para validar ambiente e integrações
-8. abrir `/onboarding` para criar o primeiro usuario real do workspace
+1. publicar o repositorio na VM ou no container de destino
+2. cadastrar as variaveis de ambiente
+3. criar o banco no provedor escolhido
+4. preferir `npm run db:deploy` com as migrations versionadas; usar `npm run db:push` apenas em ambiente de desenvolvimento controlado
+5. rodar `npm run readiness` para validar ambiente e integrações
+6. abrir `/onboarding` para criar o primeiro usuario real do workspace
 
 Observacao:
 

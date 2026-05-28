@@ -160,6 +160,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <Link href="/dashboard" className="secondary-link">
             Voltar ao dashboard
           </Link>
+          <Link href="/dashboard/whatsapp" className="secondary-link">
+            Central WhatsApp
+          </Link>
           <a href="#nova-cobranca" className="primary-link">
             Nova cobrança
           </a>
@@ -240,38 +243,24 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         </article>
 
         <aside className="dashboard-overview-stack">
-          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
-            <span className="section-label">Objetivo do módulo</span>
-            <div className="dashboard-mini-list">
-              <article>
-                <strong>Receber com previsibilidade</strong>
-                <p>Receber deixa de ser correria e vira rotina visível do dia.</p>
-              </article>
-              <article>
-                <strong>Insistir menos, entender melhor</strong>
-                <p>Promessas, dúvidas e comprovantes entram na fila com mais contexto.</p>
-              </article>
-            </div>
-          </article>
-
-          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
-            <span className="section-label">Atalhos rápidos</span>
-            <div className="dashboard-shortcuts-grid">
+          <article className="dashboard-mini-panel dashboard-mini-panel-compact fade-in-up fade-delay-1">
+            <span className="section-label">Atalhos</span>
+            <div className="dashboard-shortcuts-grid dashboard-shortcuts-grid-compact">
               <a href="#nova-cobranca" className="dashboard-shortcut-card">
                 <strong>Nova cobrança</strong>
-                <span>Criar manualmente</span>
+                <span>Criar</span>
               </a>
               <a href="#recebimentos" className="dashboard-shortcut-card">
                 <strong>Recebimentos</strong>
-                <span>Abrir fila</span>
+                <span>Fila</span>
               </a>
               <Link href="/dashboard/fiscal" className="dashboard-shortcut-card">
                 <strong>Fiscal</strong>
-                <span>Seguir depois do pago</span>
+                <span>Depois do pago</span>
               </Link>
               <Link href="/dashboard" className="dashboard-shortcut-card">
-                <strong>Dashboard</strong>
-                <span>Voltar ao comando</span>
+                <strong>Home</strong>
+                <span>Voltar</span>
               </Link>
             </div>
           </article>
@@ -950,6 +939,13 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                                 </article>
                               ))}
                             </div>
+                          </div>
+                        ) : null}
+                        {customer?.phone ? (
+                          <div className="dashboard-actions">
+                            <Link href={`/dashboard/whatsapp?customerId=${encodeURIComponent(customer.id)}`} className="secondary-link">
+                              Responder na central
+                            </Link>
                           </div>
                         ) : null}
                       </div>

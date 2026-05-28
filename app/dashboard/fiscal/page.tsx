@@ -53,7 +53,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
     getCurrentWorkspaceContext(),
   ]);
   const fiscalAccess = getWorkspaceModuleCapabilities(context.workspaceRole, "fiscal");
-  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "").catch(() => null);
   const issuePreviews = await Promise.all(
     documents.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
   );
@@ -187,38 +187,24 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
         </article>
 
         <aside className="dashboard-overview-stack">
-          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
-            <span className="section-label">Objetivo do módulo</span>
-            <div className="dashboard-mini-list">
-              <article>
-                <strong>Emitir com continuidade</strong>
-                <p>A nota entra como continuação da venda recebida, não como outro sistema separado.</p>
-              </article>
-              <article>
-                <strong>Resolver antes da fila travar</strong>
-                <p>Dados da empresa e da cidade precisam aparecer antes da fila acumular erro.</p>
-              </article>
-            </div>
-          </article>
-
-          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
-            <span className="section-label">Atalhos rápidos</span>
-            <div className="dashboard-shortcuts-grid">
+          <article className="dashboard-mini-panel dashboard-mini-panel-compact fade-in-up fade-delay-1">
+            <span className="section-label">Atalhos</span>
+            <div className="dashboard-shortcuts-grid dashboard-shortcuts-grid-compact">
               <Link href="/dashboard/setup" className="dashboard-shortcut-card">
                 <strong>Setup</strong>
-                <span>Ajustar empresa</span>
+                <span>Ajustar</span>
               </Link>
               <Link href="/dashboard/billing" className="dashboard-shortcut-card">
                 <strong>Cobranças</strong>
-                <span>Ver pagos</span>
+                <span>Pagos</span>
               </Link>
               <a href="#documentos-fiscais" className="dashboard-shortcut-card">
                 <strong>Documentos</strong>
-                <span>Abrir fila</span>
+                <span>Fila</span>
               </a>
               <Link href="/dashboard" className="dashboard-shortcut-card">
-                <strong>Dashboard</strong>
-                <span>Voltar ao comando</span>
+                <strong>Home</strong>
+                <span>Voltar</span>
               </Link>
             </div>
           </article>

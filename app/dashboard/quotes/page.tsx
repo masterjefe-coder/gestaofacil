@@ -124,38 +124,24 @@ export default async function QuotesPage({ searchParams }: QuotesPageProps) {
         </article>
 
         <aside className="dashboard-overview-stack">
-          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
-            <span className="section-label">Objetivo do módulo</span>
-            <div className="dashboard-mini-list">
-              <article>
-                <strong>Fechar com menos atrito</strong>
-                <p>Dar contexto suficiente para a equipe agir sem caçar histórico.</p>
-              </article>
-              <article>
-                <strong>Manter a proposta viva</strong>
-                <p>O follow-up entra como rotina visível e não como memória do operador.</p>
-              </article>
-            </div>
-          </article>
-
-          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
-            <span className="section-label">Atalhos rápidos</span>
-            <div className="dashboard-shortcuts-grid">
+          <article className="dashboard-mini-panel dashboard-mini-panel-compact fade-in-up fade-delay-1">
+            <span className="section-label">Atalhos</span>
+            <div className="dashboard-shortcuts-grid dashboard-shortcuts-grid-compact">
               <a href="#novo-orcamento" className="dashboard-shortcut-card">
                 <strong>Novo orçamento</strong>
-                <span>Montar proposta</span>
+                <span>Montar</span>
               </a>
               <Link href="/dashboard/customers" className="dashboard-shortcut-card">
                 <strong>Clientes</strong>
-                <span>Buscar contexto</span>
+                <span>Contexto</span>
               </Link>
               <Link href="/dashboard/billing" className="dashboard-shortcut-card">
                 <strong>Cobranças</strong>
-                <span>Converter aprovados</span>
+                <span>Converter</span>
               </Link>
               <Link href="/dashboard" className="dashboard-shortcut-card">
-                <strong>Dashboard</strong>
-                <span>Voltar ao comando</span>
+                <strong>Home</strong>
+                <span>Voltar</span>
               </Link>
             </div>
           </article>

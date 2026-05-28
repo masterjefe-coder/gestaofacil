@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { AuthSessionError, canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { getLogger } from "@/lib/api-logger";
 import { buildOperationalDiagnosticsSnapshot } from "@/lib/operational-diagnostics";
 import { attachRequestId, getOrCreateRequestId } from "@/lib/request-tracing";
@@ -26,13 +27,41 @@ export async function GET(request: Request) {
   const configuredHealthToken = process.env.HEALTHCHECK_TOKEN?.trim();
   const receivedHealthToken = request.headers.get("x-health-token")?.trim();
   const hasValidHealthToken = timingSafeCompare(receivedHealthToken, configuredHealthToken);
-  const sessionEmail = hasValidHealthToken ? null : await getSessionEmailSafe();
-  const canSeeDetails = hasValidHealthToken || Boolean(sessionEmail);
+  let authorizedByWorkspaceRole = false;
 
-  if (!canSeeDetails) {
-    requestLogger.warn("Operational diagnostics rejected because requester is not authorized");
+  if (!hasValidHealthToken) {
+    const sessionEmail = await getSessionEmailSafe();
+
+    if (!sessionEmail) {
+      requestLogger.warn("Operational diagnostics rejected because requester is not authorized");
+      return attachRequestId(
+        NextResponse.json({ error: "Diagnostico operacional nao autorizado." }, { status: 401 }),
+        requestId,
+      );
+    }
+
+    try {
+      const context = await getCurrentWorkspaceContext();
+      authorizedByWorkspaceRole = canManageWorkspace(context.workspaceRole);
+    } catch (error) {
+      if (error instanceof AuthSessionError) {
+        requestLogger.warn("Operational diagnostics rejected because workspace context could not be resolved", {
+          status: error.status,
+        });
+        return attachRequestId(
+          NextResponse.json({ error: "Diagnostico operacional nao autorizado." }, { status: error.status }),
+          requestId,
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  if (!hasValidHealthToken && !authorizedByWorkspaceRole) {
+    requestLogger.warn("Operational diagnostics rejected because requester lacks workspace management access");
     return attachRequestId(
-      NextResponse.json({ error: "Diagnostico operacional nao autorizado." }, { status: 401 }),
+      NextResponse.json({ error: "Apenas owner ou admin podem acessar o diagnostico operacional detalhado." }, { status: 403 }),
       requestId,
     );
   }

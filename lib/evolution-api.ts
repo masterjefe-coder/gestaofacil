@@ -319,6 +319,13 @@ export async function getEvolutionConnectionState(instanceName: string) {
   );
 }
 
+export async function deleteEvolutionInstance(instanceName: string) {
+  return evolutionRequest<{ status?: string; error?: boolean; response?: { message?: string } }>(
+    `/instance/delete/${encodeURIComponent(instanceName)}`,
+    { method: "DELETE" },
+  );
+}
+
 export async function probeEvolutionApi() {
   const config = getConfig();
 
@@ -331,8 +338,10 @@ export async function probeEvolutionApi() {
   }
 
   try {
-    const response = await fetch(config.baseUrl, {
+    const headers = config.apiKey ? { apikey: config.apiKey } : undefined;
+    const response = await fetch(new URL("/instance/fetchInstances", config.baseUrl).toString(), {
       method: "GET",
+      ...(headers ? { headers } : {}),
       signal: AbortSignal.timeout(config.timeoutMs),
       cache: "no-store",
     });
@@ -341,8 +350,8 @@ export async function probeEvolutionApi() {
       configured: true,
       reachable: response.ok,
       summary: response.ok
-        ? "Endpoint respondeu e a API está acessível a partir do app."
-        : `Endpoint respondeu com status ${response.status}.`,
+        ? "A Evolution respondeu ao endpoint autenticado e a integração está acessível a partir do app."
+        : `A Evolution respondeu ao endpoint autenticado com status ${response.status}.`,
     };
   } catch (error) {
     return {

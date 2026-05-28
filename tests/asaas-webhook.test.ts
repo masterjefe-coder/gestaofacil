@@ -53,12 +53,35 @@ test("computeNextChargeState marks received payments as paid", () => {
   assert.equal(nextState.externalBilling?.paymentId, "pay_1");
 });
 
+test("computeNextChargeState keeps Pix and link payments on invoiceUrl instead of boleto", () => {
+  const pixState = computeNextChargeState(createCharge({
+    source: "Pix",
+  }), {
+    billingType: "PIX",
+    invoiceUrl: "https://example.com/invoice",
+    bankSlipUrl: "https://example.com/boleto",
+  }, "PAYMENT_CREATED");
+
+  assert.equal(pixState.paymentLink, "https://example.com/invoice");
+
+  const linkState = computeNextChargeState(createCharge({
+    source: "Link de pagamento",
+  }), {
+    billingType: "UNDEFINED",
+    invoiceUrl: "https://example.com/link",
+    bankSlipUrl: "https://example.com/boleto",
+  }, "PAYMENT_CREATED");
+
+  assert.equal(linkState.paymentLink, "https://example.com/link");
+});
+
 test("computeNextChargeState preserves overdue status and updates due label", () => {
   const nextState = computeNextChargeState(createCharge({
     status: "Hoje",
     dueDate: "2026-05-21",
     dueLabel: "vence hoje",
   }), {
+    billingType: "BOLETO",
     dueDate: "2026-05-28",
     bankSlipUrl: "https://example.com/boleto",
   }, "PAYMENT_OVERDUE");

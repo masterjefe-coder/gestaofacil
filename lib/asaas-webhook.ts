@@ -3,6 +3,7 @@ import { buildChargeDueLabel, decodeChargeMeta, encodeChargeMeta, formatDateInpu
 import { isLocalDataMode } from "@/lib/data-mode";
 import { prisma } from "@/lib/prisma";
 import { readDemoWorkspaceData, writeDemoWorkspaceData } from "@/lib/demo-store";
+import { resolveAsaasPaymentLink } from "@/lib/asaas";
 import type { Charge, ExternalChargeBilling, SubscriptionStatusCode } from "@/lib/types";
 
 export type AsaasWebhookPayload = {
@@ -120,7 +121,10 @@ export function buildExternalBilling(current: ExternalChargeBilling | undefined,
 export function computeNextChargeState(current: Charge, payload: NonNullable<AsaasWebhookPayload["payment"]>, event: string): Pick<Charge, "status" | "dueDate" | "dueLabel" | "paymentLink" | "externalBilling"> {
   const externalBilling = buildExternalBilling(current.externalBilling, payload);
   const dueDate = getString(payload.dueDate) || current.dueDate;
-  const paymentLink = getString(payload.invoiceUrl) || getString(payload.bankSlipUrl) || current.paymentLink;
+  const paymentLink = resolveAsaasPaymentLink({
+    invoiceUrl: getString(payload.invoiceUrl) || undefined,
+    bankSlipUrl: getString(payload.bankSlipUrl) || undefined,
+  }, payload.billingType || current.externalBilling?.billingType) || current.paymentLink;
 
   if (isReceivedEvent(event)) {
     return {
@@ -184,7 +188,10 @@ export function computeNextSubscriptionState(current: {
         ? "PAST_DUE"
         : current.status,
     asaasSubscriptionId: getString(payload.subscription) || current.asaasSubscriptionId || undefined,
-    asaasPaymentLink: getString(payload.invoiceUrl) || getString(payload.bankSlipUrl) || current.asaasPaymentLink || undefined,
+    asaasPaymentLink: resolveAsaasPaymentLink({
+      invoiceUrl: getString(payload.invoiceUrl) || undefined,
+      bankSlipUrl: getString(payload.bankSlipUrl) || undefined,
+    }, payload.billingType || "UNDEFINED") || current.asaasPaymentLink || undefined,
     notes: (isReceivedEvent(event)
       ? "Pagamento confirmado pelo webhook do Asaas."
       : event === "PAYMENT_OVERDUE"

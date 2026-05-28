@@ -99,9 +99,19 @@ export async function issueNfseNationalAction(formData: FormData) {
     return;
   }
 
-  await issueNfseNationalDocument(id, {
-    serviceCode,
-  });
+  try {
+    const result = await issueNfseNationalDocument(id, {
+      serviceCode,
+    });
+
+    if (!result) {
+      await updateNfseStatus(id, "Erro", "Documento fiscal nao encontrado ou sem preparo suficiente para emissao.");
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Falha desconhecida ao emitir NFS-e.";
+    await updateNfseStatus(id, "Erro", message);
+  }
+
   revalidateFiscalViews();
 }
 
@@ -121,7 +131,7 @@ export async function markNfseErrorAction(formData: FormData) {
 export async function testNfseNationalConnectivityAction() {
   await requireFiscalAccess();
   const setup = await getWorkspaceSetup();
-  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "").catch(() => null);
   const provider = resolveNfseProvider(setup.city, setup.state, {
     municipalityStatus,
   });

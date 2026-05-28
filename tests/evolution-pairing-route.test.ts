@@ -9,12 +9,14 @@ const originalDeps = {
   requireApiSession: evolutionPairingRouteDeps.requireApiSession,
   getCurrentWorkspaceContext: evolutionPairingRouteDeps.getCurrentWorkspaceContext,
   connectEvolutionInstance: evolutionPairingRouteDeps.connectEvolutionInstance,
+  getWorkspaceEvolutionInstanceName: evolutionPairingRouteDeps.getWorkspaceEvolutionInstanceName,
 };
 
 function restoreEvolutionPairingDeps() {
   evolutionPairingRouteDeps.requireApiSession = originalDeps.requireApiSession;
   evolutionPairingRouteDeps.getCurrentWorkspaceContext = originalDeps.getCurrentWorkspaceContext;
   evolutionPairingRouteDeps.connectEvolutionInstance = originalDeps.connectEvolutionInstance;
+  evolutionPairingRouteDeps.getWorkspaceEvolutionInstanceName = originalDeps.getWorkspaceEvolutionInstanceName;
 }
 
 test("evolution pairing route forwards unauthorized response with request id", async () => {
@@ -72,6 +74,7 @@ test("evolution pairing route rejects missing instance name", async () => {
     workspaceId: "workspace-1",
     workspaceRole: "OWNER",
   });
+  evolutionPairingRouteDeps.getWorkspaceEvolutionInstanceName = async () => "gf-main";
 
   try {
     const requestId = "evolution-pairing-missing-instance-request-id";
@@ -98,6 +101,7 @@ test("evolution pairing route returns pairing payload with request id", async ()
     workspaceId: "workspace-1",
     workspaceRole: "OWNER",
   });
+  evolutionPairingRouteDeps.getWorkspaceEvolutionInstanceName = async () => "gf-main";
   evolutionPairingRouteDeps.connectEvolutionInstance = async () => ({
     pairingCode: "123-456",
     base64: "data:image/png;base64,ZmFrZQ==",
@@ -133,6 +137,7 @@ test("evolution pairing route surfaces integration failures as 500 with request 
     workspaceId: "workspace-1",
     workspaceRole: "OWNER",
   });
+  evolutionPairingRouteDeps.getWorkspaceEvolutionInstanceName = async () => "gf-main";
   evolutionPairingRouteDeps.connectEvolutionInstance = async () => {
     throw new EvolutionApiError("Nao foi possivel gerar o pareamento agora.");
   };
@@ -150,6 +155,33 @@ test("evolution pairing route surfaces integration failures as 500 with request 
     assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
     assert.equal(payload.ok, false);
     assert.match(payload.error, /pareamento/i);
+  } finally {
+    restoreEvolutionPairingDeps();
+  }
+});
+
+test("evolution pairing route rejects requests for another workspace instance", async () => {
+  evolutionPairingRouteDeps.requireApiSession = async () => null;
+  evolutionPairingRouteDeps.getCurrentWorkspaceContext = async () => ({
+    userId: "user-1",
+    email: "owner@gestaofacil.app",
+    workspaceId: "workspace-1",
+    workspaceRole: "OWNER",
+  });
+  evolutionPairingRouteDeps.getWorkspaceEvolutionInstanceName = async () => "gf-main";
+
+  try {
+    const requestId = "evolution-pairing-wrong-instance-request-id";
+    const response = await getEvolutionPairing(new Request("http://localhost/api/evolution/pairing?instance=other-company", {
+      headers: {
+        [REQUEST_ID_HEADER]: requestId,
+      },
+    }));
+    const payload = await response.json();
+
+    assert.equal(response.status, 403);
+    assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
+    assert.match(payload.error, /WhatsApp principal desta empresa/i);
   } finally {
     restoreEvolutionPairingDeps();
   }

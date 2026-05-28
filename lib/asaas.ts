@@ -197,6 +197,21 @@ function resolveBillingType(paymentMethod: string): AsaasBillingType {
   return "PIX";
 }
 
+export function resolveAsaasPaymentLink(
+  payment: Pick<AsaasPayment, "invoiceUrl" | "bankSlipUrl"> | null | undefined,
+  billingType?: AsaasBillingType | "CREDIT_CARD" | "UNDEFINED",
+) {
+  if (!payment) {
+    return undefined;
+  }
+
+  if (billingType === "BOLETO") {
+    return payment.bankSlipUrl || payment.invoiceUrl || undefined;
+  }
+
+  return payment.invoiceUrl || undefined;
+}
+
 async function parseAsaasResponse<T>(response: Response): Promise<T> {
   const body = (await response.json().catch(() => null)) as (T & AsaasErrorResponse) | null;
 
@@ -608,7 +623,7 @@ export async function createAsaasCharge(input: {
     pixQrCode = await getPixQrCode(payment.id, config.apiKey || undefined);
   }
 
-  const paymentLink = payment.invoiceUrl || payment.bankSlipUrl || undefined;
+  const paymentLink = resolveAsaasPaymentLink(payment, billingType);
 
   return {
     paymentLink,
@@ -671,7 +686,7 @@ export async function createAsaasWorkspaceSubscription(input: {
   return {
     customerId: customer.id,
     subscriptionId: subscription.id,
-    paymentLink: firstPayment?.invoiceUrl || firstPayment?.bankSlipUrl || undefined,
+    paymentLink: resolveAsaasPaymentLink(firstPayment, "UNDEFINED"),
   };
 }
 
@@ -705,6 +720,6 @@ export async function updateAsaasWorkspaceSubscription(input: {
 
   return {
     subscriptionId: input.subscriptionId,
-    paymentLink: firstPayment?.invoiceUrl || firstPayment?.bankSlipUrl || undefined,
+    paymentLink: resolveAsaasPaymentLink(firstPayment, "UNDEFINED"),
   };
 }

@@ -125,38 +125,24 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         </article>
 
         <aside className="dashboard-overview-stack">
-          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
-            <span className="section-label">Objetivo do módulo</span>
-            <div className="dashboard-mini-list">
-              <article>
-                <strong>Visualizar a operação</strong>
-                <p>Pedido vira estado operacional explícito e visível no sistema.</p>
-              </article>
-              <article>
-                <strong>Ligar venda e entrega</strong>
-                <p>Aprovação comercial continua até conclusão e fiscal, sem buracos no fluxo.</p>
-              </article>
-            </div>
-          </article>
-
-          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
-            <span className="section-label">Atalhos rápidos</span>
-            <div className="dashboard-shortcuts-grid">
+          <article className="dashboard-mini-panel dashboard-mini-panel-compact fade-in-up fade-delay-1">
+            <span className="section-label">Atalhos</span>
+            <div className="dashboard-shortcuts-grid dashboard-shortcuts-grid-compact">
               <a href="#novo-pedido" className="dashboard-shortcut-card">
                 <strong>Gerar pedido</strong>
-                <span>Converter aprovado</span>
+                <span>Converter</span>
               </a>
               <Link href="/dashboard/quotes" className="dashboard-shortcut-card">
                 <strong>Orçamentos</strong>
-                <span>Ver aprovados</span>
+                <span>Aprovados</span>
               </Link>
               <Link href="/dashboard/fiscal" className="dashboard-shortcut-card">
                 <strong>Fiscal</strong>
-                <span>Ir para emissão</span>
+                <span>Emitir</span>
               </Link>
               <Link href="/dashboard" className="dashboard-shortcut-card">
-                <strong>Dashboard</strong>
-                <span>Voltar ao comando</span>
+                <strong>Home</strong>
+                <span>Voltar</span>
               </Link>
             </div>
           </article>

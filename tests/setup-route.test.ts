@@ -140,6 +140,7 @@ test("setup route POST updates setup payload with normalized optional fields", a
       city: input.city,
       state: input.state,
       municipalCode: "3550308",
+      evolutionInstanceName: "",
       serviceDescription: input.serviceDescription,
       defaultFiscalServiceCode: input.defaultFiscalServiceCode || "",
       defaultPixKey: input.defaultPixKey,

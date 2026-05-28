@@ -96,3 +96,18 @@ export function getSetupHealthTone(input: { ok: boolean; warning?: boolean }) {
 
   return "split-panel";
 }
+
+export function getSuggestedEvolutionInstanceName(input: {
+  configuredInstanceName?: string;
+  evolutionInstances: Array<{ instanceName: string; status?: string }>;
+}) {
+  const configuredInstanceName = input.configuredInstanceName?.trim() || "";
+
+  if (configuredInstanceName) {
+    return configuredInstanceName;
+  }
+
+  const openInstances = input.evolutionInstances.filter((instance) => (instance.status || "").toLowerCase() === "open");
+
+  return openInstances.length === 1 ? openInstances[0]?.instanceName || "" : "";
+}

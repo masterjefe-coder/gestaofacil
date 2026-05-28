@@ -51,38 +51,24 @@ export default async function ReportsPage() {
         </article>
 
         <aside className="dashboard-overview-stack">
-          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
-            <span className="section-label">Objetivo do módulo</span>
-            <div className="dashboard-mini-list">
-              <article>
-                <strong>Ler rápido</strong>
-                <p>Os sinais mais importantes aparecem reunidos em uma única tela executiva.</p>
-              </article>
-              <article>
-                <strong>Compartilhar sem retrabalho</strong>
-                <p>Excel e PDF entram como saída do painel, não como processo separado.</p>
-              </article>
-            </div>
-          </article>
-
-          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
-            <span className="section-label">Atalhos rápidos</span>
-            <div className="dashboard-shortcuts-grid">
+          <article className="dashboard-mini-panel dashboard-mini-panel-compact fade-in-up fade-delay-1">
+            <span className="section-label">Atalhos</span>
+            <div className="dashboard-shortcuts-grid dashboard-shortcuts-grid-compact">
               <a href="/api/reports/export" className="dashboard-shortcut-card">
                 <strong>Excel</strong>
-                <span>Exportar planilha</span>
+                <span>Exportar</span>
               </a>
               <Link href="/dashboard/reports/print?autoprint=1" className="dashboard-shortcut-card" target="_blank">
                 <strong>PDF</strong>
-                <span>Gerar impressão</span>
-              </Link>
-              <Link href="/dashboard" className="dashboard-shortcut-card">
-                <strong>Dashboard</strong>
-                <span>Voltar ao comando</span>
+                <span>Imprimir</span>
               </Link>
               <Link href="/dashboard/billing" className="dashboard-shortcut-card">
                 <strong>Cobranças</strong>
-                <span>Ver financeiro</span>
+                <span>Financeiro</span>
+              </Link>
+              <Link href="/dashboard" className="dashboard-shortcut-card">
+                <strong>Home</strong>
+                <span>Voltar</span>
               </Link>
             </div>
           </article>

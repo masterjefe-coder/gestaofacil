@@ -232,6 +232,7 @@ model Company {
   asaasWalletId         String?
   asaasUseOwnAccount    Boolean   @default(false)
   asaasSplitEnabled     Boolean   @default(false)
+  evolutionInstanceName String?   @unique
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   workspaceId           String    @unique

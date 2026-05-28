@@ -70,9 +70,18 @@ export function verifyWebhookTimestamp(
   }
 
   try {
-    const webhookTime = typeof timestamp === "number" 
-      ? timestamp * 1000 // Convert Unix timestamp to milliseconds
-      : new Date(timestamp).getTime();
+    const normalizedTimestamp =
+      typeof timestamp === "string"
+        ? timestamp.trim()
+        : timestamp;
+    const webhookTime =
+      typeof normalizedTimestamp === "number"
+        ? normalizedTimestamp * 1000 // Convert Unix timestamp to milliseconds
+        : /^\d+$/.test(normalizedTimestamp)
+          ? (normalizedTimestamp.length >= 13
+              ? Number(normalizedTimestamp)
+              : Number(normalizedTimestamp) * 1000)
+          : new Date(normalizedTimestamp).getTime();
 
     if (!Number.isFinite(webhookTime)) {
       return false;

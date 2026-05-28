@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Charge as DbCharge, Customer as DbCustomer, Order as DbOrder } from "@prisma/client";
 import { getCurrentWorkspaceContext } from "@/lib/auth-session";
-import { createAsaasCharge } from "@/lib/asaas";
+import { createAsaasCharge, resolveAsaasPaymentLink } from "@/lib/asaas";
 import { getWorkspaceAsaasConnection } from "@/lib/asaas-workspace";
 import { recordAuditEvent } from "@/lib/audit-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
@@ -118,7 +118,7 @@ function toChargeView(charge: DbCharge & { customer: DbCustomer; order: DbOrder 
     dueDate: charge.dueDate ? formatDateInput(charge.dueDate) : undefined,
     status: mapDbChargeStatus(charge.status),
     source: meta.source,
-    paymentLink: charge.paymentLink || meta.externalBilling?.invoiceUrl || meta.externalBilling?.bankSlipUrl,
+    paymentLink: charge.paymentLink || resolveAsaasPaymentLink(meta.externalBilling, meta.externalBilling?.billingType),
     followUps: meta.followUps,
     cadence: meta.cadence,
     externalBilling: meta.externalBilling,

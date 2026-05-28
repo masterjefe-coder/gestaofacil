@@ -5,9 +5,11 @@ import { EvolutionPairingPanel } from "@/components/evolution-pairing-panel";
 import { InviteLinkField } from "@/components/invite-link-field";
 import { OperationalDiagnosticsPanel } from "@/components/operational-diagnostics-panel";
 import {
+  bindEvolutionInstanceAction,
   connectWorkspaceAsaasAccountAction,
   createWorkspaceAsaasSubaccountAction,
   createEvolutionInstanceAction,
+  deleteEvolutionInstanceAction,
   createWorkspaceInviteAction,
   createWorkspaceMemberAction,
   createWorkspaceSubscriptionCheckoutAction,
@@ -108,13 +110,14 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   ]);
   const flash = readSetupPageFlashState(params);
   const operationalFocus = params?.operationalFocus || "";
-  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "").catch(() => null);
   const nfsePortalUrls = getResolvedNfsePortalUrls(setup.city || "", setup.state || "", {
     municipalityStatus,
   });
   const view = buildSetupPageViewModel({
     workspaceRole: context.workspaceRole,
     setupSlug: setup.slug,
+    workspaceEvolutionInstanceName: setup.evolutionInstanceName,
     subscription,
     companyCity: setup.city,
     companyState: setup.state,
@@ -126,8 +129,10 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     asaasIncidentEntries,
   });
   const selectedEvolutionInstanceName = view.selectedEvolutionInstanceName;
-  const selectedEvolutionInstanceState = selectedEvolutionInstanceName
-    ? await getEvolutionConnectionState(selectedEvolutionInstanceName).catch(() => null)
+  const evolutionInstanceNameForActions = view.selectedEvolutionInstanceName || view.suggestedEvolutionInstanceName;
+  const evolutionInstanceNameForCreation = view.suggestedEvolutionInstanceName || "";
+  const selectedEvolutionInstanceState = evolutionInstanceNameForActions
+    ? await getEvolutionConnectionState(evolutionInstanceNameForActions).catch(() => null)
     : null;
   const evolutionOperationalSummary = getEvolutionOperationalSummary({
     integrationEnabled: view.evolutionIntegration.enabled,
@@ -167,15 +172,15 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         <article className="dashboard-spotlight-card fade-in-up">
           <div className="dashboard-spotlight-header">
             <div>
-              <span className="section-label">Leitura estrutural</span>
-              <h2>Essa área mostra o que já está pronto e o que ainda merece ajuste.</h2>
+              <span className="section-label">Visão geral</span>
+              <h2>Empresa, integrações e acesso em leitura curta.</h2>
             </div>
             <span className={`dashboard-priority-badge ${fiscalReadiness.ready ? "priority-normal" : "priority-critical"}`}>
               {fiscalReadiness.ready ? "Tudo em ordem" : "Falta ajustar"}
             </span>
           </div>
           <p>
-            {fiscalReadiness.helper} Aqui ficam os dados da empresa, cobrança, WhatsApp, equipe e sinais de operação no mesmo lugar.
+            {fiscalReadiness.helper} Aqui ficam os dados da empresa, cobrança, WhatsApp, equipe e sinais de operação.
           </p>
 
           <div className="dashboard-top-metrics">
@@ -203,38 +208,24 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </article>
 
         <aside className="dashboard-overview-stack">
-          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
-            <span className="section-label">Objetivo do módulo</span>
-            <div className="dashboard-mini-list">
-              <article>
-                <strong>Amarrar a operação</strong>
-                <p>Dados, cobrança, WhatsApp e equipe precisam estar alinhados para o trabalho fluir.</p>
-              </article>
-              <article>
-                <strong>Antecipar travas</strong>
-                <p>Quando essa base está ajustada, você evita retrabalho na cobrança, no atendimento e na emissão.</p>
-              </article>
-            </div>
-          </article>
-
-          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
-            <span className="section-label">Atalhos rápidos</span>
-            <div className="dashboard-shortcuts-grid">
+          <article className="dashboard-mini-panel dashboard-mini-panel-compact fade-in-up fade-delay-1">
+            <span className="section-label">Próximos passos</span>
+            <div className="dashboard-shortcuts-grid dashboard-shortcuts-grid-compact">
               <a href="#subscription-section" className="dashboard-shortcut-card">
-                <strong>Assinatura</strong>
-                <span>Ver plano</span>
+                <strong>Plano</strong>
+                <span>Abrir</span>
+              </a>
+              <a href="#integrations-section" className="dashboard-shortcut-card">
+                <strong>WhatsApp</strong>
+                <span>Conectar</span>
               </a>
               <a href="#team-section" className="dashboard-shortcut-card">
                 <strong>Equipe</strong>
-                <span>Gerenciar acessos</span>
-              </a>
-              <a href="#integrations-section" className="dashboard-shortcut-card">
-                <strong>Integrações</strong>
-                <span>Conectar serviços</span>
+                <span>Acessos</span>
               </a>
               <Link href="/dashboard" className="dashboard-shortcut-card">
-                <strong>Dashboard</strong>
-                <span>Voltar ao comando</span>
+                <strong>Home</strong>
+                <span>Voltar</span>
               </Link>
             </div>
           </article>
@@ -332,6 +323,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <span>Razão social</span>
               <input name="legalName" type="text" defaultValue={setup.legalName} />
             </label>
+            <input type="hidden" name="evolutionInstanceName" value={setup.evolutionInstanceName || ""} />
             <label>
               <span>Documento</span>
               <input name="document" type="text" defaultValue={setup.document} required />
@@ -434,11 +426,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </article>
       </section>
 
-      <section className="data-panel">
+      <section className="data-panel data-panel-tight">
         <div className="card-header">
           <div>
-            <span className="section-label">Observabilidade</span>
-            <h2>Saúde operacional das integrações</h2>
+            <span className="section-label">Saúde operacional</span>
+            <h2>Leitura curta das integrações</h2>
           </div>
         </div>
 
@@ -619,7 +611,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <input
                 name="instanceName"
                 type="text"
-                defaultValue={setup.slug}
+                defaultValue={evolutionInstanceNameForCreation}
                 placeholder="Ex.: numero-principal"
                 required
               />
@@ -653,11 +645,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </form>
         ) : null}
 
-        {selectedEvolutionInstanceName ? (
+        {evolutionInstanceNameForActions ? (
           <div className={evolutionOperationalSummary.tone === "success" ? "auth-hint" : "auth-hint fiscal-warning"}>
             <strong>{evolutionOperationalSummary.title}</strong>
             <span>
-              {selectedEvolutionInstanceName}
+              {evolutionInstanceNameForActions}
               {selectedEvolutionInstanceState?.instance?.state
                 ? ` · estado ${getEvolutionStateLabel(selectedEvolutionInstanceState.instance.state)}`
                 : ""}
@@ -668,33 +660,42 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <small className="muted-text">
               {view.isUsingWorkspaceEvolutionInstance
                 ? "A tela já está usando o número principal desta empresa."
-                : "A tela está usando um número padrão porque ainda não encontrou uma conexão com o nome desta empresa."}
+                : view.suggestedEvolutionInstanceName
+                  ? "Encontramos uma conexão ativa na Evolution e já estamos sugerindo ela para esta empresa."
+                  : "A conexão principal desta empresa está definida, mas ainda não apareceu na leitura operacional da Evolution."}
             </small>
+          </div>
+        ) : null}
+
+        {!evolutionInstanceNameForActions ? (
+          <div className="auth-hint fiscal-warning">
+            <strong>Instância principal ainda não definida</strong>
+            <span>Escolha uma conexão existente ou crie uma nova antes de parear e operar o WhatsApp desta empresa.</span>
           </div>
         ) : null}
 
         {view.workspaceEvolutionInstance && view.evolutionIntegration.instance && view.evolutionIntegration.instance !== view.workspaceEvolutionInstance.instanceName ? (
           <div className="auth-hint fiscal-warning">
-            <strong>O número padrão ainda não é o ideal</strong>
+            <strong>A leitura operacional ainda não bate com a conexão principal</strong>
             <span>
-              O sistema ainda estava apontando para outra conexão, mas esta empresa já tem uma conexão própria pronta para uso.
+              A empresa já tem uma conexão principal definida, mas a leitura atual da Evolution ainda está apontando para outra instância.
             </span>
             <small className="muted-text">
-              A tela já prioriza a conexão certa, para evitar que mensagens saiam pelo número errado.
+              A tela já prioriza a conexão certa para evitar que mensagens saiam pela instância errada.
             </small>
           </div>
         ) : null}
 
-        {view.canManage && selectedEvolutionInstanceName ? (
-          <EvolutionPairingPanel instanceName={selectedEvolutionInstanceName} />
+        {view.canManage && evolutionInstanceNameForActions ? (
+          <EvolutionPairingPanel instanceName={evolutionInstanceNameForActions} />
         ) : null}
 
-        <details className="guided-flow-card">
+        <details className="guided-flow-card" open={evolutionInstances.length > 0}>
           <summary>
             <div>
               <span className="section-label">Visão detalhada</span>
-              <h3>Ver outras conexões e situação de cada uma</h3>
-              <p>Abra só quando quiser revisar conexões antigas, números em teste ou detalhes de atualização.</p>
+              <h3>Ver conexões, uso e exclusão</h3>
+              <p>Lista aberta para revisar o que está ativo, o que está vinculado e o que pode ser removido.</p>
             </div>
             <span className="guided-flow-badge">Opcional</span>
           </summary>
@@ -706,6 +707,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 <span>Status</span>
                 <span>Número</span>
                 <span>Atualização</span>
+                <span>Ações</span>
               </div>
               {evolutionInstances.length > 0 ? evolutionInstances.map((instance) => (
                 <article key={instance.instanceName} className="data-table-row">
@@ -716,11 +718,26 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                   <span>{getEvolutionStateLabel(instance.status)}</span>
                   <span>{instance.owner || "Aguardando conexão"}</span>
                   <span>{instance.webhookUrl || view.evolutionIntegration.webhookUrl || "Atualização automática pronta"}</span>
+                  <div className="row-action">
+                    <form action={bindEvolutionInstanceAction}>
+                      <input type="hidden" name="instanceName" value={instance.instanceName} />
+                      <button type="submit" className="ghost-button">
+                        {setup.evolutionInstanceName === instance.instanceName ? "Instância atual" : "Usar nesta empresa"}
+                      </button>
+                    </form>
+                    <form action={deleteEvolutionInstanceAction}>
+                      <input type="hidden" name="instanceName" value={instance.instanceName} />
+                      <button type="submit" className="ghost-button ghost-button-danger">
+                        Excluir
+                      </button>
+                    </form>
+                  </div>
                 </article>
               )) : (
                 <article className="data-table-row">
                   <span>Nenhuma conexão encontrada</span>
                   <span>Conecte o WhatsApp da empresa</span>
+                  <span>-</span>
                   <span>-</span>
                   <span>-</span>
                 </article>
@@ -764,7 +781,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         {view.canManage ? (
           <>
             <div className="guided-flow-stack">
-              <details className="guided-flow-card" open={workspaceAsaas.mode !== "workspace"}>
+              <details className="guided-flow-card" open={workspaceAsaas.mode !== "workspace" || flash.asaasCreated || Boolean(flash.asaasError)}>
                 <summary>
                   <div>
                     <span className="section-label">Recomendado</span>
@@ -843,7 +860,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 </div>
               </details>
 
-              <details className="guided-flow-card" open={workspaceAsaas.mode === "workspace"}>
+              <details className="guided-flow-card" open={workspaceAsaas.mode === "workspace" || flash.asaasConnected || Boolean(flash.asaasError)}>
                 <summary>
                   <div>
                     <span className="section-label">Conta existente</span>
@@ -1104,7 +1121,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </article>
 
         <article className="split-panel">
-          <span className="section-label">Proteção de login</span>
+          <span className="section-label">Login</span>
           <h2>Cooldown ativo para excesso de tentativas</h2>
           <p>
             O login agora aplica proteção persistida contra repetição excessiva de tentativas e registra eventos de acesso no workspace.
@@ -1112,18 +1129,18 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         </article>
       </section>
 
-      <section id="access-section" className="data-panel">
+      <section id="access-section" className="data-panel data-panel-tight">
         <div className="card-header">
           <div>
-            <span className="section-label">Acesso e alertas</span>
-            <h2>Controle o que aparece para você e acompanhe o que aconteceu no workspace</h2>
+            <span className="section-label">Acesso</span>
+            <h2>Alertas e segurança em um painel curto</h2>
           </div>
         </div>
 
         {flash.alertPrefsSaved ? <p className="auth-hint">Preferências pessoais de alerta salvas com sucesso.</p> : null}
         {flash.alertPrefsError ? <p className="auth-error">{flash.alertPrefsError}</p> : null}
 
-        <div className="cards-grid quote-grid">
+        <div className="cards-grid quote-grid dashboard-card-grid-compact">
           <article className="dashboard-card">
             <span className="dashboard-kicker">Entradas recentes</span>
             <h3>{accessSummary.successCount}</h3>
@@ -1146,10 +1163,10 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </article>
         </div>
 
-        <div className="section-split">
+        <div className="section-split section-split-tight">
           <article className="split-panel">
-            <span className="section-label">Preferências do seu usuário</span>
-            <h2>Escolha como quer receber sinais operacionais</h2>
+            <span className="section-label">Preferências</span>
+            <h2>Como você quer receber sinais</h2>
             <p>Essas escolhas valem só para a sua conta dentro deste workspace.</p>
 
             <form action={updateUserAlertPreferencesAction} className="inline-form">
@@ -1176,8 +1193,8 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </article>
 
           <article className="split-panel">
-            <span className="section-label">Leitura rápida</span>
-            <h2>O que esse painel já ajuda a detectar</h2>
+            <span className="section-label">Resumo</span>
+            <h2>O que este painel já cobre</h2>
             <p>
               Picos de falha de login, excesso de recuperação de senha, convites aceitos e saídas de sessão ficam visíveis sem depender de suporte técnico.
             </p>

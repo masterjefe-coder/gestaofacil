@@ -1,7 +1,7 @@
 import { recordAuditEvent } from "@/lib/audit-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { prisma } from "@/lib/prisma";
-import { extractMessageId, normalizePhone } from "@/lib/whatsapp-message-metadata";
+import { extractMessageId, extractRemoteJid, normalizePhone } from "@/lib/whatsapp-message-metadata";
 
 type EvolutionWebhookPayload = {
   event?: string;
@@ -77,6 +77,15 @@ async function resolveWorkspaceIdFromInstance(instanceName: string) {
     return null;
   }
 
+  const companyMatch = await prisma.company.findFirst({
+    where: { evolutionInstanceName: instanceName },
+    select: { workspaceId: true },
+  });
+
+  if (companyMatch?.workspaceId) {
+    return companyMatch.workspaceId;
+  }
+
   const exactMatch = await prisma.workspace.findUnique({
     where: { slug: instanceName },
     select: { id: true },
@@ -84,20 +93,6 @@ async function resolveWorkspaceIdFromInstance(instanceName: string) {
 
   if (exactMatch) {
     return exactMatch.id;
-  }
-
-  const defaultInstance = process.env.EVOLUTION_API_INSTANCE?.trim();
-
-  if (defaultInstance && instanceName === defaultInstance) {
-    const workspaces = await prisma.workspace.findMany({
-      select: { id: true },
-      take: 2,
-      orderBy: { createdAt: "asc" },
-    });
-
-    if (workspaces.length === 1) {
-      return workspaces[0].id;
-    }
   }
 
   return null;
@@ -223,8 +218,8 @@ export async function handleEvolutionWebhook(payload: EvolutionWebhookPayload) {
   const data = payload.data && typeof payload.data === "object" && !Array.isArray(payload.data)
     ? payload.data as Record<string, unknown>
     : null;
-  const remoteJid = getString(data?.remoteJid) || null;
-  const messageId = extractMessageId(data);
+  const remoteJid = extractRemoteJid(data || payload) || getString(payload.sender) || null;
+  const messageId = extractMessageId(data || payload);
   const linkedChargeId = await resolveLinkedChargeIdByMessageId(workspaceId, messageId)
     || (remoteJid ? await resolveLinkedChargeId(workspaceId, remoteJid) : null);
 

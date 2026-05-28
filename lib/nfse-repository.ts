@@ -657,7 +657,7 @@ async function issueJoinvillePreviewPayloadInternal(input: {
 }
 
 async function resolveProviderForSetup(setup: Awaited<ReturnType<typeof getWorkspaceSetup>>) {
-  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "").catch(() => null);
   const provider = resolveNfseProvider(setup.city, setup.state, {
     municipalityStatus,
   });

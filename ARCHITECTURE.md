@@ -28,7 +28,7 @@ Backend:
 
 Infra:
 
-- Vercel para app
+- VM dedicada, container ou hospedagem equivalente
 - Supabase ou Postgres gerenciado
 - object storage apenas se necessario
 

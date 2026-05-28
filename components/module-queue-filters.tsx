@@ -30,7 +30,6 @@ export function ModuleQueueFilters({
     <section className="data-panel queue-filter-panel">
       <div className="card-header queue-filter-header">
         <div>
-          <span className="section-label">Visão da fila</span>
           <h2>{title}</h2>
         </div>
         <div className="queue-filter-summary">

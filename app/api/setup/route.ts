@@ -55,6 +55,7 @@ export async function POST(request: Request) {
       document: body.document,
       city: body.city,
       state: body.state,
+      evolutionInstanceName: body.evolutionInstanceName,
       serviceDescription: body.serviceDescription,
       defaultFiscalServiceCode: body.defaultFiscalServiceCode,
       defaultPixKey: body.defaultPixKey,
