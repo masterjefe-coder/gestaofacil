@@ -55,6 +55,39 @@ test("buildWhatsappConversationSnapshot groups inbound and outbound messages by 
   assert.equal(conversations[0]?.messages[1]?.direction, "inbound");
 });
 
+test("buildWhatsappConversationSnapshot treats charge replies as inbound timeline entries", () => {
+  const conversations = buildWhatsappConversationSnapshot(
+    [
+      {
+        id: "customer-2",
+        name: "Cliente Retorno",
+        phone: "5547999990000",
+      },
+    ],
+    [
+      {
+        id: "event-3",
+        action: "charge.whatsapp.received",
+        entityType: "charge",
+        entityId: "charge-1",
+        createdAt: new Date("2026-05-26T19:10:00.000Z"),
+        payload: {
+          summary: "Resposta do cliente ligada à cobrança.",
+          metadata: {
+            remoteJid: "5547999990000@s.whatsapp.net",
+            messagePreview: "vou pagar hoje",
+          },
+        },
+      },
+    ],
+  );
+
+  assert.equal(conversations.length, 1);
+  assert.equal(conversations[0]?.inboundCount, 1);
+  assert.equal(conversations[0]?.pendingReply, true);
+  assert.equal(conversations[0]?.messages[0]?.direction, "inbound");
+});
+
 test("buildWhatsappConversationSnapshot ignores events without resolvable phone", () => {
   const conversations = buildWhatsappConversationSnapshot(
     [],

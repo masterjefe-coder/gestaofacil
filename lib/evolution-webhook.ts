@@ -1,7 +1,7 @@
 import { recordAuditEvent } from "@/lib/audit-repository";
 import { isLocalDataMode } from "@/lib/data-mode";
 import { prisma } from "@/lib/prisma";
-import { extractMessageId, normalizePhone } from "@/lib/whatsapp-message-metadata";
+import { extractMessageId, extractRemoteJid, normalizePhone } from "@/lib/whatsapp-message-metadata";
 
 type EvolutionWebhookPayload = {
   event?: string;
@@ -218,8 +218,8 @@ export async function handleEvolutionWebhook(payload: EvolutionWebhookPayload) {
   const data = payload.data && typeof payload.data === "object" && !Array.isArray(payload.data)
     ? payload.data as Record<string, unknown>
     : null;
-  const remoteJid = getString(data?.remoteJid) || null;
-  const messageId = extractMessageId(data);
+  const remoteJid = extractRemoteJid(data || payload) || getString(payload.sender) || null;
+  const messageId = extractMessageId(data || payload);
   const linkedChargeId = await resolveLinkedChargeIdByMessageId(workspaceId, messageId)
     || (remoteJid ? await resolveLinkedChargeId(workspaceId, remoteJid) : null);
 

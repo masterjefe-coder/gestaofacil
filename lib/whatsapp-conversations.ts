@@ -65,10 +65,13 @@ const WHATSAPP_ACTIONS = [
   "evolution.messages_upsert",
   "customer.whatsapp.sent",
   "customer.whatsapp.failed",
+  "customer.whatsapp.received",
   "quote.whatsapp.sent",
   "quote.whatsapp.failed",
+  "quote.whatsapp.received",
   "charge.whatsapp.sent",
   "charge.whatsapp.failed",
+  "charge.whatsapp.received",
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -134,7 +137,7 @@ function resolveConversationPhone(metadata: Record<string, unknown> | null) {
 }
 
 function getDirection(action: string): WhatsappConversationMessageDirection {
-  if (action === "evolution.messages_upsert") {
+  if (action === "evolution.messages_upsert" || action.endsWith(".whatsapp.received")) {
     return "inbound";
   }
 
