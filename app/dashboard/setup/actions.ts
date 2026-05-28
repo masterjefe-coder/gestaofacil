@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { WorkspaceRole } from "@prisma/client";
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
-import { connectEvolutionInstance, createEvolutionInstance, EvolutionApiError } from "@/lib/evolution-api";
+import { connectEvolutionInstance, createEvolutionInstance, EvolutionApiError, fetchEvolutionInstances } from "@/lib/evolution-api";
 import {
   bindWorkspaceEvolutionInstanceName,
   ensureWorkspaceEvolutionInstanceAvailable,
@@ -345,6 +345,15 @@ export async function createEvolutionInstanceAction(formData: FormData) {
     );
     const number = readOptionalFormMaybeString(formData, "instanceNumber");
     await ensureWorkspaceEvolutionInstanceAvailable(instanceName, context.workspaceId);
+    const existingInstances = await fetchEvolutionInstances().catch(() => []);
+    const existingInstance = existingInstances.find((instance) => instance.instanceName === instanceName);
+
+    if (existingInstance) {
+      await bindWorkspaceEvolutionInstanceName(instanceName);
+      revalidatePath("/dashboard/setup");
+      revalidatePath("/dashboard/whatsapp");
+      redirectEvolution(`A instância ${instanceName} já existia na Evolution e foi vinculada a esta empresa.`, true);
+    }
 
     await createEvolutionInstance({
       instanceName,

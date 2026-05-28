@@ -128,8 +128,9 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     asaasIncidentEntries,
   });
   const selectedEvolutionInstanceName = view.selectedEvolutionInstanceName;
-  const selectedEvolutionInstanceState = selectedEvolutionInstanceName
-    ? await getEvolutionConnectionState(selectedEvolutionInstanceName).catch(() => null)
+  const evolutionInstanceNameForActions = view.selectedEvolutionInstanceName || view.suggestedEvolutionInstanceName;
+  const selectedEvolutionInstanceState = evolutionInstanceNameForActions
+    ? await getEvolutionConnectionState(evolutionInstanceNameForActions).catch(() => null)
     : null;
   const evolutionOperationalSummary = getEvolutionOperationalSummary({
     integrationEnabled: view.evolutionIntegration.enabled,
@@ -607,7 +608,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <input
                 name="instanceName"
                 type="text"
-                defaultValue={setup.evolutionInstanceName || setup.slug}
+                defaultValue={evolutionInstanceNameForActions}
                 placeholder="Ex.: numero-principal"
                 required
               />
@@ -641,11 +642,11 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </form>
         ) : null}
 
-        {selectedEvolutionInstanceName ? (
+        {evolutionInstanceNameForActions ? (
           <div className={evolutionOperationalSummary.tone === "success" ? "auth-hint" : "auth-hint fiscal-warning"}>
             <strong>{evolutionOperationalSummary.title}</strong>
             <span>
-              {selectedEvolutionInstanceName}
+              {evolutionInstanceNameForActions}
               {selectedEvolutionInstanceState?.instance?.state
                 ? ` · estado ${getEvolutionStateLabel(selectedEvolutionInstanceState.instance.state)}`
                 : ""}
@@ -656,12 +657,14 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <small className="muted-text">
               {view.isUsingWorkspaceEvolutionInstance
                 ? "A tela já está usando o número principal desta empresa."
-                : "A conexão principal desta empresa está definida, mas ainda não apareceu na leitura operacional da Evolution."}
+                : view.suggestedEvolutionInstanceName
+                  ? "Encontramos uma conexão ativa na Evolution e já estamos sugerindo ela para esta empresa."
+                  : "A conexão principal desta empresa está definida, mas ainda não apareceu na leitura operacional da Evolution."}
             </small>
           </div>
         ) : null}
 
-        {!selectedEvolutionInstanceName ? (
+        {!evolutionInstanceNameForActions ? (
           <div className="auth-hint fiscal-warning">
             <strong>Instância principal ainda não definida</strong>
             <span>Escolha uma conexão existente ou crie uma nova antes de parear e operar o WhatsApp desta empresa.</span>
@@ -680,8 +683,8 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           </div>
         ) : null}
 
-        {view.canManage && selectedEvolutionInstanceName ? (
-          <EvolutionPairingPanel instanceName={selectedEvolutionInstanceName} />
+        {view.canManage && evolutionInstanceNameForActions ? (
+          <EvolutionPairingPanel instanceName={evolutionInstanceNameForActions} />
         ) : null}
 
         <details className="guided-flow-card">

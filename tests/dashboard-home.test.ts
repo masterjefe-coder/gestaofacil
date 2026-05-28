@@ -15,6 +15,7 @@ import {
   getEvolutionStateLabel,
   getNfseMunicipalityBlockSummary,
   getSetupHealthTone,
+  getSuggestedEvolutionInstanceName,
 } from "@/lib/setup-page-helpers";
 
 test("dashboard priority helpers map labels and classes consistently", () => {
@@ -185,6 +186,28 @@ test("setup page helpers classify evolution operational readiness", () => {
     title: "WhatsApp configurado, mas desconectado",
     description: "A API responde, porém a instância principal está fechada e precisa ser reconectada.",
   });
+});
+
+test("setup page helpers suggest a single open evolution instance when no binding exists", () => {
+  assert.equal(getSuggestedEvolutionInstanceName({
+    configuredInstanceName: "",
+    evolutionInstances: [
+      { instanceName: "ofertas-do-ton", status: "open" },
+    ],
+  }), "ofertas-do-ton");
+
+  assert.equal(getSuggestedEvolutionInstanceName({
+    configuredInstanceName: "",
+    evolutionInstances: [
+      { instanceName: "primeira", status: "open" },
+      { instanceName: "segunda", status: "open" },
+    ],
+  }), "");
+
+  assert.equal(getSuggestedEvolutionInstanceName({
+    configuredInstanceName: "configurada",
+    evolutionInstances: [],
+  }), "configurada");
 });
 
 test("setup page helpers explain municipal blockage for nfse automatic issuance", () => {

@@ -7,6 +7,7 @@ import {
   getResolvedNfseIntegrationStatus,
 } from "@/lib/nfse-provider";
 import type { NfseNationalMunicipalityStatus } from "@/lib/nfse-national-municipal-status";
+import { getSuggestedEvolutionInstanceName } from "@/lib/setup-page-helpers";
 import { getBillingCycleLabel, getSubscriptionPlanPresentation, getTrialRemainingDays } from "@/lib/subscription";
 import { isTransactionalEmailConfigured } from "@/lib/transactional-email";
 
@@ -39,6 +40,10 @@ export function buildSetupPageViewModel(input: {
   const asaasIntegration = getAsaasIntegrationStatus();
   const transactionalEmailReady = isTransactionalEmailConfigured();
   const configuredInstanceName = input.workspaceEvolutionInstanceName?.trim() || "";
+  const suggestedEvolutionInstanceName = getSuggestedEvolutionInstanceName({
+    configuredInstanceName,
+    evolutionInstances: input.evolutionInstances,
+  });
   const workspaceEvolutionInstance = configuredInstanceName
     ? input.evolutionInstances.find((instance) => instance.instanceName === configuredInstanceName)
     : undefined;
@@ -68,6 +73,7 @@ export function buildSetupPageViewModel(input: {
     transactionalEmailReady,
     workspaceEvolutionInstance,
     selectedEvolutionInstanceName,
+    suggestedEvolutionInstanceName,
     selectedEvolutionInstanceStatus,
     isUsingWorkspaceEvolutionInstance,
     subscriptionPlan,
