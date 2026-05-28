@@ -319,6 +319,13 @@ export async function getEvolutionConnectionState(instanceName: string) {
   );
 }
 
+export async function deleteEvolutionInstance(instanceName: string) {
+  return evolutionRequest<{ status?: string; error?: boolean; response?: { message?: string } }>(
+    `/instance/delete/${encodeURIComponent(instanceName)}`,
+    { method: "DELETE" },
+  );
+}
+
 export async function probeEvolutionApi() {
   const config = getConfig();
 

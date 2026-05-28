@@ -16,6 +16,7 @@ type SetupPayload = {
   document: string;
   city: string;
   state: string;
+  evolutionInstanceName?: string;
   serviceDescription: string;
   defaultFiscalServiceCode: string;
   defaultPixKey: string;
@@ -173,6 +174,7 @@ export function parseSetupPayload(body: JsonObject): SetupPayload {
     document: readRequiredString(body, "document"),
     city: readOptionalString(body, "city"),
     state: readOptionalString(body, "state"),
+    evolutionInstanceName: readOptionalString(body, "evolutionInstanceName") || undefined,
     serviceDescription: readOptionalString(body, "serviceDescription"),
     defaultFiscalServiceCode: readOptionalString(body, "defaultFiscalServiceCode"),
     defaultPixKey: readOptionalString(body, "defaultPixKey"),

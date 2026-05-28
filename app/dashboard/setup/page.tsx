@@ -9,6 +9,7 @@ import {
   connectWorkspaceAsaasAccountAction,
   createWorkspaceAsaasSubaccountAction,
   createEvolutionInstanceAction,
+  deleteEvolutionInstanceAction,
   createWorkspaceInviteAction,
   createWorkspaceMemberAction,
   createWorkspaceSubscriptionCheckoutAction,
@@ -129,6 +130,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   });
   const selectedEvolutionInstanceName = view.selectedEvolutionInstanceName;
   const evolutionInstanceNameForActions = view.selectedEvolutionInstanceName || view.suggestedEvolutionInstanceName;
+  const evolutionInstanceNameForCreation = view.suggestedEvolutionInstanceName || "";
   const selectedEvolutionInstanceState = evolutionInstanceNameForActions
     ? await getEvolutionConnectionState(evolutionInstanceNameForActions).catch(() => null)
     : null;
@@ -321,6 +323,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <span>Razão social</span>
               <input name="legalName" type="text" defaultValue={setup.legalName} />
             </label>
+            <input type="hidden" name="evolutionInstanceName" value={setup.evolutionInstanceName || ""} />
             <label>
               <span>Documento</span>
               <input name="document" type="text" defaultValue={setup.document} required />
@@ -608,7 +611,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <input
                 name="instanceName"
                 type="text"
-                defaultValue={evolutionInstanceNameForActions}
+                defaultValue={evolutionInstanceNameForCreation}
                 placeholder="Ex.: numero-principal"
                 required
               />
@@ -687,12 +690,12 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
           <EvolutionPairingPanel instanceName={evolutionInstanceNameForActions} />
         ) : null}
 
-        <details className="guided-flow-card">
+        <details className="guided-flow-card" open={evolutionInstances.length > 0}>
           <summary>
             <div>
               <span className="section-label">Visão detalhada</span>
-              <h3>Ver outras conexões e situação de cada uma</h3>
-              <p>Abra só quando quiser revisar conexões antigas, números em teste ou detalhes de atualização.</p>
+              <h3>Ver conexões, uso e exclusão</h3>
+              <p>Lista aberta para revisar o que está ativo, o que está vinculado e o que pode ser removido.</p>
             </div>
             <span className="guided-flow-badge">Opcional</span>
           </summary>
@@ -715,12 +718,20 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                   <span>{getEvolutionStateLabel(instance.status)}</span>
                   <span>{instance.owner || "Aguardando conexão"}</span>
                   <span>{instance.webhookUrl || view.evolutionIntegration.webhookUrl || "Atualização automática pronta"}</span>
-                  <form action={bindEvolutionInstanceAction} className="row-action">
-                    <input type="hidden" name="instanceName" value={instance.instanceName} />
-                    <button type="submit" className="ghost-button">
-                      {setup.evolutionInstanceName === instance.instanceName ? "Instância atual" : "Usar nesta empresa"}
-                    </button>
-                  </form>
+                  <div className="row-action">
+                    <form action={bindEvolutionInstanceAction}>
+                      <input type="hidden" name="instanceName" value={instance.instanceName} />
+                      <button type="submit" className="ghost-button">
+                        {setup.evolutionInstanceName === instance.instanceName ? "Instância atual" : "Usar nesta empresa"}
+                      </button>
+                    </form>
+                    <form action={deleteEvolutionInstanceAction}>
+                      <input type="hidden" name="instanceName" value={instance.instanceName} />
+                      <button type="submit" className="ghost-button ghost-button-danger">
+                        Excluir
+                      </button>
+                    </form>
+                  </div>
                 </article>
               )) : (
                 <article className="data-table-row">

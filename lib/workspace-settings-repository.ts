@@ -157,6 +157,71 @@ export async function bindWorkspaceEvolutionInstanceName(instanceName: string) {
   return normalizedInstanceName;
 }
 
+export async function unbindWorkspaceEvolutionInstanceName(instanceName?: string) {
+  const normalizedInstanceName = instanceName?.trim() || "";
+
+  if (!isLocalDataMode()) {
+    await ensureDemoCommerceSeeded();
+    const context = await getCurrentWorkspaceContext();
+
+    if (!canManageWorkspace(context.workspaceRole)) {
+      throw new Error("Apenas owner ou admin podem desvincular a instancia principal do WhatsApp.");
+    }
+
+    const company = await prisma.company.findUnique({
+      where: { workspaceId: context.workspaceId },
+      select: { evolutionInstanceName: true },
+    });
+
+    const currentInstanceName = company?.evolutionInstanceName?.trim() || "";
+
+    if (!currentInstanceName) {
+      return "";
+    }
+
+    if (normalizedInstanceName && normalizedInstanceName !== currentInstanceName) {
+      return currentInstanceName;
+    }
+
+    await prisma.company.updateMany({
+      where: { workspaceId: context.workspaceId },
+      data: {
+        evolutionInstanceName: null,
+      },
+    });
+
+    await recordAuditEvent({
+      action: "workspace.evolution.instance_unbound",
+      entityType: "workspace",
+      entityId: context.workspaceId,
+      context,
+      payload: {
+        summary: `Instancia principal do WhatsApp desvinculada do workspace: ${currentInstanceName}.`,
+        metadata: {
+          instanceName: currentInstanceName,
+        },
+      },
+    });
+
+    return currentInstanceName;
+  }
+
+  const data = await readDemoWorkspaceData();
+  const currentInstanceName = data.company.evolutionInstanceName?.trim() || "";
+
+  if (!currentInstanceName) {
+    return "";
+  }
+
+  if (normalizedInstanceName && normalizedInstanceName !== currentInstanceName) {
+    return currentInstanceName;
+  }
+
+  data.company.evolutionInstanceName = "";
+  await writeDemoWorkspaceData(data);
+  return currentInstanceName;
+}
+
 export async function updateWorkspaceSetup(input: SetupInput) {
   const resolvedMunicipality = input.city && input.state
     ? await resolveIbgeMunicipalityCode(input.city, input.state)
@@ -178,6 +243,10 @@ export async function updateWorkspaceSetup(input: SetupInput) {
         where: { workspaceId: context.workspaceId },
       }),
     ]);
+    const nextEvolutionInstanceName =
+      input.evolutionInstanceName === undefined
+        ? company?.evolutionInstanceName || null
+        : input.evolutionInstanceName || null;
 
     const changedFields = [
       workspace.name !== input.name ? "nome do workspace" : null,
@@ -188,7 +257,7 @@ export async function updateWorkspaceSetup(input: SetupInput) {
       (company?.city || "") !== input.city ? "cidade" : null,
       (company?.state || "") !== input.state ? "UF" : null,
       (company?.municipalCode || "") !== (resolvedMunicipality?.municipalCode || "") ? "codigo IBGE" : null,
-      (company?.evolutionInstanceName || "") !== (input.evolutionInstanceName || "") ? "instancia principal do WhatsApp" : null,
+      (company?.evolutionInstanceName || "") !== (nextEvolutionInstanceName || "") ? "instancia principal do WhatsApp" : null,
       (company?.serviceDescription || "") !== (input.serviceDescription || input.niche)
         ? "descricao de servicos"
         : null,
@@ -218,7 +287,7 @@ export async function updateWorkspaceSetup(input: SetupInput) {
             city: input.city,
             state: input.state,
             municipalCode: resolvedMunicipality?.municipalCode || null,
-            evolutionInstanceName: input.evolutionInstanceName || null,
+            evolutionInstanceName: nextEvolutionInstanceName,
             serviceDescription: input.serviceDescription || input.niche,
             defaultFiscalServiceCode: input.defaultFiscalServiceCode || null,
             defaultPixKey: input.defaultPixKey,
@@ -232,7 +301,7 @@ export async function updateWorkspaceSetup(input: SetupInput) {
             city: input.city,
             state: input.state,
             municipalCode: resolvedMunicipality?.municipalCode || null,
-            evolutionInstanceName: input.evolutionInstanceName || null,
+            evolutionInstanceName: nextEvolutionInstanceName,
             serviceDescription: input.serviceDescription || input.niche,
             defaultFiscalServiceCode: input.defaultFiscalServiceCode || null,
             defaultPixKey: input.defaultPixKey,
@@ -256,7 +325,7 @@ export async function updateWorkspaceSetup(input: SetupInput) {
                 city: input.city || null,
                 state: input.state || null,
                 municipalCode: resolvedMunicipality?.municipalCode || null,
-                evolutionInstanceName: input.evolutionInstanceName || null,
+                evolutionInstanceName: nextEvolutionInstanceName,
               },
             },
           },
@@ -296,7 +365,10 @@ export async function updateWorkspaceSetup(input: SetupInput) {
         city: input.city,
         state: input.state,
         municipalCode: resolvedMunicipality?.municipalCode || "",
-        evolutionInstanceName: input.evolutionInstanceName || "",
+        evolutionInstanceName:
+          input.evolutionInstanceName === undefined
+            ? company?.evolutionInstanceName || ""
+            : input.evolutionInstanceName || "",
         serviceDescription: input.serviceDescription,
         defaultFiscalServiceCode: input.defaultFiscalServiceCode || "",
         defaultPixKey: input.defaultPixKey,
@@ -320,7 +392,10 @@ export async function updateWorkspaceSetup(input: SetupInput) {
     city: input.city,
     state: input.state,
     municipalCode: resolvedMunicipality?.municipalCode || "",
-    evolutionInstanceName: input.evolutionInstanceName || data.company.evolutionInstanceName || "",
+    evolutionInstanceName:
+      input.evolutionInstanceName === undefined
+        ? data.company.evolutionInstanceName || ""
+        : input.evolutionInstanceName || "",
     serviceDescription: input.serviceDescription,
     defaultFiscalServiceCode: input.defaultFiscalServiceCode || "",
     defaultPixKey: input.defaultPixKey,

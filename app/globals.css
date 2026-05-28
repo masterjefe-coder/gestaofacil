@@ -2090,6 +2090,8 @@ p {
   display: flex;
   align-items: start;
   justify-content: end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .card-action {
@@ -2112,6 +2114,15 @@ p {
 .ghost-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 24px rgba(194, 70, 92, 0.08);
+}
+
+.ghost-button-danger {
+  background: rgba(194, 70, 92, 0.08);
+  border-color: rgba(194, 70, 92, 0.22);
+}
+
+.ghost-button-danger:hover {
+  background: rgba(194, 70, 92, 0.12);
 }
 
 .quote-grid {

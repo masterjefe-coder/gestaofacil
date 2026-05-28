@@ -4,13 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { WorkspaceRole } from "@prisma/client";
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
-import { connectEvolutionInstance, createEvolutionInstance, EvolutionApiError, fetchEvolutionInstances } from "@/lib/evolution-api";
+import { connectEvolutionInstance, createEvolutionInstance, deleteEvolutionInstance, EvolutionApiError, fetchEvolutionInstances } from "@/lib/evolution-api";
 import {
   bindWorkspaceEvolutionInstanceName,
   ensureWorkspaceEvolutionInstanceAvailable,
   connectWorkspaceAsaasAccount,
   createWorkspaceAsaasSubaccount,
   disconnectWorkspaceAsaasAccount,
+  getWorkspaceEvolutionInstanceNameByWorkspaceId,
+  unbindWorkspaceEvolutionInstanceName,
   updateWorkspaceSetup,
 } from "@/lib/workspace-settings-repository";
 import {
@@ -81,6 +83,7 @@ export async function updateWorkspaceSetupAction(formData: FormData) {
       document: readRequiredFormString(formData, "document", "Preencha os campos principais da empresa antes de salvar."),
       city: readOptionalFormString(formData, "city"),
       state: readOptionalFormString(formData, "state"),
+      evolutionInstanceName: readOptionalFormString(formData, "evolutionInstanceName") || undefined,
       serviceDescription: readOptionalFormString(formData, "serviceDescription"),
       defaultFiscalServiceCode: readOptionalFormString(formData, "defaultFiscalServiceCode"),
       defaultPixKey: readOptionalFormString(formData, "defaultPixKey"),
@@ -347,9 +350,15 @@ export async function createEvolutionInstanceAction(formData: FormData) {
     await ensureWorkspaceEvolutionInstanceAvailable(instanceName, context.workspaceId);
     const existingInstances = await fetchEvolutionInstances().catch(() => []);
     const existingInstance = existingInstances.find((instance) => instance.instanceName === instanceName);
+    const currentInstanceName = await getWorkspaceEvolutionInstanceNameByWorkspaceId(context.workspaceId);
 
     if (existingInstance) {
       await bindWorkspaceEvolutionInstanceName(instanceName);
+      if (currentInstanceName === instanceName) {
+        revalidatePath("/dashboard/setup");
+        revalidatePath("/dashboard/whatsapp");
+        redirectEvolution(`A empresa já está vinculada à instância ${instanceName}.`, true);
+      }
       revalidatePath("/dashboard/setup");
       revalidatePath("/dashboard/whatsapp");
       redirectEvolution(`A instância ${instanceName} já existia na Evolution e foi vinculada a esta empresa.`, true);
@@ -445,6 +454,40 @@ export async function bindEvolutionInstanceAction(formData: FormData) {
   revalidatePath("/dashboard/setup");
   revalidatePath("/dashboard/whatsapp");
   redirectEvolution("Instância principal do WhatsApp vinculada com sucesso.", true);
+}
+
+export async function deleteEvolutionInstanceAction(formData: FormData) {
+  try {
+    const context = await getCurrentWorkspaceContext();
+    if (!canManageWorkspace(context.workspaceRole)) {
+      redirectEvolution("Apenas owner ou admin podem excluir conexões do WhatsApp.");
+    }
+
+    const instanceName = readRequiredFormString(
+      formData,
+      "instanceName",
+      "Escolha uma instância válida para excluir.",
+    );
+    await ensureWorkspaceEvolutionInstanceAvailable(instanceName, context.workspaceId);
+
+    await deleteEvolutionInstance(instanceName);
+    await unbindWorkspaceEvolutionInstanceName(instanceName);
+  } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectEvolution(error.message);
+    }
+
+    const message = error instanceof Error
+      ? error.message
+      : "Não foi possível excluir a instância do WhatsApp.";
+
+    redirectEvolution(message);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  revalidatePath("/dashboard/whatsapp");
+  redirectEvolution("Instância do WhatsApp excluída com sucesso.", true);
 }
 
 export async function connectWorkspaceAsaasAccountAction(formData: FormData) {
