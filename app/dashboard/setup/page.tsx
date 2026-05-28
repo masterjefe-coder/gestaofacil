@@ -767,7 +767,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
         {view.canManage ? (
           <>
             <div className="guided-flow-stack">
-              <details className="guided-flow-card" open={workspaceAsaas.mode !== "workspace"}>
+              <details className="guided-flow-card" open={workspaceAsaas.mode !== "workspace" || flash.asaasCreated || Boolean(flash.asaasError)}>
                 <summary>
                   <div>
                     <span className="section-label">Recomendado</span>
@@ -846,7 +846,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 </div>
               </details>
 
-              <details className="guided-flow-card" open={workspaceAsaas.mode === "workspace"}>
+              <details className="guided-flow-card" open={workspaceAsaas.mode === "workspace" || flash.asaasConnected || Boolean(flash.asaasError)}>
                 <summary>
                   <div>
                     <span className="section-label">Conta existente</span>

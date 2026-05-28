@@ -15,11 +15,5 @@ export function resolveAppBaseUrl() {
     }
   }
 
-  const vercelUrl = process.env.VERCEL_URL?.trim();
-
-  if (vercelUrl) {
-    return `https://${vercelUrl.replace(/\/$/, "")}`;
-  }
-
   return null;
 }
