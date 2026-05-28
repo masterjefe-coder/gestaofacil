@@ -331,11 +331,10 @@ export async function probeEvolutionApi() {
   }
 
   try {
+    const headers = config.apiKey ? { apikey: config.apiKey } : undefined;
     const response = await fetch(new URL("/instance/fetchInstances", config.baseUrl).toString(), {
       method: "GET",
-      headers: {
-        apikey: config.apiKey,
-      },
+      ...(headers ? { headers } : {}),
       signal: AbortSignal.timeout(config.timeoutMs),
       cache: "no-store",
     });
