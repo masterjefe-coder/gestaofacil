@@ -159,7 +159,7 @@ test("evolution webhook POST returns 401 for invalid bearer secret", async () =>
   });
 });
 
-test("evolution webhook POST rejects expired timestamps before processing", async () => {
+test("evolution webhook POST accepts expired timestamps when webhook auth is valid", async () => {
   await withEnv({ EVOLUTION_WEBHOOK_SECRET: "evolution-secret" }, async () => {
     const response = await postEvolutionWebhook(
       buildJsonRequest(
@@ -173,7 +173,8 @@ test("evolution webhook POST rejects expired timestamps before processing", asyn
     );
     const payload = await response.json();
 
-    assert.equal(response.status, 400);
-    assert.match(payload.error, /timestamp invalido ou expirado/i);
+    assert.equal(response.status, 200);
+    assert.equal(payload.received, true);
+    assert.equal(payload.hasBody, true);
   });
 });

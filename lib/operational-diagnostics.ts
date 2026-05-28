@@ -143,10 +143,12 @@ export async function buildOperationalDiagnosticsSnapshot(
   const evolution = operationalDiagnosticsDeps.getEvolutionIntegrationStatus();
   const nfseReferenceCity = process.env.NFSE_REFERENCE_CITY?.trim();
   const nfseReferenceState = process.env.NFSE_REFERENCE_STATE?.trim();
-  const municipalityStatus = await operationalDiagnosticsDeps.getNfseNationalMunicipalityStatus(
-    nfseReferenceCity || "",
-    nfseReferenceState || "",
-  );
+  const municipalityStatus = await operationalDiagnosticsDeps
+    .getNfseNationalMunicipalityStatus(
+      nfseReferenceCity || "",
+      nfseReferenceState || "",
+    )
+    .catch(() => null);
   const nfse = operationalDiagnosticsDeps.getResolvedNfseIntegrationStatus(
     nfseReferenceCity,
     nfseReferenceState,

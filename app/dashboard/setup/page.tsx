@@ -5,6 +5,7 @@ import { EvolutionPairingPanel } from "@/components/evolution-pairing-panel";
 import { InviteLinkField } from "@/components/invite-link-field";
 import { OperationalDiagnosticsPanel } from "@/components/operational-diagnostics-panel";
 import {
+  bindEvolutionInstanceAction,
   connectWorkspaceAsaasAccountAction,
   createWorkspaceAsaasSubaccountAction,
   createEvolutionInstanceAction,
@@ -108,13 +109,14 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   ]);
   const flash = readSetupPageFlashState(params);
   const operationalFocus = params?.operationalFocus || "";
-  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "").catch(() => null);
   const nfsePortalUrls = getResolvedNfsePortalUrls(setup.city || "", setup.state || "", {
     municipalityStatus,
   });
   const view = buildSetupPageViewModel({
     workspaceRole: context.workspaceRole,
     setupSlug: setup.slug,
+    workspaceEvolutionInstanceName: setup.evolutionInstanceName,
     subscription,
     companyCity: setup.city,
     companyState: setup.state,
@@ -619,7 +621,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
               <input
                 name="instanceName"
                 type="text"
-                defaultValue={setup.slug}
+                defaultValue={setup.evolutionInstanceName || setup.slug}
                 placeholder="Ex.: numero-principal"
                 required
               />
@@ -668,19 +670,26 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
             <small className="muted-text">
               {view.isUsingWorkspaceEvolutionInstance
                 ? "A tela já está usando o número principal desta empresa."
-                : "A tela está usando um número padrão porque ainda não encontrou uma conexão com o nome desta empresa."}
+                : "A conexão principal desta empresa está definida, mas ainda não apareceu na leitura operacional da Evolution."}
             </small>
+          </div>
+        ) : null}
+
+        {!selectedEvolutionInstanceName ? (
+          <div className="auth-hint fiscal-warning">
+            <strong>Instância principal ainda não definida</strong>
+            <span>Escolha uma conexão existente ou crie uma nova antes de parear e operar o WhatsApp desta empresa.</span>
           </div>
         ) : null}
 
         {view.workspaceEvolutionInstance && view.evolutionIntegration.instance && view.evolutionIntegration.instance !== view.workspaceEvolutionInstance.instanceName ? (
           <div className="auth-hint fiscal-warning">
-            <strong>O número padrão ainda não é o ideal</strong>
+            <strong>A leitura operacional ainda não bate com a conexão principal</strong>
             <span>
-              O sistema ainda estava apontando para outra conexão, mas esta empresa já tem uma conexão própria pronta para uso.
+              A empresa já tem uma conexão principal definida, mas a leitura atual da Evolution ainda está apontando para outra instância.
             </span>
             <small className="muted-text">
-              A tela já prioriza a conexão certa, para evitar que mensagens saiam pelo número errado.
+              A tela já prioriza a conexão certa para evitar que mensagens saiam pela instância errada.
             </small>
           </div>
         ) : null}
@@ -706,6 +715,7 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                 <span>Status</span>
                 <span>Número</span>
                 <span>Atualização</span>
+                <span>Ações</span>
               </div>
               {evolutionInstances.length > 0 ? evolutionInstances.map((instance) => (
                 <article key={instance.instanceName} className="data-table-row">
@@ -716,11 +726,18 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
                   <span>{getEvolutionStateLabel(instance.status)}</span>
                   <span>{instance.owner || "Aguardando conexão"}</span>
                   <span>{instance.webhookUrl || view.evolutionIntegration.webhookUrl || "Atualização automática pronta"}</span>
+                  <form action={bindEvolutionInstanceAction} className="row-action">
+                    <input type="hidden" name="instanceName" value={instance.instanceName} />
+                    <button type="submit" className="ghost-button">
+                      {setup.evolutionInstanceName === instance.instanceName ? "Instância atual" : "Usar nesta empresa"}
+                    </button>
+                  </form>
                 </article>
               )) : (
                 <article className="data-table-row">
                   <span>Nenhuma conexão encontrada</span>
                   <span>Conecte o WhatsApp da empresa</span>
+                  <span>-</span>
                   <span>-</span>
                   <span>-</span>
                 </article>

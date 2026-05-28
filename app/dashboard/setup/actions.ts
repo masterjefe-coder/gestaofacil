@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { WorkspaceRole } from "@prisma/client";
+import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { connectEvolutionInstance, createEvolutionInstance, EvolutionApiError } from "@/lib/evolution-api";
 import {
+  bindWorkspaceEvolutionInstanceName,
+  ensureWorkspaceEvolutionInstanceAvailable,
   connectWorkspaceAsaasAccount,
   createWorkspaceAsaasSubaccount,
   disconnectWorkspaceAsaasAccount,
@@ -330,18 +333,26 @@ export async function resetWorkspaceMemberPasswordAction(formData: FormData) {
 
 export async function createEvolutionInstanceAction(formData: FormData) {
   try {
+    const context = await getCurrentWorkspaceContext();
+    if (!canManageWorkspace(context.workspaceRole)) {
+      redirectEvolution("Apenas owner ou admin podem criar a conexão principal do WhatsApp.");
+    }
+
     const instanceName = readRequiredFormString(
       formData,
       "instanceName",
       "Defina um nome de instância para criar a conexão WhatsApp.",
     );
     const number = readOptionalFormMaybeString(formData, "instanceNumber");
+    await ensureWorkspaceEvolutionInstanceAvailable(instanceName, context.workspaceId);
 
     await createEvolutionInstance({
       instanceName,
       number,
     });
+    await bindWorkspaceEvolutionInstanceName(instanceName);
     revalidatePath("/dashboard/setup");
+    revalidatePath("/dashboard/whatsapp");
     redirectEvolution(`Instância ${instanceName} criada com sucesso na Evolution API.`, true);
   } catch (error) {
     if (error instanceof FormInputError) {
@@ -359,16 +370,24 @@ export async function createEvolutionInstanceAction(formData: FormData) {
 
 export async function connectEvolutionInstanceAction(formData: FormData) {
   try {
+    const context = await getCurrentWorkspaceContext();
+    if (!canManageWorkspace(context.workspaceRole)) {
+      redirectEvolution("Apenas owner ou admin podem gerar o pareamento do WhatsApp.");
+    }
+
     const instanceName = readRequiredFormString(
       formData,
       "instanceName",
       "Escolha uma instância para solicitar o pareamento.",
     );
+    await ensureWorkspaceEvolutionInstanceAvailable(instanceName, context.workspaceId);
 
     const result = await connectEvolutionInstance(instanceName);
     const pairingCode = result.pairingCode;
+    await bindWorkspaceEvolutionInstanceName(instanceName);
 
     revalidatePath("/dashboard/setup");
+    revalidatePath("/dashboard/whatsapp");
     redirectEvolution(`Pareamento solicitado para ${instanceName}.`, true, {
       evolutionPairingCode: pairingCode,
     });
@@ -384,6 +403,39 @@ export async function connectEvolutionInstanceAction(formData: FormData) {
 
     redirectEvolution(message);
   }
+}
+
+export async function bindEvolutionInstanceAction(formData: FormData) {
+  try {
+    const context = await getCurrentWorkspaceContext();
+    if (!canManageWorkspace(context.workspaceRole)) {
+      redirectEvolution("Apenas owner ou admin podem definir a conexão principal do WhatsApp.");
+    }
+
+    const instanceName = readRequiredFormString(
+      formData,
+      "instanceName",
+      "Escolha uma instância válida para usar nesta empresa.",
+    );
+    await ensureWorkspaceEvolutionInstanceAvailable(instanceName, context.workspaceId);
+
+    await bindWorkspaceEvolutionInstanceName(instanceName);
+  } catch (error) {
+    if (error instanceof FormInputError) {
+      redirectEvolution(error.message);
+    }
+
+    const message = error instanceof Error
+      ? error.message
+      : "Não foi possível vincular a instância principal do WhatsApp.";
+
+    redirectEvolution(message);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/setup");
+  revalidatePath("/dashboard/whatsapp");
+  redirectEvolution("Instância principal do WhatsApp vinculada com sucesso.", true);
 }
 
 export async function connectWorkspaceAsaasAccountAction(formData: FormData) {

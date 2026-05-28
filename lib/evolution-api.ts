@@ -331,8 +331,11 @@ export async function probeEvolutionApi() {
   }
 
   try {
-    const response = await fetch(config.baseUrl, {
+    const response = await fetch(new URL("/instance/fetchInstances", config.baseUrl).toString(), {
       method: "GET",
+      headers: {
+        apikey: config.apiKey,
+      },
       signal: AbortSignal.timeout(config.timeoutMs),
       cache: "no-store",
     });
@@ -341,8 +344,8 @@ export async function probeEvolutionApi() {
       configured: true,
       reachable: response.ok,
       summary: response.ok
-        ? "Endpoint respondeu e a API está acessível a partir do app."
-        : `Endpoint respondeu com status ${response.status}.`,
+        ? "A Evolution respondeu ao endpoint autenticado e a integração está acessível a partir do app."
+        : `A Evolution respondeu ao endpoint autenticado com status ${response.status}.`,
     };
   } catch (error) {
     return {

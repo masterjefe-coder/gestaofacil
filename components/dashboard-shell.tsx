@@ -68,6 +68,13 @@ export async function DashboardShell({
   );
   const currentModuleSignal = getCurrentDashboardModuleSignal(currentPath, navigationSignals);
   const pageHeading = eyebrow || title;
+  const navigationItems = dashboardNav.some((item) => item.href === "/dashboard/whatsapp")
+    ? dashboardNav
+    : [
+        ...dashboardNav.slice(0, 2),
+        { href: "/dashboard/whatsapp", label: "WhatsApp", helper: "Conversas e respostas" },
+        ...dashboardNav.slice(2),
+      ];
 
   if (restrictedSubscription && currentPath !== "/dashboard/setup") {
     redirect("/dashboard/setup?subscriptionIntent=1");
@@ -97,7 +104,7 @@ export async function DashboardShell({
         </div>
 
         <nav className="sidebar-nav" aria-label="Navegação do dashboard">
-          {dashboardNav.map((item) => {
+          {navigationItems.map((item) => {
             const signal = navigationSignalsByHref.get(item.href);
 
             return (

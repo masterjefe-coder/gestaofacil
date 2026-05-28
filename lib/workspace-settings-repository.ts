@@ -35,6 +35,7 @@ export async function getWorkspaceSetup() {
       city: company?.city || "",
       state: company?.state || "",
       municipalCode: company?.municipalCode || resolvedMunicipality?.municipalCode || "",
+      evolutionInstanceName: company?.evolutionInstanceName || "",
       serviceDescription: company?.serviceDescription || "",
       defaultFiscalServiceCode: company?.defaultFiscalServiceCode || "",
       defaultPixKey: company?.defaultPixKey || "",
@@ -56,6 +57,104 @@ export async function getWorkspaceSetup() {
     ...data.company,
     municipalCode: data.company.municipalCode || resolvedMunicipality?.municipalCode || "",
   };
+}
+
+export async function getWorkspaceEvolutionInstanceName() {
+  const setup = await getWorkspaceSetup();
+  return setup.evolutionInstanceName?.trim() || "";
+}
+
+export async function getWorkspaceEvolutionInstanceNameByWorkspaceId(workspaceId: string) {
+  if (!workspaceId || isLocalDataMode()) {
+    return "";
+  }
+
+  const company = await prisma.company.findUnique({
+    where: { workspaceId },
+    select: { evolutionInstanceName: true },
+  });
+
+  return company?.evolutionInstanceName?.trim() || "";
+}
+
+export async function ensureWorkspaceEvolutionInstanceAvailable(instanceName: string, workspaceId?: string) {
+  const normalizedInstanceName = instanceName.trim();
+
+  if (!normalizedInstanceName || isLocalDataMode()) {
+    return;
+  }
+
+  await ensureDemoCommerceSeeded();
+
+  const company = await prisma.company.findFirst({
+    where: {
+      evolutionInstanceName: normalizedInstanceName,
+    },
+    select: {
+      workspaceId: true,
+    },
+  });
+
+  if (company && workspaceId && company.workspaceId === workspaceId) {
+    return;
+  }
+
+  if (company) {
+    throw new Error("Essa instancia principal do WhatsApp ja esta vinculada a outra empresa.");
+  }
+}
+
+export async function bindWorkspaceEvolutionInstanceName(instanceName: string) {
+  const normalizedInstanceName = instanceName.trim();
+
+  if (!normalizedInstanceName) {
+    throw new Error("Informe uma instancia valida para vincular ao workspace.");
+  }
+
+  if (!isLocalDataMode()) {
+    await ensureDemoCommerceSeeded();
+    const context = await getCurrentWorkspaceContext();
+
+    if (!canManageWorkspace(context.workspaceRole)) {
+      throw new Error("Apenas owner ou admin podem definir a instancia principal do WhatsApp.");
+    }
+
+    await ensureWorkspaceEvolutionInstanceAvailable(normalizedInstanceName, context.workspaceId);
+
+    await prisma.company.upsert({
+      where: { workspaceId: context.workspaceId },
+      update: {
+        evolutionInstanceName: normalizedInstanceName,
+      },
+      create: {
+        workspaceId: context.workspaceId,
+        legalName: "Empresa sem razao social definida",
+        tradeName: "Workspace sem setup completo",
+        document: `workspace-${context.workspaceId}`,
+        evolutionInstanceName: normalizedInstanceName,
+      },
+    });
+
+    await recordAuditEvent({
+      action: "workspace.evolution.instance_bound",
+      entityType: "workspace",
+      entityId: context.workspaceId,
+      context,
+      payload: {
+        summary: `Instancia principal do WhatsApp vinculada ao workspace: ${normalizedInstanceName}.`,
+        metadata: {
+          instanceName: normalizedInstanceName,
+        },
+      },
+    });
+
+    return normalizedInstanceName;
+  }
+
+  const data = await readDemoWorkspaceData();
+  data.company.evolutionInstanceName = normalizedInstanceName;
+  await writeDemoWorkspaceData(data);
+  return normalizedInstanceName;
 }
 
 export async function updateWorkspaceSetup(input: SetupInput) {
@@ -89,6 +188,7 @@ export async function updateWorkspaceSetup(input: SetupInput) {
       (company?.city || "") !== input.city ? "cidade" : null,
       (company?.state || "") !== input.state ? "UF" : null,
       (company?.municipalCode || "") !== (resolvedMunicipality?.municipalCode || "") ? "codigo IBGE" : null,
+      (company?.evolutionInstanceName || "") !== (input.evolutionInstanceName || "") ? "instancia principal do WhatsApp" : null,
       (company?.serviceDescription || "") !== (input.serviceDescription || input.niche)
         ? "descricao de servicos"
         : null,
@@ -118,6 +218,7 @@ export async function updateWorkspaceSetup(input: SetupInput) {
             city: input.city,
             state: input.state,
             municipalCode: resolvedMunicipality?.municipalCode || null,
+            evolutionInstanceName: input.evolutionInstanceName || null,
             serviceDescription: input.serviceDescription || input.niche,
             defaultFiscalServiceCode: input.defaultFiscalServiceCode || null,
             defaultPixKey: input.defaultPixKey,
@@ -131,6 +232,7 @@ export async function updateWorkspaceSetup(input: SetupInput) {
             city: input.city,
             state: input.state,
             municipalCode: resolvedMunicipality?.municipalCode || null,
+            evolutionInstanceName: input.evolutionInstanceName || null,
             serviceDescription: input.serviceDescription || input.niche,
             defaultFiscalServiceCode: input.defaultFiscalServiceCode || null,
             defaultPixKey: input.defaultPixKey,
@@ -154,6 +256,7 @@ export async function updateWorkspaceSetup(input: SetupInput) {
                 city: input.city || null,
                 state: input.state || null,
                 municipalCode: resolvedMunicipality?.municipalCode || null,
+                evolutionInstanceName: input.evolutionInstanceName || null,
               },
             },
           },
@@ -170,6 +273,10 @@ export async function updateWorkspaceSetup(input: SetupInput) {
 
         if (target.includes("document")) {
           throw new Error("Esse documento ja esta vinculado a outra empresa.");
+        }
+
+        if (target.includes("evolutionInstanceName")) {
+          throw new Error("Essa instancia principal do WhatsApp ja esta vinculada a outra empresa.");
         }
       }
 
@@ -189,6 +296,7 @@ export async function updateWorkspaceSetup(input: SetupInput) {
         city: input.city,
         state: input.state,
         municipalCode: resolvedMunicipality?.municipalCode || "",
+        evolutionInstanceName: input.evolutionInstanceName || "",
         serviceDescription: input.serviceDescription,
         defaultFiscalServiceCode: input.defaultFiscalServiceCode || "",
         defaultPixKey: input.defaultPixKey,
@@ -212,15 +320,16 @@ export async function updateWorkspaceSetup(input: SetupInput) {
     city: input.city,
     state: input.state,
     municipalCode: resolvedMunicipality?.municipalCode || "",
+    evolutionInstanceName: input.evolutionInstanceName || data.company.evolutionInstanceName || "",
     serviceDescription: input.serviceDescription,
     defaultFiscalServiceCode: input.defaultFiscalServiceCode || "",
     defaultPixKey: input.defaultPixKey,
-      defaultPaymentMessage: input.defaultPaymentMessage,
-      asaasAccountId: data.company.asaasAccountId || "",
-      asaasWalletId: data.company.asaasWalletId || "",
-      asaasUseOwnAccount: data.company.asaasUseOwnAccount || false,
-      asaasSplitEnabled: data.company.asaasSplitEnabled || false,
-    };
+    defaultPaymentMessage: input.defaultPaymentMessage,
+    asaasAccountId: data.company.asaasAccountId || "",
+    asaasWalletId: data.company.asaasWalletId || "",
+    asaasUseOwnAccount: data.company.asaasUseOwnAccount || false,
+    asaasSplitEnabled: data.company.asaasSplitEnabled || false,
+  };
 
   await writeDemoWorkspaceData(data);
   return data;

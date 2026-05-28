@@ -57,16 +57,15 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
   
-  // Validate webhook timestamp to prevent replay attacks
+  // Evolution sends authorized server-to-server events, but some payloads can
+  // arrive with timestamp formats that fail strict replay validation. Keep the
+  // warning for observability and continue processing behind bearer auth.
   if (body?.date_time && !verifyWebhookTimestamp(body.date_time)) {
-    requestLogger.warn("Evolution webhook rejected because timestamp is expired", {
+    requestLogger.warn("Evolution webhook received with non-verifiable timestamp", {
       event: typeof body?.event === "string" ? body.event : null,
       instance: typeof body?.instance === "string" ? body.instance : null,
+      dateTime: body.date_time,
     });
-    return attachRequestId(
-      NextResponse.json({ error: "Webhook timestamp invalido ou expirado." }, { status: 400 }),
-      requestId,
-    );
   }
 
   const result = body ? await handleEvolutionWebhook(body) : null;

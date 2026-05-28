@@ -121,7 +121,7 @@ export async function markNfseErrorAction(formData: FormData) {
 export async function testNfseNationalConnectivityAction() {
   await requireFiscalAccess();
   const setup = await getWorkspaceSetup();
-  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "").catch(() => null);
   const provider = resolveNfseProvider(setup.city, setup.state, {
     municipalityStatus,
   });

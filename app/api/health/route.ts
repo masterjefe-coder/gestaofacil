@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { AuthSessionError, canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/auth-session";
 import { getAsaasIntegrationStatus } from "@/lib/asaas";
 import { getLogger } from "@/lib/api-logger";
 import { isLocalDataMode } from "@/lib/data-mode";
@@ -30,8 +31,22 @@ export async function GET(request: Request) {
   const configuredHealthToken = process.env.HEALTHCHECK_TOKEN?.trim();
   const receivedHealthToken = request.headers.get("x-health-token")?.trim();
   const hasValidHealthToken = timingSafeCompare(receivedHealthToken, configuredHealthToken);
-  const sessionEmail = hasValidHealthToken ? null : await getSessionEmailSafe();
-  const canSeeDetails = hasValidHealthToken || Boolean(sessionEmail);
+  let canSeeDetails = hasValidHealthToken;
+
+  if (!hasValidHealthToken) {
+    const sessionEmail = await getSessionEmailSafe();
+
+    if (sessionEmail) {
+      try {
+        const context = await getCurrentWorkspaceContext();
+        canSeeDetails = canManageWorkspace(context.workspaceRole);
+      } catch (error) {
+        if (!(error instanceof AuthSessionError)) {
+          throw error;
+        }
+      }
+    }
+  }
 
   if (!canSeeDetails) {
     requestLogger.info("Health check served in public mode");
@@ -53,7 +68,7 @@ export async function GET(request: Request) {
   const municipalityStatus = await getNfseNationalMunicipalityStatus(
     nfseReferenceCity || "",
     nfseReferenceState || "",
-  );
+  ).catch(() => null);
   const nfse = getResolvedNfseIntegrationStatus(
     nfseReferenceCity,
     nfseReferenceState,

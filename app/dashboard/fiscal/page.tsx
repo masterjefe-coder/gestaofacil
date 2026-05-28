@@ -53,7 +53,7 @@ export default async function FiscalPage({ searchParams }: FiscalPageProps) {
     getCurrentWorkspaceContext(),
   ]);
   const fiscalAccess = getWorkspaceModuleCapabilities(context.workspaceRole, "fiscal");
-  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "");
+  const municipalityStatus = await getNfseNationalMunicipalityStatus(setup.city || "", setup.state || "").catch(() => null);
   const issuePreviews = await Promise.all(
     documents.map(async (document) => [document.id, await getNfseNationalIssuePreview(document.id)] as const),
   );

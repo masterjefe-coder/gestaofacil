@@ -84,6 +84,9 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
           <Link href="/dashboard" className="secondary-link">
             Voltar ao dashboard
           </Link>
+          <Link href="/dashboard/whatsapp" className="secondary-link">
+            Central WhatsApp
+          </Link>
           <a href="#novo-cliente" className="primary-link">
             Novo cliente
           </a>
@@ -483,6 +486,11 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
                     </div>
                   )}
                   <div className="dashboard-actions">
+                    {item.phone ? (
+                      <Link href={`/dashboard/whatsapp?customerId=${encodeURIComponent(item.customerId)}`} className="secondary-link">
+                        Abrir conversa
+                      </Link>
+                    ) : null}
                     {item.priority === "reactivation" && item.phone ? (
                       <form action={sendCustomerReactivationWhatsappAction} className="card-action">
                         <input type="hidden" name="id" value={item.customerId} />

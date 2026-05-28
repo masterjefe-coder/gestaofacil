@@ -13,6 +13,7 @@ import { isTransactionalEmailConfigured } from "@/lib/transactional-email";
 export function buildSetupPageViewModel(input: {
   workspaceRole: "OWNER" | "ADMIN" | "MEMBER";
   setupSlug: string;
+  workspaceEvolutionInstanceName?: string;
   subscription: {
     plan: "ESSENTIAL" | "PROFESSIONAL" | "OPERATION" | "ENTERPRISE";
     billingCycle: "MONTHLY" | "YEARLY";
@@ -37,20 +38,14 @@ export function buildSetupPageViewModel(input: {
   const evolutionIntegration = getEvolutionIntegrationStatus();
   const asaasIntegration = getAsaasIntegrationStatus();
   const transactionalEmailReady = isTransactionalEmailConfigured();
-  const workspaceEvolutionInstance = input.evolutionInstances.find((instance) => instance.instanceName === input.setupSlug);
-  const fallbackEvolutionInstance = input.evolutionInstances.find((instance) => instance.instanceName === evolutionIntegration.instance);
-  const selectedEvolutionInstanceName =
-    workspaceEvolutionInstance?.instanceName
-    || fallbackEvolutionInstance?.instanceName
-    || evolutionIntegration.instance
-    || input.evolutionInstances[0]?.instanceName
-    || "";
-  const selectedEvolutionInstanceStatus =
-    workspaceEvolutionInstance?.status
-    || fallbackEvolutionInstance?.status
-    || input.evolutionInstances[0]?.status
-    || "";
-  const isUsingWorkspaceEvolutionInstance = selectedEvolutionInstanceName === input.setupSlug;
+  const configuredInstanceName = input.workspaceEvolutionInstanceName?.trim() || "";
+  const workspaceEvolutionInstance = configuredInstanceName
+    ? input.evolutionInstances.find((instance) => instance.instanceName === configuredInstanceName)
+    : undefined;
+  const selectedEvolutionInstanceName = workspaceEvolutionInstance?.instanceName || configuredInstanceName;
+  const selectedEvolutionInstanceStatus = workspaceEvolutionInstance?.status || "";
+  const isUsingWorkspaceEvolutionInstance = Boolean(configuredInstanceName)
+    && selectedEvolutionInstanceName === configuredInstanceName;
   const subscriptionPlan = getSubscriptionPlanPresentation(input.subscription.plan);
   const trialRemainingDays = getTrialRemainingDays(input.subscription);
   const localMode = isLocalDataMode();

@@ -77,6 +77,15 @@ async function resolveWorkspaceIdFromInstance(instanceName: string) {
     return null;
   }
 
+  const companyMatch = await prisma.company.findFirst({
+    where: { evolutionInstanceName: instanceName },
+    select: { workspaceId: true },
+  });
+
+  if (companyMatch?.workspaceId) {
+    return companyMatch.workspaceId;
+  }
+
   const exactMatch = await prisma.workspace.findUnique({
     where: { slug: instanceName },
     select: { id: true },
@@ -84,20 +93,6 @@ async function resolveWorkspaceIdFromInstance(instanceName: string) {
 
   if (exactMatch) {
     return exactMatch.id;
-  }
-
-  const defaultInstance = process.env.EVOLUTION_API_INSTANCE?.trim();
-
-  if (defaultInstance && instanceName === defaultInstance) {
-    const workspaces = await prisma.workspace.findMany({
-      select: { id: true },
-      take: 2,
-      orderBy: { createdAt: "asc" },
-    });
-
-    if (workspaces.length === 1) {
-      return workspaces[0].id;
-    }
   }
 
   return null;

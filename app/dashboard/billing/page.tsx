@@ -160,6 +160,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
           <Link href="/dashboard" className="secondary-link">
             Voltar ao dashboard
           </Link>
+          <Link href="/dashboard/whatsapp" className="secondary-link">
+            Central WhatsApp
+          </Link>
           <a href="#nova-cobranca" className="primary-link">
             Nova cobrança
           </a>
@@ -950,6 +953,13 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                                 </article>
                               ))}
                             </div>
+                          </div>
+                        ) : null}
+                        {customer?.phone ? (
+                          <div className="dashboard-actions">
+                            <Link href={`/dashboard/whatsapp?customerId=${encodeURIComponent(customer.id)}`} className="secondary-link">
+                              Responder na central
+                            </Link>
                           </div>
                         ) : null}
                       </div>

@@ -19,6 +19,7 @@ const defaultCompany: CompanyProfile = {
   city: "Joinville",
   state: "SC",
   municipalCode: "4209102",
+  evolutionInstanceName: "ofertas-do-ton",
   serviceDescription: "Digitacao e servicos administrativos com emissao fiscal assistida e automatica.",
   defaultFiscalServiceCode: "17.02",
   defaultPixKey: "43300030000126",
@@ -66,9 +67,18 @@ export async function readDemoWorkspaceData() {
   const parsed = JSON.parse(raw) as Partial<DemoWorkspaceData>;
 
   return {
-    workspace: parsed.workspace ?? defaultWorkspace,
-    company: parsed.company ?? defaultCompany,
-    subscription: parsed.subscription ?? defaultSubscription,
+    workspace: {
+      ...defaultWorkspace,
+      ...(parsed.workspace || {}),
+    },
+    company: {
+      ...defaultCompany,
+      ...(parsed.company || {}),
+    },
+    subscription: {
+      ...defaultSubscription,
+      ...(parsed.subscription || {}),
+    },
     customers: parsed.customers ?? customers,
     quotes: parsed.quotes ?? quotes,
     orders: parsed.orders ?? orders,

@@ -9,12 +9,14 @@ const originalDeps = {
   requireApiSession: evolutionStatusRouteDeps.requireApiSession,
   getCurrentWorkspaceContext: evolutionStatusRouteDeps.getCurrentWorkspaceContext,
   getEvolutionConnectionState: evolutionStatusRouteDeps.getEvolutionConnectionState,
+  getWorkspaceEvolutionInstanceName: evolutionStatusRouteDeps.getWorkspaceEvolutionInstanceName,
 };
 
 function restoreEvolutionStatusDeps() {
   evolutionStatusRouteDeps.requireApiSession = originalDeps.requireApiSession;
   evolutionStatusRouteDeps.getCurrentWorkspaceContext = originalDeps.getCurrentWorkspaceContext;
   evolutionStatusRouteDeps.getEvolutionConnectionState = originalDeps.getEvolutionConnectionState;
+  evolutionStatusRouteDeps.getWorkspaceEvolutionInstanceName = originalDeps.getWorkspaceEvolutionInstanceName;
 }
 
 test("evolution status route forwards unauthorized response with request id", async () => {
@@ -72,6 +74,7 @@ test("evolution status route rejects missing instance name", async () => {
     workspaceId: "workspace-1",
     workspaceRole: "OWNER",
   });
+  evolutionStatusRouteDeps.getWorkspaceEvolutionInstanceName = async () => "gf-main";
 
   try {
     const requestId = "evolution-status-missing-instance-request-id";
@@ -98,6 +101,7 @@ test("evolution status route returns connection state with request id", async ()
     workspaceId: "workspace-1",
     workspaceRole: "OWNER",
   });
+  evolutionStatusRouteDeps.getWorkspaceEvolutionInstanceName = async () => "gf-main";
   evolutionStatusRouteDeps.getEvolutionConnectionState = async () => ({
     instance: {
       state: "open",
@@ -132,6 +136,7 @@ test("evolution status route surfaces integration failures as 500 with request i
     workspaceId: "workspace-1",
     workspaceRole: "OWNER",
   });
+  evolutionStatusRouteDeps.getWorkspaceEvolutionInstanceName = async () => "gf-main";
   evolutionStatusRouteDeps.getEvolutionConnectionState = async () => {
     throw new EvolutionApiError("Evolution API recusou a operacao (503).");
   };
@@ -149,6 +154,33 @@ test("evolution status route surfaces integration failures as 500 with request i
     assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
     assert.equal(payload.ok, false);
     assert.match(payload.error, /503/);
+  } finally {
+    restoreEvolutionStatusDeps();
+  }
+});
+
+test("evolution status route rejects requests for another workspace instance", async () => {
+  evolutionStatusRouteDeps.requireApiSession = async () => null;
+  evolutionStatusRouteDeps.getCurrentWorkspaceContext = async () => ({
+    userId: "user-1",
+    email: "owner@gestaofacil.app",
+    workspaceId: "workspace-1",
+    workspaceRole: "OWNER",
+  });
+  evolutionStatusRouteDeps.getWorkspaceEvolutionInstanceName = async () => "gf-main";
+
+  try {
+    const requestId = "evolution-status-wrong-instance-request-id";
+    const response = await getEvolutionStatus(new Request("http://localhost/api/evolution/status?instance=other-company", {
+      headers: {
+        [REQUEST_ID_HEADER]: requestId,
+      },
+    }));
+    const payload = await response.json();
+
+    assert.equal(response.status, 403);
+    assert.equal(response.headers.get(REQUEST_ID_HEADER), requestId);
+    assert.match(payload.error, /WhatsApp principal desta empresa/i);
   } finally {
     restoreEvolutionStatusDeps();
   }
