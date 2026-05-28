@@ -117,7 +117,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         <article className="dashboard-spotlight-card fade-in-up">
           <div className="dashboard-spotlight-header">
             <div>
-              <span className="section-label">Leitura de relacionamento</span>
+              <span className="section-label">Relacionamento</span>
               <h2>
                 {filteredEngagementItems[0]?.customerName
                   ? `${filteredEngagementItems[0].customerName} é o cliente com melhor próximo passo agora.`
@@ -156,38 +156,24 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         </article>
 
         <aside className="dashboard-overview-stack">
-          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
-            <span className="section-label">Objetivo do módulo</span>
-            <div className="dashboard-mini-list">
-              <article>
-                <strong>Concentrar o contexto</strong>
-                <p>Conversa, proposta e cobrança precisam viver no mesmo lugar.</p>
-              </article>
-              <article>
-                <strong>Priorizar o próximo passo</strong>
-                <p>Follow-up e retomada entram com base em sinais reais, não na memória do time.</p>
-              </article>
-            </div>
-          </article>
-
-          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
-            <span className="section-label">Atalhos rápidos</span>
-            <div className="dashboard-shortcuts-grid">
+          <article className="dashboard-mini-panel dashboard-mini-panel-compact fade-in-up fade-delay-1">
+            <span className="section-label">Próximos passos</span>
+            <div className="dashboard-shortcuts-grid dashboard-shortcuts-grid-compact">
               <a href="#novo-cliente" className="dashboard-shortcut-card">
                 <strong>Novo cliente</strong>
-                <span>Cadastrar rápido</span>
+                <span>Cadastrar</span>
               </a>
               <Link href="/dashboard/quotes" className="dashboard-shortcut-card">
                 <strong>Orçamentos</strong>
-                <span>Ver pipeline</span>
+                <span>Pipeline</span>
               </Link>
               <Link href="/dashboard/billing" className="dashboard-shortcut-card">
                 <strong>Cobranças</strong>
-                <span>Ler aberto</span>
+                <span>Abre</span>
               </Link>
               <Link href="/dashboard" className="dashboard-shortcut-card">
-                <strong>Dashboard</strong>
-                <span>Voltar ao comando</span>
+                <strong>Home</strong>
+                <span>Voltar</span>
               </Link>
             </div>
           </article>

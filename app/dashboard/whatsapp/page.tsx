@@ -41,15 +41,15 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
     <DashboardShell
       currentPath="/dashboard/whatsapp"
       eyebrow="WhatsApp"
-      title="Conversas reais do canal no mesmo fluxo do negocio."
-      description="A equipe consegue ver contexto recente, responder manualmente e seguir cliente, orcamento e cobranca sem sair do app."
+      title="Conversas do canal em leitura curta."
+      description="Responder, acompanhar contexto e seguir cliente, orçamento e cobrança sem sair do app."
       actions={
         <>
+          <Link href="/dashboard/setup#integrations-section" className="secondary-link">
+            Conexão
+          </Link>
           <Link href="/dashboard/customers" className="secondary-link">
             Clientes
-          </Link>
-          <Link href="/dashboard/setup#integrations-section" className="secondary-link">
-            Configuracao
           </Link>
         </>
       }
@@ -84,8 +84,8 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
         </div>
       ) : null}
 
-      <div className="auth-hint">
-        <strong>Instância principal da empresa</strong>
+      <div className="auth-hint auth-hint-inline">
+        <strong>Instância principal</strong>
         <span>{setup.evolutionInstanceName || "Ainda não definida"}</span>
       </div>
 
@@ -182,32 +182,10 @@ export default async function WhatsappPage({ searchParams }: WhatsappPageProps) 
         )}
       </section>
 
-      <section className="data-panel">
-        <div className="card-header">
-          <div>
-            <span className="section-label">Como usar</span>
-            <h2>Fluxo sugerido para a equipe</h2>
-          </div>
-        </div>
-
-        <div className="cards-grid quote-grid">
-          <article className="dashboard-card">
-            <span className="dashboard-kicker">1</span>
-            <h3>Ler quem respondeu</h3>
-            <p>Comece pelas conversas em aguardando resposta para nao perder timing comercial ou financeiro.</p>
-          </article>
-          <article className="dashboard-card">
-            <span className="dashboard-kicker">2</span>
-            <h3>Responder no proprio app</h3>
-            <p>Use o campo de resposta manual para manter o historico operacional junto do cliente.</p>
-          </article>
-          <article className="dashboard-card">
-            <span className="dashboard-kicker">3</span>
-            <h3>Voltar ao modulo certo</h3>
-            <p>Depois do retorno, siga para clientes, orcamentos ou financeiro conforme o contexto daquela conversa.</p>
-          </article>
-        </div>
-      </section>
+      <div className="auth-hint">
+        <strong>Uso rápido</strong>
+        <span>Priorize quem pede resposta, responda no app e siga para o módulo certo quando concluir.</span>
+      </div>
     </DashboardShell>
   );
 }

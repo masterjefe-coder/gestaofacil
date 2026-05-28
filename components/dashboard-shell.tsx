@@ -122,11 +122,8 @@ export async function DashboardShell({
               </Link>
             );
           })}
+          <LogoutButton className="sidebar-link sidebar-link-action sidebar-link-danger sidebar-link-logout" />
         </nav>
-
-        <div className="sidebar-footer">
-          <LogoutButton />
-        </div>
       </aside>
 
       <section className="workspace-content">

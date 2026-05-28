@@ -2,7 +2,11 @@
 
 import { signOut } from "next-auth/react";
 
-export function LogoutButton() {
+type LogoutButtonProps = {
+  className?: string;
+};
+
+export function LogoutButton({ className = "ghost-button sidebar-logout" }: LogoutButtonProps) {
   async function handleLogout() {
     await fetch("/api/auth/logout-track", {
       method: "POST",
@@ -14,7 +18,7 @@ export function LogoutButton() {
   return (
     <button
       type="button"
-      className="ghost-button sidebar-logout"
+      className={className}
       onClick={() => void handleLogout()}
     >
       Sair

@@ -78,15 +78,15 @@ export default async function DashboardPage() {
     <DashboardShell
       currentPath="/dashboard"
       eyebrow="Central da empresa"
-      title="Uma central mais limpa para decidir rápido e operar melhor."
-      description="A home do workspace prioriza direção, contexto e entrada rápida nos módulos certos, sem poluir a operação."
+      title="Central executiva, curta e objetiva."
+      description="Dire??o, atalhos e prioridades em uma leitura r?pida."
       actions={(
         <>
           <Link href="/dashboard/setup" className="secondary-link">
-            Ajustar empresa
+            Empresa
           </Link>
           <Link href="/dashboard/reports" className="primary-link">
-            Abrir relatórios
+            Relat?rios
           </Link>
         </>
       )}
@@ -170,27 +170,13 @@ export default async function DashboardPage() {
         </article>
 
         <aside className="dashboard-overview-stack">
-          <article className="dashboard-mini-panel fade-in-up fade-delay-1">
-            <span className="section-label">Entrada rápida</span>
-            <div className="dashboard-mini-list">
-              <article>
-                <strong>Comece pelo módulo certo</strong>
-                <p>Clientes, vendas, cobrança, fiscal e empresa ficam organizados para entrar direto onde importa.</p>
-              </article>
-              <article>
-                <strong>Sem excesso na tela inicial</strong>
-                <p>A home mostra direção, prioridade e atalhos, não a operação inteira despejada de uma vez.</p>
-              </article>
-            </div>
-          </article>
-
-          <article className="dashboard-mini-panel fade-in-up fade-delay-2">
+          <article className="dashboard-mini-panel dashboard-mini-panel-compact fade-in-up fade-delay-1">
             <span className="section-label">Hoje</span>
-            <div className="dashboard-mini-list">
+            <div className="dashboard-shortcuts-grid dashboard-shortcuts-grid-compact">
               {todayAgenda.slice(0, 3).map((item) => (
-                <article key={item.title}>
+                <article key={item.title} className="dashboard-shortcut-card dashboard-shortcut-card-text">
                   <strong>{item.title}</strong>
-                  <p>{item.description}</p>
+                  <span>{item.description}</span>
                 </article>
               ))}
             </div>
@@ -201,7 +187,7 @@ export default async function DashboardPage() {
       <section className="data-panel data-panel-refined">
         <div className="card-header">
             <div>
-              <span className="section-label">Áreas do sistema</span>
+              <span className="section-label">�reas do sistema</span>
               <h2>Entre direto no que precisa resolver agora</h2>
             </div>
         </div>
@@ -221,14 +207,14 @@ export default async function DashboardPage() {
         <article className="data-panel data-panel-refined">
           <div className="card-header">
             <div>
-              <span className="section-label">Próximas ações</span>
-              <h2>O que vale atacar primeiro</h2>
+              <span className="section-label">Prioridades</span>
+              <h2>O que atacar primeiro</h2>
             </div>
           </div>
 
           {orderedRecommendations.length > 0 ? (
             <div className="cards-grid quote-grid">
-              {orderedRecommendations.slice(0, 3).map((item) => (
+              {orderedRecommendations.slice(0, 2).map((item) => (
                 (() => {
                   const operationalPromotion = getOperationalPromotionForRecommendation(item, navigationSignals);
 
@@ -258,8 +244,8 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="auth-hint">
-              <strong>Sem ação destacada agora</strong>
-              <span>A operação está estável neste momento. Você pode entrar direto na área que quiser acompanhar.</span>
+              <strong>Sem a��o destacada agora</strong>
+              <span>A opera��o est� est�vel neste momento. Voc� pode entrar direto na �rea que quiser acompanhar.</span>
             </div>
           )}
         </article>
@@ -273,8 +259,8 @@ export default async function DashboardPage() {
           <article className="agenda-card agenda-card-refined">
             <div className="card-header">
               <div>
-                <span className="section-label">Alertas</span>
-                <h2>O que merece atenção</h2>
+                <span className="section-label">Riscos</span>
+                <h2>O que merece aten��o</h2>
               </div>
             </div>
 
@@ -293,29 +279,11 @@ export default async function DashboardPage() {
             ) : (
               <div className="auth-hint">
                 <strong>Sem alerta forte no momento</strong>
-                <span>Os principais blocos da operação estão em ordem agora.</span>
+                <span>Os principais blocos da opera��o est�o em ordem agora.</span>
               </div>
             )}
           </article>
 
-          <article className="agenda-card agenda-card-refined">
-            <div className="card-header">
-              <div>
-                <span className="section-label">Indicadores</span>
-                <h2>Leitura rápida</h2>
-              </div>
-            </div>
-
-            <div className="stats-row stats-row-compact">
-              {cadenceMetrics.map((metric) => (
-                <article key={metric.label} className="stat-card stat-card-refined">
-                  <span>{metric.label}</span>
-                  <strong>{metric.value}</strong>
-                  <p>{metric.helper}</p>
-                </article>
-              ))}
-            </div>
-          </article>
         </aside>
       </section>
     </DashboardShell>
