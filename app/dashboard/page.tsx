@@ -1,4 +1,4 @@
-import Link from "next/link";
+Ôªøimport Link from "next/link";
 import { DashboardOperationalDomainsStrip } from "@/components/dashboard-operational-domains-strip";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { DashboardOperationalSummary } from "@/components/dashboard-operational-summary";
@@ -187,7 +187,7 @@ export default async function DashboardPage() {
       <section className="data-panel data-panel-refined">
         <div className="card-header">
             <div>
-              <span className="section-label">¡reas do sistema</span>
+              <span className="section-label">√Åreas do sistema</span>
               <h2>Entre direto no que precisa resolver agora</h2>
             </div>
         </div>
@@ -244,8 +244,8 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="auth-hint">
-              <strong>Sem aÁ„o destacada agora</strong>
-              <span>A operaÁ„o est· est·vel neste momento. VocÍ pode entrar direto na ·rea que quiser acompanhar.</span>
+              <strong>Sem a√ß√£o destacada agora</strong>
+              <span>A opera√ß√£o est√° est√°vel neste momento. Voc√™ pode entrar direto na √°rea que quiser acompanhar.</span>
             </div>
           )}
         </article>
@@ -260,7 +260,7 @@ export default async function DashboardPage() {
             <div className="card-header">
               <div>
                 <span className="section-label">Riscos</span>
-                <h2>O que merece atenÁ„o</h2>
+                <h2>O que merece aten√ß√£o</h2>
               </div>
             </div>
 
@@ -279,7 +279,7 @@ export default async function DashboardPage() {
             ) : (
               <div className="auth-hint">
                 <strong>Sem alerta forte no momento</strong>
-                <span>Os principais blocos da operaÁ„o est„o em ordem agora.</span>
+                <span>Os principais blocos da opera√ß√£o est√£o em ordem agora.</span>
               </div>
             )}
           </article>
